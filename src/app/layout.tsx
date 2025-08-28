@@ -92,11 +92,13 @@ export default function RootLayout({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Community">
-                    <Users2 className="size-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      Community
-                    </span>
+                  <SidebarMenuButton asChild tooltip="Community">
+                    <a href="/community">
+                      <Users2 className="size-5" />
+                      <span className="group-data-[collapsible=icon]:hidden">
+                        Community
+                      </span>
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

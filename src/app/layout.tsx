@@ -106,11 +106,13 @@ export default function RootLayout({
             <SidebarFooter>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Settings">
-                    <Settings className="size-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      Settings
-                    </span>
+                  <SidebarMenuButton asChild tooltip="Settings">
+                    <a href="/settings">
+                      <Settings className="size-5" />
+                      <span className="group-data-[collapsible=icon]:hidden">
+                        Settings
+                      </span>
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

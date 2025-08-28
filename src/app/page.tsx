@@ -35,7 +35,7 @@ export default function DashboardPage() {
               <Logo className="h-5 w-5" />
             </div>
             <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">
-              Algo Ace
+              Indmon
             </span>
           </div>
         </SidebarHeader>

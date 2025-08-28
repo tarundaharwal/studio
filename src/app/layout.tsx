@@ -82,11 +82,13 @@ export default function RootLayout({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton tooltip="Backtests">
-                    <LineChart className="size-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">
-                      Backtests
-                    </span>
+                  <SidebarMenuButton asChild tooltip="Backtests">
+                    <a href="/backtests">
+                      <LineChart className="size-5" />
+                      <span className="group-data-[collapsible=icon]:hidden">
+                        Backtests
+                      </span>
+                    </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>

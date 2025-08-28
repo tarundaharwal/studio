@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
 
 const chartData = [
   { date: '2024-07-01', equity: 100000 },
@@ -34,6 +34,13 @@ const chartData = [
   { date: '2024-07-29', equity: 106250 },
 ];
 
+const chartConfig = {
+    equity: {
+        label: 'Equity',
+        color: 'hsl(var(--primary))',
+    },
+};
+
 export function PerformanceChart() {
   return (
     <Card>
@@ -43,49 +50,51 @@ export function PerformanceChart() {
       </CardHeader>
       <CardContent>
         <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart
-              data={chartData}
-              margin={{
-                top: 5,
-                right: 10,
-                left: -10,
-                bottom: 0,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis
-                dataKey="date"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => value.substring(5)}
-              />
-              <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) => `₹${Number(value) / 1000}k`}
-              />
-              <Tooltip
-                cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '3 3' }}
-                content={<ChartTooltipContent
-                    formatter={(value) => `₹${Number(value).toLocaleString()}`}
-                    labelClassName="font-bold"
-                    indicator="dot"
-                />}
-              />
-              <Line
-                type="monotone"
-                dataKey="equity"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+        <ChartContainer config={chartConfig} className="h-full w-full">
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                data={chartData}
+                margin={{
+                    top: 5,
+                    right: 10,
+                    left: -10,
+                    bottom: 0,
+                }}
+                >
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis
+                    dataKey="date"
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => value.substring(5)}
+                />
+                <YAxis
+                    stroke="hsl(var(--muted-foreground))"
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `₹${Number(value) / 1000}k`}
+                />
+                <Tooltip
+                    cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '3 3' }}
+                    content={<ChartTooltipContent
+                        formatter={(value) => `₹${Number(value).toLocaleString()}`}
+                        labelClassName="font-bold"
+                        indicator="dot"
+                    />}
+                />
+                <Line
+                    type="monotone"
+                    dataKey="equity"
+                    stroke="var(--color-equity)"
+                    strokeWidth={2}
+                    dot={false}
+                />
+                </LineChart>
+            </ResponsiveContainer>
+        </ChartContainer>
         </div>
       </CardContent>
     </Card>

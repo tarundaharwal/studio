@@ -29,29 +29,29 @@ const positions = [
 
 export function PositionsTable() {
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader className="p-4">
         <CardTitle>Positions</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-40">
+      <CardContent className="p-0 flex-1">
+        <ScrollArea className="h-full">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="p-4">Symbol</TableHead>
-              <TableHead className="p-4 text-right">Qty</TableHead>
-              <TableHead className="p-4 text-right">P&L</TableHead>
+            <TableRow className="text-xs">
+              <TableHead className="p-2">Symbol</TableHead>
+              <TableHead className="p-2 text-right">Qty</TableHead>
+              <TableHead className="p-2 text-right">P&L</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {positions.map((pos) => (
-              <TableRow key={pos.symbol}>
-                <TableCell className="p-4">
+              <TableRow key={pos.symbol} className="text-xs">
+                <TableCell className="p-2">
                   <div className="font-medium">{pos.symbol}</div>
                   <div className="text-xs text-muted-foreground">LTP: ₹{pos.ltp.toFixed(2)}</div>
                 </TableCell>
-                <TableCell className="p-4 text-right">{pos.qty}</TableCell>
-                <TableCell className={`p-4 text-right font-medium ${pos.pnl > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <TableCell className="p-2 text-right">{pos.qty}</TableCell>
+                <TableCell className={`p-2 text-right font-medium ${pos.pnl > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {pos.pnl > 0 ? '+' : ''}₹{pos.pnl.toFixed(2)}
                 </TableCell>
               </TableRow>

@@ -45,7 +45,7 @@ const generateCandlestickData = (count: number) => {
   return data
 }
 
-const chartData = generateCandlestickData(75);
+const chartData = generateCandlestickData(50); // Reduced data points for better fit
 
 const chartConfig = {
   price: {
@@ -56,19 +56,21 @@ const chartConfig = {
 // Custom shape for candlestick
 const Candlestick = (props: any) => {
     const { x, y, width, height, ohlc } = props;
+    if (!ohlc) return null;
     const [open, high, low, close] = ohlc;
     const isGain = close >= open;
     const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     const stroke = fill;
   
-    // The y position from recharts is the top of the body
-    const bodyY = isGain ? y + height : y;
+    const bodyHeight = Math.abs(open - close);
+    const bodyY = isGain ? y + (height - bodyHeight) : y;
   
     return (
-      <g stroke={stroke} fill="none" strokeWidth={1}>
+      <g stroke={stroke} fill="none" strokeWidth={1.5}>
         {/* Wick */}
-        <path d={`M ${x + width / 2} ${bodyY - (isGain ? (high - open) : (high - close))} L ${x + width / 2} ${bodyY + (isGain ? (close - low) : (open - low))}`} />
-        <rect x={x} y={bodyY} width={width} height={height} fill={fill} />
+        <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
+        {/* Body */}
+        <rect x={x} y={bodyY} width={width} height={bodyHeight} fill={fill} />
       </g>
     );
   };
@@ -81,10 +83,10 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       return (
         <div className="p-2 text-xs bg-background border rounded-md shadow-lg">
           <p className="font-bold">{label}</p>
-          <p>Open: <span className="font-mono">{open.toFixed(2)}</span></p>
-          <p>High: <span className="font-mono">{high.toFixed(2)}</span></p>
-          <p>Low: <span className="font-mono">{low.toFixed(2)}</span></p>
-          <p>Close: <span className="font-mono">{close.toFixed(2)}</span></p>
+          <p>O: <span className="font-mono">{open.toFixed(2)}</span></p>
+          <p>H: <span className="font-mono">{high.toFixed(2)}</span></p>
+          <p>L: <span className="font-mono">{low.toFixed(2)}</span></p>
+          <p>C: <span className="font-mono">{close.toFixed(2)}</span></p>
         </div>
       );
     }
@@ -98,7 +100,7 @@ export function TradingTerminal() {
       <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-2">
         <div>
           <Select defaultValue="NIFTY 50">
-            <SelectTrigger className="w-40 border-0 text-lg font-bold shadow-none focus:ring-0">
+            <SelectTrigger className="w-40 border-0 text-base font-bold shadow-none focus:ring-0">
               <SelectValue placeholder="Select Instrument" />
             </SelectTrigger>
             <SelectContent>
@@ -118,17 +120,17 @@ export function TradingTerminal() {
             <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={{ top: 20, right: 20, bottom: 20, left: -20 }}
+              margin={{ top: 15, right: 15, bottom: 5, left: -25 }}
             >
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} interval={11} />
+              <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval={8} />
               <YAxis
                 domain={['dataMin - 50', 'dataMax + 50']}
                 orientation="right"
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                fontSize={12}
+                fontSize={10}
               />
               <Tooltip
                 cursor={{ strokeDasharray: '3 3' }}

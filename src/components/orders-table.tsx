@@ -45,33 +45,33 @@ const orders = [
 
 export function OrdersTable() {
   return (
-    <Card className="h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader className="p-4">
         <CardTitle>Orders</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-40">
+      <CardContent className="p-0 flex-1">
+        <ScrollArea className="h-full">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead className="p-4">Symbol</TableHead>
-              <TableHead className="p-4">Type</TableHead>
-              <TableHead className="p-4 text-right">Status</TableHead>
+            <TableRow className="text-xs">
+              <TableHead className="p-2">Symbol</TableHead>
+              <TableHead className="p-2">Type</TableHead>
+              <TableHead className="p-2 text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.map((order, index) => (
-              <TableRow key={index}>
-                <TableCell className="p-4">
+              <TableRow key={index} className="text-xs">
+                <TableCell className="p-2">
                   <div className="font-medium">{order.symbol}</div>
                   <div className="font-mono text-xs text-muted-foreground">{order.time}</div>
                 </TableCell>
-                <TableCell className="p-4">
+                <TableCell className="p-2">
                   <Badge variant={order.type === 'BUY' ? 'outline' : 'secondary'} className={order.type === 'BUY' ? 'text-green-600 border-green-600' : 'text-red-600 border-red-600'}>
                     {order.type}
                   </Badge>
                 </TableCell>
-                <TableCell className="p-4 text-right">
+                <TableCell className="p-2 text-right">
                     <Badge variant="outline" className={order.status === 'EXECUTED' ? 'text-blue-600 border-blue-600' : 'text-amber-600 border-amber-600'}>
                         {order.status}
                     </Badge>

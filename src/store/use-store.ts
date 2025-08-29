@@ -112,13 +112,13 @@ export const useStore = create<StoreState>((set, get) => ({
     chartData: generateCandlestickData(78, timeframes['5m']),
     timeframe: '5m',
     positions: [
-        { symbol: 'NIFTYBEES', qty: 50, avgPrice: 245.50, ltp: 248.75, pnl: 162.50 },
-        { symbol: 'BANKBEES', qty: 100, avgPrice: 520.10, ltp: 518.90, pnl: -120.00 },
+        { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: 22750.50, ltp: 22775.25, pnl: 1237.50 },
+        { symbol: 'NIFTY 29 AUG 22800 CE', qty: 100, avgPrice: 118.40, ltp: 125.90, pnl: 750.00 },
     ],
     orders: [
-        { time: '10:05:14', symbol: 'NIFTYBEES', type: 'BUY', qty: 50, price: 245.50, status: 'EXECUTED' },
-        { time: '09:45:20', symbol: 'BANKBEES', type: 'BUY', qty: 100, price: 520.10, status: 'EXECUTED' },
-        { time: '11:30:00', symbol: 'NIFTYBEES', type: 'SELL', qty: 50, price: 250.00, status: 'PENDING' },
+        { time: '10:05:14', symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: 22750.50, status: 'EXECUTED' },
+        { time: '09:45:20', symbol: 'NIFTY 29 AUG 22800 CE', type: 'BUY', qty: 100, price: 118.40, status: 'EXECUTED' },
+        { time: '11:30:00', symbol: 'NIFTY AUG FUT', type: 'SELL', qty: 50, price: 22850.00, status: 'PENDING' },
     ],
     overview: {
         pnl: 1250.75,

@@ -64,7 +64,7 @@ export function DataSimulator() {
             const [open, high, low, close] = currentCandle.ohlc;
             
             const volumeSpurt = Math.random() * 1000;
-            const change = (Math.random() - 0.5) * (volumeSpurt / 500); 
+            const change = (Math.random() - 0.5) * (volumeSpurt / 100); 
             let newClose = close + change;
             
             const newHigh = Math.max(high, newClose);

@@ -111,6 +111,15 @@ const timeframes: { [key: string]: number } = {
     '1h': 60 * 60 * 1000,
 };
 
+const getNextTime = (time: string, timeframeMinutes: number): string => {
+    const [hours, minutes] = time.split(':').map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    date.setMinutes(date.getMinutes() + timeframeMinutes);
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+};
+
+
 // This is the main simulation flow, defined with Genkit
 export const simulationFlow = ai.defineFlow(
   {
@@ -129,7 +138,7 @@ export const simulationFlow = ai.defineFlow(
     // --- MARKET DATA SIMULATION ---
     let newClosePrice: number;
     const now = Date.now();
-    const nowLocale = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const nowLocale = new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
     // We need to mutate the data, so we create deep copies
     let newChartData = JSON.parse(JSON.stringify(chartData));
@@ -137,13 +146,22 @@ export const simulationFlow = ai.defineFlow(
 
     // Simulate a new candle if timeframe has passed
     // NOTE: This logic is simplified and assumes regular tick intervals.
-    const lastCandleTime = new Date(`1970-01-01T${lastCandleInStore.time}Z`).getTime();
     const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
+    const tickInterval = 2000; // 2 seconds, matches frontend
+    const ticksPerCandle = timeframeDuration / tickInterval;
 
-    if (now - lastCandleTime > timeframeDuration * 20) { // simplified check for new candle
+    // A simple counter stored on the overview object to track progress towards a new candle
+    // In a real app, this might be handled differently.
+    const tickCount = (overview.pnl / 1_000_000_000) || 0; // misuse pnl as a tick counter for now
+    
+    // Check if it's time for a new candle
+    if (Math.random() < 1/ticksPerCandle) { 
         const lastClose = lastCandleInStore.ohlc[3];
+        const timeframeMinutes = timeframeDuration / (60 * 1000);
+        const newTime = getNextTime(lastCandleInStore.time, timeframeMinutes);
+
         const newCandle = {
-            time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+            time: newTime,
             ohlc: [lastClose, lastClose, lastClose, lastClose] as [number, number, number, number],
             volume: 0,
         };
@@ -152,7 +170,7 @@ export const simulationFlow = ai.defineFlow(
 
         // --- TRADING LOGIC (Only on new candle & if trading is active) ---
         if (tradingStatus === 'ACTIVE') {
-            const priceAction = newCandle.ohlc[3] - newChartData[newChartData.length - 2].ohlc[3];
+            const priceAction = newCandle.ohlc[3] - (newChartData[newChartData.length - 2]?.ohlc[3] || newCandle.ohlc[3]);
             const hasOpenPosition = positions.length > 0;
             
             if (Math.random() < 0.1) { // 10% chance to trade

@@ -119,10 +119,12 @@ export default function RootLayout({
             </SidebarFooter>
           </Sidebar>
 
-          <SidebarInset>
+          <div className="flex flex-col flex-1 h-screen overflow-hidden">
             <DashboardHeader />
-            {children}
-          </SidebarInset>
+            <SidebarInset>
+              {children}
+            </SidebarInset>
+          </div>
         </SidebarProvider>
         <Toaster />
       </body>

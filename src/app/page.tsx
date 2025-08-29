@@ -7,18 +7,18 @@ import { TradingTerminal } from '@/components/trading-terminal';
 
 export default function DashboardPage() {
   return (
-    <main className="flex-1">
-      <div className="grid h-[calc(100vh-3.5rem)] grid-cols-1 gap-4 p-4 md:grid-cols-2 md:gap-6">
+    <main className="flex-1 overflow-hidden">
+      <div className="grid h-full grid-cols-1 gap-4 p-4 md:grid-cols-2 md:gap-6">
         {/* Top-Left */}
-        <div className="col-span-1">
+        <div className="col-span-1 flex flex-col">
           <TradingTerminal />
         </div>
         {/* Top-Right */}
-        <div className="col-span-1">
+        <div className="col-span-1 flex flex-col">
           <IndicatorCards />
         </div>
         {/* Bottom-Left */}
-        <div className="col-span-1">
+        <div className="col-span-1 flex flex-col">
           <OptionChain />
         </div>
         {/* Bottom-Right */}

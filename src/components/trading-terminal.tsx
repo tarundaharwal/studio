@@ -99,8 +99,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   };
 
 const ColoredBar = (props: any) => {
-    const { fill, x, y, width, height } = props;
-    return <Rectangle {...props} fill={fill} />;
+    const { fill, x, y, width, height, payload } = props;
+    const color = payload.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'
+    return <Rectangle {...props} fill={color} />;
+};
+
+
+// Custom shape components for dynamic coloring
+const CustomWick = (props: any) => {
+    const { x, y, width, height, payload } = props;
+    if (!payload) return null;
+    const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+    return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
+};
+  
+const CustomBody = (props: any) => {
+    const { x, y, width, height, payload } = props;
+    if (!payload) return null;
+    const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+    return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
 
 
@@ -132,15 +149,12 @@ export function TradingTerminal() {
 
         return { 
             ...d,
-            candleBody: [open, close],
+            candleBody: [open, close].sort((a,b) => a-b),
             candleWick: [low, high], 
             isGain,
-            originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0], // For volume color
+            originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0], // For volume color and tooltip
             original_ohlc: originalCandle.ohlc, // For tooltip
             closePrice: close,
-            // Pre-calculate colors for the shape renderer
-            fill: isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))',
-            volumeFill: originalCandle.ohlc[3] >= originalCandle.ohlc[0] ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)',
         }
     });
   }, [fullChartData, candleType]);
@@ -248,7 +262,7 @@ export function TradingTerminal() {
                 className="h-full"
                 style={{
                     width: '100%',
-                    minWidth: `${chartData.length * (CANDLE_WIDTH + 4)}px`,
+                    minWidth: `${chartData.length * (CANDLE_WIDTH)}px`,
                 }}
             >
                 <ComposedChart
@@ -287,15 +301,11 @@ export function TradingTerminal() {
                     
                     <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
                     
-                    {candleType !== 'line' && (
-                        <>
-                            <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" shape={<ColoredBar />} />
-                            <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH} stackId="price" shape={<ColoredBar />} />
-                        </>
-                    )}
+                    <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" shape={<CustomWick />} />
+                    <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="price" shape={<CustomBody />} />
 
                     {/* Volume Bar */}
-                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH} shape={<ColoredBar />} />
+                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH / 1.5} shape={<ColoredBar />} />
                 </ComposedChart>
             </ChartContainer>
           <ScrollBar orientation="horizontal" />

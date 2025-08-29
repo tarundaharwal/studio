@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 
 // Helper to generate a random number within a range
@@ -102,6 +103,9 @@ type StoreState = {
     addCandle: (newCandle: ChartData) => void;
     setTimeframe: (newTimeframe: string) => void;
     updatePositions: (newPositions: Position[]) => void;
+    addOrder: (newOrder: Order) => void;
+    addPosition: (newPosition: Position) => void;
+    closePosition: (symbol: string) => void;
     updateOverview: (newOverview: Partial<Overview>) => void;
     updateIndicators: (newIndicators: Indicator[]) => void;
     updateOptionChain: (newOptionChain: Option[]) => void;
@@ -115,18 +119,11 @@ export const useStore = create<StoreState>((set, get) => ({
     chartData: generateCandlestickData(78, timeframes['5m']),
     timeframe: '5m',
     tradingStatus: 'ACTIVE',
-    positions: [
-        { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: 22750.50, ltp: 22775.25, pnl: 1237.50 },
-        { symbol: 'NIFTY 29 AUG 22800 CE', qty: 100, avgPrice: 118.40, ltp: 125.90, pnl: 750.00 },
-    ],
-    orders: [
-        { time: '10:05:14', symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: 22750.50, status: 'EXECUTED' },
-        { time: '09:45:20', symbol: 'NIFTY 29 AUG 22800 CE', type: 'BUY', qty: 100, price: 118.40, status: 'EXECUTED' },
-        { time: '11:30:00', symbol: 'NIFTY AUG FUT', type: 'SELL', qty: 50, price: 22850.00, status: 'PENDING' },
-    ],
+    positions: [],
+    orders: [],
     overview: {
-        pnl: 1987.50,
-        drawdown: -4530.10,
+        pnl: 0,
+        drawdown: 0,
     },
     indicators: [
         { name: 'RSI (14)', value: 28.7 },
@@ -160,6 +157,9 @@ export const useStore = create<StoreState>((set, get) => ({
         chartData: [...state.chartData.slice(1), newCandle]
     })),
     updatePositions: (newPositions) => set({ positions: newPositions }),
+    addOrder: (newOrder) => set(state => ({ orders: [newOrder, ...state.orders].slice(0, 100) })),
+    addPosition: (newPosition) => set(state => ({ positions: [...state.positions, newPosition] })),
+    closePosition: (symbol) => set(state => ({ positions: state.positions.filter(p => p.symbol !== symbol) })),
     updateOverview: (newOverview) => set(state => ({ overview: { ...state.overview, ...newOverview } })),
     updateIndicators: (newIndicators) => set({ indicators: newIndicators }),
     updateOptionChain: (newOptionChain) => set({ optionChain: newOptionChain }),
@@ -174,6 +174,9 @@ export const useStore = create<StoreState>((set, get) => ({
     emergencyStop: () => set(state => {
         const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
+        // Don't do anything if already stopped
+        if (state.tradingStatus === 'STOPPED') return {};
+
         // Create liquidation orders from open positions
         const liquidationOrders: Order[] = state.positions.map(pos => ({
             time: now,

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -19,10 +20,6 @@ const getRandom = (min: number, max: number, precision: number = 2) => {
 export function DataSimulator() {
   const {
     timeframe,
-    positions,
-    orders,
-    optionChain,
-    indicators,
     tradingStatus,
     updatePositions,
     updateOverview,
@@ -31,7 +28,11 @@ export function DataSimulator() {
     addSignal,
     updateOrderStatus,
     setChartData,
-    addCandle
+    addCandle,
+    addOrder,
+    addPosition,
+    closePosition,
+    positions,
   } = useStore();
 
   const lastCandleTime = useRef(Date.now());
@@ -39,10 +40,9 @@ export function DataSimulator() {
   useEffect(() => {
     const interval = setInterval(() => {
         const now = Date.now();
+        const nowLocale = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         
-        // MARKET DATA SIMULATION (Always runs)
-        // This block simulates the market itself, which never stops.
-        
+        // --- MARKET DATA SIMULATION (Always runs) ---
         const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
         const currentChartData = useStore.getState().chartData;
         const newChartData = currentChartData.slice(); // Create a shallow copy for mutation
@@ -60,6 +60,33 @@ export function DataSimulator() {
             };
             addCandle(newCandle);
             newClosePrice = newCandle.ohlc[3];
+
+            // --- TRADING LOGIC (Only runs on new candle and if trading is active) ---
+            if (useStore.getState().tradingStatus === 'ACTIVE') {
+                const priceAction = newCandle.ohlc[3] - lastCandleInStore.ohlc[3];
+                const currentPositions = useStore.getState().positions;
+                const hasOpenPosition = currentPositions.length > 0;
+                
+                // Simple logic: 10% chance to trade on a new candle
+                if (Math.random() < 0.1) {
+                    if (priceAction > 10 && !hasOpenPosition) { // If price moved up and no open position
+                        // ENTER LONG
+                        const newPosition = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newCandle.ohlc[3], ltp: newCandle.ohlc[3], pnl: 0 };
+                        addPosition(newPosition);
+                        addOrder({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newCandle.ohlc[3], status: 'EXECUTED' });
+                        addSignal({ time: nowLocale, strategy: 'SIM-TREND', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: 'Simulated bullish momentum.'});
+
+                    } else if (priceAction < -10 && hasOpenPosition) { // If price moved down and has open position
+                        // EXIT LONG
+                        const positionToClose = currentPositions[0]; // Assuming one position for simplicity
+                        addOrder({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newCandle.ohlc[3], status: 'EXECUTED' });
+                        closePosition(positionToClose.symbol);
+                        addSignal({ time: nowLocale, strategy: 'SIM-TREND', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: 'Simulated bearish momentum.'});
+                    }
+                }
+            }
+             // --- END TRADING LOGIC ---
+
         } else {
             const currentCandle = { ...newChartData[newChartData.length - 1] };
             currentCandle.ohlc = [...currentCandle.ohlc]; // IMPORTANT: Create a copy of ohlc array
@@ -109,15 +136,16 @@ export function DataSimulator() {
         });
         updateIndicators(newIndicators);
 
-        // TRADING SIMULATION (Only runs if trading is active)
-        // This block simulates the user's portfolio and trading actions.
+        // --- TRADING DATA SIMULATION (Only runs if trading is active) ---
         if (useStore.getState().tradingStatus === 'ACTIVE') {
             // 4. Update Positions based on new close price (LTP)
             const newPositions = useStore.getState().positions.map(pos => {
                 let newLtp;
                 if (pos.symbol.includes('FUT')) {
+                    // Futures LTP tracks the main chart price
                     newLtp = newClosePrice;
                 } else {
+                    // Options have their own random volatility
                     const optionChange = getRandom(-2.5, 2.5);
                     newLtp = Math.max(0.05, pos.ltp + optionChange);
                 }
@@ -133,35 +161,13 @@ export function DataSimulator() {
                 pnl: totalPnl,
                 drawdown: useStore.getState().overview.drawdown + drawdownChange,
             });
-
-            // 6. Add a new signal occasionally (2% chance)
-            if (Math.random() < 0.02) { 
-                const actions = ['ENTER LONG', 'EXIT LONG', 'MONITOR', 'CONFIRM'];
-                const instruments = ['NIFTY AUG FUT', 'NIFTY 29 AUG 22800 CE'];
-                addSignal({
-                    time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                    strategy: 'RSI-MR',
-                    action: actions[Math.floor(Math.random() * actions.length)],
-                    instrument: instruments[Math.floor(Math.random() * instruments.length)],
-                    reason: 'Simulated signal event.'
-                });
-            }
-
-            // 7. Update an order status occasionally (5% chance)
-            if (Math.random() < 0.05) { 
-                const currentOrders = useStore.getState().orders;
-                const pendingOrderIndex = currentOrders.findIndex(o => o.status === 'PENDING');
-                if (pendingOrderIndex !== -1) {
-                    updateOrderStatus(pendingOrderIndex, 'EXECUTED');
-                }
-            }
         }
     }, TICK_INTERVAL);
 
     return () => {
         clearInterval(interval);
     };
-  }, [timeframe, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, setChartData]);
+  }, [timeframe, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, setChartData, addOrder, addPosition, closePosition]);
 
   return null;
 }

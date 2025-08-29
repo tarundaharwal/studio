@@ -64,6 +64,39 @@ const calculateHeikinAshi = (data: ChartData[]) => {
     return haData;
 };
 
+// A custom shape for the candlestick
+const Candle = (props: any) => {
+  const { x, y, width, height, isGain, original_ohlc, yAxis } = props;
+  
+  if (!original_ohlc || !yAxis || !yAxis.scale) {
+    return null;
+  }
+  
+  const ohlcY = yAxis.scale;
+  const [open, high, low, close] = original_ohlc;
+
+  const yOpen = ohlcY(open);
+  const yClose = ohlcY(close);
+  const yHigh = ohlcY(high);
+  const yLow = ohlcY(low);
+
+  const bodyY = Math.min(yOpen, yClose);
+  const bodyHeight = Math.abs(yOpen - yClose);
+  const wickX = x + width / 2;
+
+  const color = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+
+  return (
+    <g>
+      {/* Wick */}
+      <path d={`M ${wickX},${yHigh} L ${wickX},${yLow}`} stroke={color} />
+      {/* Body */}
+      <rect x={x} y={bodyY} width={width} height={bodyHeight > 1 ? bodyHeight : 1} fill={color} />
+    </g>
+  );
+};
+
+
 const chartConfig = {
   price: {
     label: "Price",
@@ -129,7 +162,7 @@ export function TradingTerminal() {
             ...d, 
             isGain,
             originalIsGain, // For volume color
-            original_ohlc: originalCandle.ohlc, // For tooltip
+            original_ohlc: originalCandle.ohlc, // For tooltip and custom shape
             
             // This is the structure Recharts needs for floating bars
             candleBody: [open, close],
@@ -287,20 +320,11 @@ export function TradingTerminal() {
                     {candleType === 'line' ? (
                          <Line type="monotone" dataKey="closePrice" strokeWidth={2} yAxisId="right" dot={false} name="Price" stroke="hsl(var(--primary))"/>
                     ) : (
-                        <>
-                        {/* Wick */}
-                        <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="candles">
-                             {chartData.map((entry, index) => (
-                                <Cell key={`wick-cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
-                            ))}
-                        </Bar>
-                        {/* Body */}
-                        <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH} stackId="candles">
+                       <Bar dataKey="ohlc" yAxisId="right" shape={<Candle />} barSize={CANDLE_WIDTH}>
                             {chartData.map((entry, index) => (
-                                <Cell key={`body-cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
+                                <Cell key={`cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}/>
                             ))}
                         </Bar>
-                        </>
                     )}
 
 
@@ -318,5 +342,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

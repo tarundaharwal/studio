@@ -14,18 +14,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  ComposedChart,
-  Line,
-  Area,
-  Cell,
-  Customized,
 } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
@@ -38,7 +35,6 @@ const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
 const CANDLE_WIDTH = 16;
 
-// Helper to calculate SMA
 const calculateSMA = (data: any[], period: number) => {
     return data.map((d, i, arr) => {
         if (i < period - 1) return null;
@@ -48,7 +44,6 @@ const calculateSMA = (data: any[], period: number) => {
     });
 };
 
-// Helper to calculate Standard Deviation for Bollinger Bands
 const calculateStdDev = (data: number[], period: number) => {
     return data.map((d, i, arr) => {
         if (i < period - 1) return null;
@@ -59,7 +54,6 @@ const calculateStdDev = (data: number[], period: number) => {
         return Math.sqrt(avgSqDiff);
     });
 };
-
 
 const chartConfig = {
   price: {
@@ -81,74 +75,6 @@ const chartConfig = {
       color: "hsl(var(--chart-2))",
   }
 }
-
-// Custom component to render candlesticks using Customized component
-const Candlestick = (props: any) => {
-    const { data, xAxis, yAxis } = props;
-
-    if (!data || !xAxis || !yAxis) {
-        return null;
-    }
-
-    return (
-        <g>
-            {data.map((d: any, i: number) => {
-                const { ohlc } = d;
-                if (!ohlc) return null;
-
-                const [open, high, low, close] = ohlc;
-                
-                // Ensure scale functions are available
-                if (typeof xAxis.scale.bandwidth !== 'function' || typeof yAxis.scale !== 'function') {
-                    return null;
-                }
-                
-                const bandWidth = xAxis.scale.bandwidth();
-                const x = xAxis.scale(d.time);
-                
-                // Check if x is a valid number
-                if (x === undefined || isNaN(x)) return null;
-
-                const yOpen = yAxis.scale(open);
-                const yClose = yAxis.scale(close);
-                const yHigh = yAxis.scale(high);
-                const yLow = yAxis.scale(low);
-
-                // Check if all y-values are valid numbers
-                if ([yOpen, yClose, yHigh, yLow].some(val => val === undefined || isNaN(val))) {
-                    return null;
-                }
-
-                const isGain = close >= open;
-                const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-                const stroke = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-
-                const bodyY = Math.min(yOpen, yClose);
-                const bodyHeight = Math.max(1, Math.abs(yOpen - yClose)); // Ensure minimum height of 1px
-                const wickX = x + bandWidth / 2;
-                
-                return (
-                    <g key={`candle-${d.time}-${i}`}>
-                        {/* Wick */}
-                        <path
-                            d={`M ${wickX} ${yHigh} L ${wickX} ${yLow}`}
-                            stroke={stroke}
-                            strokeWidth={1}
-                        />
-                        {/* Body */}
-                        <rect
-                            x={x + bandWidth * 0.15}
-                            y={bodyY}
-                            width={bandWidth * 0.7}
-                            height={bodyHeight}
-                            fill={fill}
-                        />
-                    </g>
-                );
-            })}
-        </g>
-    );
-};
   
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -172,7 +98,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
   };
 
-
 export function TradingTerminal() {
   const { chartData: fullChartData, timeframe, setTimeframe } = useStore();
   const [visibleCandles, setVisibleCandles] = React.useState(50);
@@ -191,19 +116,27 @@ export function TradingTerminal() {
   }, []);
 
   const chartDataWithIndicators = React.useMemo(() => {
+    if (!fullChartData) return [];
     const sma20 = calculateSMA(fullChartData, 20);
     const stdDev20 = calculateStdDev(fullChartData.map(d => d.ohlc[3]), 20);
     const sma50 = calculateSMA(fullChartData, 50);
     const sma100 = calculateSMA(fullChartData, 100);
 
-    return fullChartData.map((d, i) => ({ 
-        ...d, 
-        sma50: sma50[i],
-        sma100: sma100[i],
-        bb_middle: sma20[i],
-        bb_upper: sma20[i] && stdDev20[i] ? sma20[i]! + (stdDev20[i]! * 2) : null,
-        bb_lower: sma20[i] && stdDev20[i] ? sma20[i]! - (stdDev20[i]! * 2) : null,
-    }));
+    return fullChartData.map((d, i) => {
+        const [open, high, low, close] = d.ohlc;
+        const isGain = close >= open;
+        return { 
+            ...d, 
+            isGain,
+            body: [open, close],
+            wick: [high, low],
+            sma50: sma50[i],
+            sma100: sma100[i],
+            bb_middle: sma20[i],
+            bb_upper: sma20[i] && stdDev20[i] ? sma20[i]! + (stdDev20[i]! * 2) : null,
+            bb_lower: sma20[i] && stdDev20[i] ? sma20[i]! - (stdDev20[i]! * 2) : null,
+        }
+    });
   }, [fullChartData]);
 
   const chartData = chartDataWithIndicators.slice(-visibleCandles);
@@ -212,7 +145,7 @@ export function TradingTerminal() {
   React.useEffect(() => {
     if (fullChartData && fullChartData.length > 1) {
         const latestPrice = fullChartData[fullChartData.length - 1].ohlc[3];
-        const previousDayClose = fullChartData[fullChartData.length - 2].ohlc[3]; // Or a proper daily close
+        const previousDayClose = fullChartData[fullChartData.length - 2].ohlc[3];
         const priceChange = latestPrice - previousDayClose;
         const priceChangePercent = previousDayClose !== 0 ? (priceChange / previousDayClose) * 100 : 0;
         const isGain = priceChange >= 0;
@@ -324,20 +257,19 @@ export function TradingTerminal() {
                             content={<CustomTooltip />}
                             cursor={{ strokeDasharray: '3 3' }}
                         />
-                         <Customized component={(props: any) => <Candlestick {...props} data={chartData} />} />
-                         {indicator === 'sma' && (
-                            <>
-                                <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 50"/>
-                                <Line type="monotone" dataKey="sma100" stroke="var(--color-sma100)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 100"/>
-                            </>
-                        )}
-                        {indicator === 'bb' && (
-                            <>
-                                <Line type="monotone" dataKey="bb_middle" stroke="var(--color-bb)" strokeWidth={1.5} dot={false} yAxisId="left" name="BB Middle" />
-                                <Area type="monotone" dataKey="bb_upper" fill="var(--color-bb)" fillOpacity={0.1} stroke="var(--color-bb)" strokeWidth={1.5} dot={false} yAxisId="left" name="BB Upper" connectNulls/>
-                                <Area type="monotone" dataKey="bb_lower" fill="var(--color-bb)" fillOpacity={0.1} stroke="var(--color-bb)" strokeWidth={1.5} dot={false} yAxisId="left" name="BB Lower" connectNulls/>
-                            </>
-                        )}
+                        {/* Wicks */}
+                        <Bar dataKey="wick" yAxisId="left" barSize={1} >
+                            {chartData.map((d, i) => (
+                                <Cell key={`wick-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
+                            ))}
+                        </Bar>
+                        {/* Body */}
+                        <Bar dataKey="body" yAxisId="left" barSize={CANDLE_WIDTH * 0.7}>
+                            {chartData.map((d, i) => (
+                                <Cell key={`body-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
+                            ))}
+                        </Bar>
+
                     </ComposedChart>
                 </ResponsiveContainer>
                 
@@ -358,9 +290,8 @@ export function TradingTerminal() {
                         />
                         <Bar dataKey="volume" yAxisId="right" barSize={CANDLE_WIDTH * 0.7}>
                             {chartData.map((entry, index) => {
-                                const [open, , , close] = entry.ohlc;
-                                const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-                                return <Cell key={`cell-${entry.time}-${index}`} fill={fill} />;
+                                const fill = entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+                                return <Cell key={`volume-cell-${entry.time}-${index}`} fill={fill} />;
                             })}
                         </Bar>
                     </BarChart>

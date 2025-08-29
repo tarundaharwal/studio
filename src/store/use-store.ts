@@ -184,11 +184,13 @@ export const useStore = create<StoreState>((set, get) => ({
             status: 'EXECUTED'
         }));
     
-        // Cancel all pending orders
-        const remainingOrders = state.orders.filter(order => order.status !== 'PENDING');
+        // Cancel all pending orders by marking them as CANCELLED
+        const updatedOrders = state.orders.map(order => 
+            order.status === 'PENDING' ? { ...order, status: 'CANCELLED' } : order
+        );
     
         // Add new liquidation orders to the list
-        const newOrders = [...liquidationOrders, ...remainingOrders];
+        const newOrders = [...liquidationOrders, ...updatedOrders];
     
         // Add a signal for emergency stop
         const newSignal: Signal = {
@@ -203,7 +205,7 @@ export const useStore = create<StoreState>((set, get) => ({
             positions: [], // All positions are liquidated
             orders: newOrders,
             signals: [newSignal, ...state.signals].slice(0, 20),
-            tradingStatus: 'STOPPED' // Stop all trading activity
+            tradingStatus: 'STOPPED' // Stop all TRADING activity
         };
     }),
 }));

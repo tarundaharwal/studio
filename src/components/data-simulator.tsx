@@ -40,14 +40,13 @@ export function DataSimulator() {
     const interval = setInterval(() => {
         const now = Date.now();
         
-        // Stop all data updates if trading status is STOPPED
-        if (useStore.getState().tradingStatus === 'STOPPED') {
-            return;
-        }
-
+        // MARKET DATA SIMULATION (Always runs)
+        // This block simulates the market itself, which never stops.
+        
         const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
         const currentChartData = useStore.getState().chartData;
-        const lastCandleInStore = currentChartData[currentChartData.length - 1];
+        const newChartData = currentChartData.slice(); // Create a shallow copy for mutation
+        const lastCandleInStore = newChartData[newChartData.length - 1];
         let newClosePrice: number;
 
         // 1. Update or Create Candle
@@ -62,9 +61,8 @@ export function DataSimulator() {
             addCandle(newCandle);
             newClosePrice = newCandle.ohlc[3];
         } else {
-            const newChartData = currentChartData.slice();
             const currentCandle = { ...newChartData[newChartData.length - 1] };
-            currentCandle.ohlc = [...currentCandle.ohlc]; 
+            currentCandle.ohlc = [...currentCandle.ohlc]; // IMPORTANT: Create a copy of ohlc array
 
             const [open, high, low, close] = currentCandle.ohlc;
             const volumeSpurt = Math.random() * 1000;
@@ -81,35 +79,9 @@ export function DataSimulator() {
             setChartData(newChartData);
         }
 
-        // 2. Update Positions based on new close price (LTP)
-        const newPositions = positions.map(pos => {
-            let newLtp;
-            // Differentiate between Futures/Stocks and Options
-            if (pos.symbol.includes('FUT') || !pos.symbol.includes('CE') && !pos.symbol.includes('PE')) {
-                // For futures, use the chart's price
-                newLtp = newClosePrice;
-            } else {
-                // For options, simulate a smaller, more realistic price change
-                const optionChange = getRandom(-2.5, 2.5); // Options price fluctuates less
-                newLtp = Math.max(0.05, pos.ltp + optionChange); // Ensure price doesn't go negative
-            }
-            const newPnl = (newLtp - pos.avgPrice) * pos.qty;
-            return { ...pos, ltp: newLtp, pnl: newPnl };
-        });
-        updatePositions(newPositions);
-
-
-        // 3. Update Overview Cards from new positions
-        const totalPnl = newPositions.reduce((acc, pos) => acc + pos.pnl, 0);
-        const drawdownChange = (Math.random() - 0.5) * (totalPnl > 0 ? 10 : -50); 
-        updateOverview({
-            pnl: totalPnl,
-            drawdown: useStore.getState().overview.drawdown + drawdownChange,
-        });
-
-        // 4. Update Option Chain based on new price
+        // 2. Update Option Chain based on new market price
         const atmStrike = Math.round(newClosePrice / 50) * 50;
-        const newOptionChain = optionChain.map(opt => {
+        const newOptionChain = useStore.getState().optionChain.map(opt => {
             const isATM = opt.strike === atmStrike;
             const priceInfluence = (newClosePrice - opt.strike) / 100;
             return {
@@ -122,9 +94,9 @@ export function DataSimulator() {
         });
         updateOptionChain(newOptionChain);
 
-        // 5. Update Indicators based on new price
-        const priceMovement = newClosePrice - lastCandleInStore.ohlc[3];
-        const newIndicators = indicators.map(ind => {
+        // 3. Update Indicators based on new market price
+        const priceMovement = newClosePrice - (newChartData[newChartData.length - 2]?.ohlc[3] || newClosePrice);
+        const newIndicators = useStore.getState().indicators.map(ind => {
             let newValue = ind.value;
             if (ind.name.includes('RSI')) {
                 newValue = Math.max(0, Math.min(100, ind.value + priceMovement * 2));
@@ -137,24 +109,51 @@ export function DataSimulator() {
         });
         updateIndicators(newIndicators);
 
-        // 6. Add a new signal occasionally (10% chance)
-        if (Math.random() < 0.02) { 
-            const actions = ['ENTER LONG', 'EXIT LONG', 'MONITOR', 'CONFIRM'];
-            const instruments = ['NIFTYBEES', 'BANKBEES'];
-            addSignal({
-                time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-                strategy: 'RSI-MR',
-                action: actions[Math.floor(Math.random() * actions.length)],
-                instrument: instruments[Math.floor(Math.random() * instruments.length)],
-                reason: 'Simulated signal event.'
+        // TRADING SIMULATION (Only runs if trading is active)
+        // This block simulates the user's portfolio and trading actions.
+        if (useStore.getState().tradingStatus === 'ACTIVE') {
+            // 4. Update Positions based on new close price (LTP)
+            const newPositions = useStore.getState().positions.map(pos => {
+                let newLtp;
+                if (pos.symbol.includes('FUT')) {
+                    newLtp = newClosePrice;
+                } else {
+                    const optionChange = getRandom(-2.5, 2.5);
+                    newLtp = Math.max(0.05, pos.ltp + optionChange);
+                }
+                const newPnl = (newLtp - pos.avgPrice) * pos.qty;
+                return { ...pos, ltp: newLtp, pnl: newPnl };
             });
-        }
+            updatePositions(newPositions);
 
-        // 7. Update an order status occasionally (5% chance)
-        if (Math.random() < 0.05) { 
-            const pendingOrderIndex = orders.findIndex(o => o.status === 'PENDING');
-            if (pendingOrderIndex !== -1) {
-                updateOrderStatus(pendingOrderIndex, 'EXECUTED');
+            // 5. Update Overview Cards from new positions
+            const totalPnl = newPositions.reduce((acc, pos) => acc + pos.pnl, 0);
+            const drawdownChange = (Math.random() - 0.5) * (totalPnl > 0 ? 10 : -50); 
+            updateOverview({
+                pnl: totalPnl,
+                drawdown: useStore.getState().overview.drawdown + drawdownChange,
+            });
+
+            // 6. Add a new signal occasionally (2% chance)
+            if (Math.random() < 0.02) { 
+                const actions = ['ENTER LONG', 'EXIT LONG', 'MONITOR', 'CONFIRM'];
+                const instruments = ['NIFTY AUG FUT', 'NIFTY 29 AUG 22800 CE'];
+                addSignal({
+                    time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                    strategy: 'RSI-MR',
+                    action: actions[Math.floor(Math.random() * actions.length)],
+                    instrument: instruments[Math.floor(Math.random() * instruments.length)],
+                    reason: 'Simulated signal event.'
+                });
+            }
+
+            // 7. Update an order status occasionally (5% chance)
+            if (Math.random() < 0.05) { 
+                const currentOrders = useStore.getState().orders;
+                const pendingOrderIndex = currentOrders.findIndex(o => o.status === 'PENDING');
+                if (pendingOrderIndex !== -1) {
+                    updateOrderStatus(pendingOrderIndex, 'EXECUTED');
+                }
             }
         }
     }, TICK_INTERVAL);
@@ -162,7 +161,7 @@ export function DataSimulator() {
     return () => {
         clearInterval(interval);
     };
-  }, [timeframe, positions, orders, optionChain, indicators, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, setChartData, tradingStatus]);
+  }, [timeframe, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, setChartData]);
 
   return null;
 }

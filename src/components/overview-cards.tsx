@@ -31,6 +31,7 @@ import {
 import { useStore } from '@/store/use-store';
 import React from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 
 export function OverviewCards() {
@@ -83,11 +84,18 @@ export function OverviewCards() {
 
           <div className="flex items-center justify-center">
             <AlertDialog>
-                <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="whitespace-nowrap text-xs">
-                    <Power className="mr-1 h-3 w-3" /> Emergency Stop
-                </Button>
-                </AlertDialogTrigger>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon">
+                                <Power className="h-4 w-4" />
+                            </Button>
+                        </AlertDialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Emergency Stop</p>
+                    </TooltipContent>
+                </Tooltip>
                 <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

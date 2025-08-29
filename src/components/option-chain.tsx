@@ -22,6 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
+import { ScrollArea } from './ui/scroll-area';
 
 const optionChainData = [
   { strike: 22600, callOI: 150000, callIV: 14.5, callLTP: 250.5, putLTP: 25.1, putIV: 18.2, putOI: 180000 },
@@ -55,6 +56,7 @@ export function OptionChain() {
         </div>
       </CardHeader>
       <CardContent className="p-0">
+      <ScrollArea className="h-72">
         <Table>
           <TableHeader>
             <TableRow>
@@ -83,6 +85,7 @@ export function OptionChain() {
             ))}
           </TableBody>
         </Table>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

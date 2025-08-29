@@ -33,8 +33,8 @@ export function DataSimulator() {
       const [open, high, low, close] = currentCandle.ohlc;
       
       // Simulate a volume spurt, then correlate price change to it
-      const volumeSpurt = Math.random() * 10000;
-      const change = (Math.random() - 0.5) * (volumeSpurt / 500); // Bigger volume = bigger potential price change
+      const volumeSpurt = Math.random() * 1000; // Reduced for more realistic volume increments
+      const change = (Math.random() - 0.5) * (volumeSpurt / 5000); // Reduced price sensitivity
       let newClose = close + change;
       
       // Update H, L, C. Keep O the same.

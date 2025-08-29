@@ -90,29 +90,29 @@ export default function BacktestsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Strategy</TableHead>
-              <TableHead>Symbol</TableHead>
-              <TableHead>Timeframe</TableHead>
-              <TableHead>Period</TableHead>
-              <TableHead className="text-right">Net P&L (₹)</TableHead>
-              <TableHead className="text-right">Win Rate (%)</TableHead>
-              <TableHead className="text-right">Sharpe Ratio</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="px-2">ID</TableHead>
+              <TableHead className="px-2">Strategy</TableHead>
+              <TableHead className="px-2">Symbol</TableHead>
+              <TableHead className="px-2">Timeframe</TableHead>
+              <TableHead className="px-2">Period</TableHead>
+              <TableHead className="px-2 text-right">Net P&L (₹)</TableHead>
+              <TableHead className="px-2 text-right">Win Rate (%)</TableHead>
+              <TableHead className="px-2 text-right">Sharpe Ratio</TableHead>
+              <TableHead className="px-2 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {backtests.map((backtest) => (
               <TableRow key={backtest.id}>
-                <TableCell>
+                <TableCell className="p-2">
                   <Badge variant="outline">{backtest.id}</Badge>
                 </TableCell>
-                <TableCell className="font-medium">{backtest.strategy}</TableCell>
-                <TableCell>{backtest.symbol}</TableCell>
-                <TableCell>{backtest.timeframe}</TableCell>
-                <TableCell className="font-mono text-xs">{backtest.period}</TableCell>
+                <TableCell className="font-medium p-2">{backtest.strategy}</TableCell>
+                <TableCell className="p-2">{backtest.symbol}</TableCell>
+                <TableCell className="p-2">{backtest.timeframe}</TableCell>
+                <TableCell className="font-mono text-xs p-2">{backtest.period}</TableCell>
                 <TableCell
-                  className={`text-right font-semibold ${
+                  className={`text-right font-semibold p-2 ${
                     backtest.netPnl >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}
                 >
@@ -121,9 +121,9 @@ export default function BacktestsPage() {
                     maximumFractionDigits: 2,
                   })}
                 </TableCell>
-                <TableCell className="text-right">{backtest.winRate.toFixed(2)}</TableCell>
-                <TableCell className="text-right">{backtest.sharpe.toFixed(2)}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right p-2">{backtest.winRate.toFixed(2)}</TableCell>
+                <TableCell className="text-right p-2">{backtest.sharpe.toFixed(2)}</TableCell>
+                <TableCell className="text-right p-2">
                     <Button variant="outline" size="sm">View Report</Button>
                 </TableCell>
               </TableRow>

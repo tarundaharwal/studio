@@ -35,13 +35,13 @@ export default function SettingsPage() {
         </TabsList>
         <TabsContent value="profile" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4">
               <CardTitle>Profile</CardTitle>
               <CardDescription>
                 Make changes to your personal information here. Click save when you're done.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
                 <Input id="name" defaultValue="Your Name" />
@@ -51,20 +51,20 @@ export default function SettingsPage() {
                 <Input id="email" type="email" defaultValue="your.email@example.com" disabled />
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="p-4">
               <Button>Save Changes</Button>
             </CardFooter>
           </Card>
         </TabsContent>
         <TabsContent value="api_keys" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4">
               <CardTitle>API Keys</CardTitle>
               <CardDescription>
                 Manage your broker API keys for live trading.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4">
               <div className="space-y-2">
                 <Label htmlFor="api-key">API Key</Label>
                 <Input id="api-key" placeholder="Enter your API key" type="password" />
@@ -74,21 +74,21 @@ export default function SettingsPage() {
                 <Input id="api-secret" placeholder="Enter your API secret" type="password" />
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="p-4">
               <Button>Connect Broker</Button>
             </CardFooter>
           </Card>
         </TabsContent>
         <TabsContent value="notifications" className="space-y-4">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4">
               <CardTitle>Notifications</CardTitle>
               <CardDescription>
                 Configure how you receive notifications.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+            <CardContent className="space-y-6 p-4">
+              <div className="flex flex-row items-center justify-between rounded-lg border p-3">
                 <div className="space-y-0.5">
                   <Label className="text-base">Trade Alerts</Label>
                   <p className="text-sm text-muted-foreground">
@@ -97,7 +97,7 @@ export default function SettingsPage() {
                 </div>
                 <Switch defaultChecked />
               </div>
-              <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="flex flex-row items-center justify-between rounded-lg border p-3">
                 <div className="space-y-0.5">
                   <Label className="text-base">Signal Alerts</Label>
                   <p className="text-sm text-muted-foreground">
@@ -106,7 +106,7 @@ export default function SettingsPage() {
                 </div>
                 <Switch defaultChecked />
               </div>
-              <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="flex flex-row items-center justify-between rounded-lg border p-3">
                 <div className="space-y-0.5">
                   <Label className="text-base">System Status</Label>
                   <p className="text-sm text-muted-foreground">

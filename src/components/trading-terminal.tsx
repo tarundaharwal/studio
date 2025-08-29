@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -177,7 +176,7 @@ export function TradingTerminal() {
   
   return (
     <Card className="overflow-hidden h-full flex flex-col">
-      <CardHeader className="flex flex-col items-start justify-between border-b px-4 py-2 gap-2">
+      <CardHeader className="flex flex-col items-start justify-between border-b p-2 gap-2">
        <div className="flex flex-row items-center justify-between w-full">
             <div className="flex items-center gap-2">
                 <Select defaultValue="NIFTY 50">

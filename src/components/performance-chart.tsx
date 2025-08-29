@@ -44,11 +44,11 @@ const chartConfig = {
 export function PerformanceChart() {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="p-4">
         <CardTitle>Performance</CardTitle>
         <CardDescription>Equity curve over the last month.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-4 pt-0">
         <div className="h-[300px]">
         <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">

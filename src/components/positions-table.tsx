@@ -30,7 +30,7 @@ const positions = [
 export function PositionsTable() {
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="p-4">
+      <CardHeader className="p-2">
         <CardTitle>Positions</CardTitle>
       </CardHeader>
       <CardContent className="p-0 flex-1 overflow-hidden">

@@ -24,13 +24,13 @@ import {
   export function SignalsFeed() {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4">
           <CardTitle>Signals Feed</CardTitle>
           <CardDescription>Live feed of IndMon's trading decisions.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0">
           <ScrollArea className="h-72">
-            <div className="space-y-4">
+            <div className="space-y-3">
               {signals.map((signal, index) => (
                 <div key={index} className="grid grid-cols-[auto_1fr] gap-x-3 text-sm">
                   <div className="font-mono text-muted-foreground">{signal.time}</div>

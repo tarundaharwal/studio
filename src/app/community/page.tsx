@@ -73,8 +73,8 @@ export default function CommunityPage() {
         {/* Left Nav */}
         <div className="md:col-span-1">
           <Card>
-            <CardContent className="p-4">
-              <nav className="flex flex-col gap-2">
+            <CardContent className="p-2">
+              <nav className="flex flex-col gap-1">
                 <Button variant="ghost" className="justify-start">
                   <Rss className="mr-2 h-4 w-4" /> All Discussions
                 </Button>
@@ -92,12 +92,12 @@ export default function CommunityPage() {
         {/* Right Content */}
         <div className="md:col-span-3">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-4">
               <CardTitle>Recent Discussions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4">
               {discussions.map((discussion) => (
-                <div key={discussion.id} className="flex items-start justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
+                <div key={discussion.id} className="flex items-start justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50">
                   <div className="flex items-start gap-4">
                     <Avatar>
                       <AvatarImage src={`https://i.pravatar.cc/150?u=${discussion.author}`} />

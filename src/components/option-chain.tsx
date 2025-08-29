@@ -1,4 +1,3 @@
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,7 +47,7 @@ const pcr = totalPutOI / totalCallOI;
 const OrderPopover = ({ ltp, strike, type }: { ltp: number, strike: number, type: 'CALL' | 'PUT' }) => (
     <Popover>
       <PopoverTrigger asChild>
-        <span className="block w-full h-full cursor-pointer">{ltp.toFixed(2)}</span>
+        <span className="block w-full h-full cursor-pointer p-2">{ltp.toFixed(2)}</span>
       </PopoverTrigger>
       <PopoverContent className="w-60">
         <div className="space-y-4">
@@ -74,8 +73,8 @@ const OrderPopover = ({ ltp, strike, type }: { ltp: number, strike: number, type
 export function OptionChain() {
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="p-4 space-y-4">
-        <div className="flex flex-row items-start justify-between">
+      <CardHeader className="p-2 space-y-2">
+        <div className="flex flex-row items-center justify-between">
             <div>
                 <CardTitle>Option Chain</CardTitle>
                 <CardDescription className="text-xs">NIFTY 50 - 29 AUG 2024</CardDescription>
@@ -93,14 +92,14 @@ export function OptionChain() {
                 </Select>
             </div>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1">
             <div className="flex justify-between items-center text-xs">
                 <span className="font-medium text-muted-foreground">PCR: <span className="font-bold text-foreground">{pcr.toFixed(2)}</span></span>
                 <span className={`font-semibold ${pcr > 1 ? 'text-green-600' : 'text-red-600'}`}>
                     {pcr > 1.2 ? 'Overly Bullish' : pcr > 0.8 ? 'Bullish' : pcr < 0.6 ? 'Overly Bearish' : 'Bearish'}
                 </span>
             </div>
-            <Progress value={pcr / 2 * 100} className="h-2" />
+            <Progress value={pcr / 2 * 100} className="h-1.5" />
         </div>
       </CardHeader>
       <CardContent className="p-0 flex-1">
@@ -108,27 +107,27 @@ export function OptionChain() {
         <Table>
           <TableHeader>
             <TableRow className="text-xs">
-              <TableHead className="w-[100px] text-center p-2">OI (Lacs)</TableHead>
-              <TableHead className="w-[80px] text-center p-2">IV</TableHead>
-              <TableHead className="w-[100px] text-center p-2 bg-red-900/10">CALLS LTP</TableHead>
-              <TableHead className="w-[120px] text-center font-bold text-foreground p-2">Strike</TableHead>
-              <TableHead className="w-[100px] text-center p-2 bg-green-900/10">PUTS LTP</TableHead>
-              <TableHead className="w-[80px] text-center p-2">IV</TableHead>
-              <TableHead className="w-[100px] text-center p-2">OI (Lacs)</TableHead>
+              <TableHead className="w-[80px] text-center p-1">OI (Lacs)</TableHead>
+              <TableHead className="w-[60px] text-center p-1">IV</TableHead>
+              <TableHead className="w-[80px] text-center p-1 bg-red-900/10">CALLS LTP</TableHead>
+              <TableHead className="w-[100px] text-center font-bold text-foreground p-1">Strike</TableHead>
+              <TableHead className="w-[80px] text-center p-1 bg-green-900/10">PUTS LTP</TableHead>
+              <TableHead className="w-[60px] text-center p-1">IV</TableHead>
+              <TableHead className="w-[80px] text-center p-1">OI (Lacs)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {optionChainData.map((row) => (
               <TableRow key={row.strike} className="text-center text-xs">
-                <TableCell className="p-1.5">{ (row.callOI / 100000).toFixed(2) }</TableCell>
-                <TableCell className="p-1.5">{row.callIV.toFixed(1)}</TableCell>
+                <TableCell className="p-1">{ (row.callOI / 100000).toFixed(2) }</TableCell>
+                <TableCell className="p-1">{row.callIV.toFixed(1)}</TableCell>
                 <TableCell className="bg-red-900/10 hover:bg-red-900/20 p-0 m-0"><OrderPopover ltp={row.callLTP} strike={row.strike} type="CALL" /></TableCell>
-                <TableCell className="font-bold text-sm bg-muted/50 p-1.5">
+                <TableCell className="font-bold text-sm bg-muted/50 p-1">
                     <Badge variant={row.strike === 22800 ? "default" : "outline"} className="text-xs px-2 py-0.5">{row.strike}</Badge>
                 </TableCell>
                 <TableCell className="bg-green-900/10 hover:bg-green-900/20 p-0 m-0"><OrderPopover ltp={row.putLTP} strike={row.strike} type="PUT" /></TableCell>
-                <TableCell className="p-1.5">{row.putIV.toFixed(1)}</TableCell>
-                <TableCell className="p-1.5">{ (row.putOI / 100000).toFixed(2) }</TableCell>
+                <TableCell className="p-1">{row.putIV.toFixed(1)}</TableCell>
+                <TableCell className="p-1">{ (row.putOI / 100000).toFixed(2) }</TableCell>
               </TableRow>
             ))}
           </TableBody>

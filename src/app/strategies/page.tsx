@@ -58,11 +58,11 @@ export default function StrategiesPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {strategies.map((strategy) => (
           <Card key={strategy.name}>
-            <CardHeader>
+            <CardHeader className="p-4">
               <CardTitle>{strategy.name}</CardTitle>
-              <CardDescription>{strategy.description}</CardDescription>
+              <CardDescription className="text-ellipsis line-clamp-2 h-[40px]">{strategy.description}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4 pt-0">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-muted-foreground">
                   Status
@@ -91,7 +91,7 @@ export default function StrategiesPage() {
                 </span>
               </div>
             </CardContent>
-            <CardFooter className="flex justify-between border-t pt-4">
+            <CardFooter className="flex justify-between border-t p-4">
               <div className="flex items-center space-x-2">
                 <Switch
                   id={`trading-enabled-${strategy.name}`}

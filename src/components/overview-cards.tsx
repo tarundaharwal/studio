@@ -40,11 +40,11 @@ export function OverviewCards() {
   return (
     <>
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4">
           <CardTitle>Live Status</CardTitle>
           <CardDescription>Real-time system & market health.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0">
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div className="font-medium">Market Status</div>
             <div className="text-right">
@@ -67,17 +67,17 @@ export function OverviewCards() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4">
           <CardTitle>Global Controls</CardTitle>
           <CardDescription>
-            High-level manual overrides for all strategies.
+            Manual overrides for all strategies.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 p-4 pt-0">
           <div className="flex items-center justify-between space-x-2">
             <Label htmlFor="trading-enabled" className="flex flex-col space-y-1">
               <span>Global Trading</span>
-              <span className="font-normal leading-snug text-muted-foreground">
+              <span className="text-xs font-normal leading-snug text-muted-foreground">
                 Enable or disable all trading activity.
               </span>
             </Label>
@@ -86,7 +86,7 @@ export function OverviewCards() {
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full">
+              <Button variant="destructive" className="w-full h-9">
                 <Power className="mr-2 h-4 w-4" /> Emergency Stop
               </Button>
             </AlertDialogTrigger>
@@ -108,13 +108,13 @@ export function OverviewCards() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
           <CardTitle className="text-sm font-medium">
             Today's P&L
           </CardTitle>
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0">
           <div className="text-2xl font-bold text-green-600">+₹1,250.75</div>
           <p className="text-xs text-muted-foreground">
             +1.2% from yesterday
@@ -123,11 +123,11 @@ export function OverviewCards() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
           <CardTitle className="text-sm font-medium">Max Drawdown</CardTitle>
           <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0">
           <div className="text-2xl font-bold">-₹4,530.10</div>
           <p className="text-xs text-muted-foreground">
             -4.5% of total equity

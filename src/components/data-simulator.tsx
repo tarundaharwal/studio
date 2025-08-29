@@ -19,20 +19,19 @@ const getRandom = (min: number, max: number, precision: number = 2) => {
 export function DataSimulator() {
   const {
     timeframe,
-    chartData,
     positions,
     orders,
     optionChain,
     indicators,
     signals,
-    updateChart,
-    addCandle,
     updatePositions,
     updateOverview,
     updateOptionChain,
     updateIndicators,
     addSignal,
     updateOrderStatus,
+    setChartData, // Use the new action
+    addCandle
   } = useStore();
 
   const lastCandleTime = useRef(Date.now());
@@ -49,13 +48,19 @@ export function DataSimulator() {
             const lastCandle = currentChartData[currentChartData.length - 1];
             const newCandle = {
                 time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-                ohlc: [lastCandle.ohlc[3], lastCandle.ohlc[3], lastCandle.ohlc[3], lastCandle.ohlc[3]], // O, H, L, C
+                // Open price is the previous close
+                ohlc: [lastCandle.ohlc[3], lastCandle.ohlc[3], lastCandle.ohlc[3], lastCandle.ohlc[3]],
                 volume: 0,
             };
             addCandle(newCandle);
         } else {
-            // 1. Update Current Candle
-            const currentCandle = { ...currentChartData[currentChartData.length - 1] };
+            // Update Current Candle
+            const newChartData = currentChartData.slice(); // Create a copy
+            const currentCandle = { ...newChartData[newChartData.length - 1] };
+            
+            // Mutate the copy, not the original state object
+            currentCandle.ohlc = [...currentCandle.ohlc];
+
             const [open, high, low, close] = currentCandle.ohlc;
             
             const volumeSpurt = Math.random() * 1000;
@@ -64,11 +69,15 @@ export function DataSimulator() {
             
             const newHigh = Math.max(high, newClose);
             const newLow = Math.min(low, newClose);
+
             currentCandle.ohlc = [open, newHigh, newLow, newClose];
-            
             currentCandle.volume += volumeSpurt;
             
-            updateChart(currentCandle);
+            // Replace the last element in the copied array
+            newChartData[newChartData.length - 1] = currentCandle;
+            
+            // Set the new array in the store
+            setChartData(newChartData);
         }
 
         // 2. Update Positions
@@ -133,7 +142,7 @@ export function DataSimulator() {
     return () => {
         clearInterval(interval);
     };
-  }, [timeframe, addCandle, addSignal, updateChart, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, optionChain, orders, positions, signals, indicators]);
+  }, [timeframe, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, optionChain, orders, positions, signals, indicators, setChartData]);
 
   return null;
 }

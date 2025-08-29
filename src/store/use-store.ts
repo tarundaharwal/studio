@@ -95,6 +95,7 @@ type StoreState = {
     indicators: Indicator[];
     optionChain: Option[];
     signals: Signal[];
+    setChartData: (newData: ChartData[]) => void;
     updateChart: (updatedCandle: ChartData) => void;
     addCandle: (newCandle: ChartData) => void;
     setTimeframe: (newTimeframe: string) => void;
@@ -146,13 +147,13 @@ export const useStore = create<StoreState>((set, get) => ({
     ],
 
     // Actions
+    setChartData: (newData) => set({ chartData: newData }),
     setTimeframe: (newTimeframe) => set({
         timeframe: newTimeframe,
         chartData: generateCandlestickData(78, timeframes[newTimeframe] || 5)
     }),
     updateChart: (updatedCandle) => set(state => {
-        const newChartData = state.chartData.slice(0, -1);
-        newChartData.push(updatedCandle);
+        const newChartData = [...state.chartData.slice(0, -1), updatedCandle];
         return { chartData: newChartData };
     }),
     addCandle: (newCandle) => set(state => ({

@@ -73,34 +73,36 @@ export function OverviewCards() {
           <CardTitle className="text-base">Global Controls</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-2 p-2 pt-0">
-          <div className="flex items-center justify-between space-x-2 p-2 rounded-md bg-muted/50">
+          <div className="flex items-center justify-between space-x-2 rounded-md bg-muted/50 p-2">
             <Label htmlFor="trading-enabled" className="flex flex-col space-y-0.5">
               <span className="text-xs font-medium">Trading Status</span>
-              <Badge variant={tradingStatus === 'ACTIVE' ? 'outline' : 'secondary'} className={`text-xs w-min ${tradingStatus === 'ACTIVE' ? 'text-green-600 border-green-600' : 'text-red-600 border-red-600'}`}>{tradingStatus}</Badge>
+              <Badge variant={tradingStatus === 'ACTIVE' ? 'outline' : 'secondary'} className={`w-min text-xs ${tradingStatus === 'ACTIVE' ? 'border-green-600 text-green-600' : 'border-red-600 text-red-600'}`}>{tradingStatus}</Badge>
             </Label>
             <Switch id="trading-enabled" checked={tradingStatus === 'ACTIVE'} disabled className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:translate-x-4"/>
           </div>
 
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="text-xs">
-                <Power className="mr-1 h-3 w-3" /> Emergency Stop
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action will immediately attempt to liquidate all open
-                  positions and cancel all open orders. This is irreversible.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleEmergencyStop}>Confirm Emergency Stop</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <div className="flex items-center justify-center">
+            <AlertDialog>
+                <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="whitespace-nowrap text-xs">
+                    <Power className="mr-1 h-3 w-3" /> Emergency Stop
+                </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                    This action will immediately attempt to liquidate all open
+                    positions and cancel all open orders. This is irreversible.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleEmergencyStop}>Confirm Emergency Stop</AlertDialogAction>
+                </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardContent>
       </Card>
       

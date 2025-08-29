@@ -85,39 +85,38 @@ const chartConfig = {
 
 // Custom shape for candlestick
 const Candlestick = (props: any) => {
-  const { x, y, width, height, ohlc, low: domainLow, high: domainHigh } = props;
-  if (!ohlc) return null;
-  const [open, high, low, close] = ohlc;
-  const isGain = close >= open;
-  const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-  const stroke = fill;
-
-  const domainRange = domainHigh - domainLow;
-  const priceToY = (price: number) => {
-      if (domainRange === 0) return y + height / 2; // Handle case where all prices are same
-      return y + ((domainHigh - price) / domainRange) * height;
+    const { x, y, width, height, ohlc, low: domainLow, high: domainHigh } = props;
+    if (!ohlc) return null;
+    const [open, high, low, close] = ohlc;
+    const isGain = close >= open;
+    const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+    const stroke = fill;
+  
+    const domainRange = domainHigh - domainLow;
+    if (domainRange <= 0) return null; // Avoid division by zero
+  
+    const priceToY = (price: number) => y + ((domainHigh - price) / domainRange) * height;
+  
+    const bodyY = priceToY(Math.max(open, close));
+    const bodyHeight = Math.abs(priceToY(open) - priceToY(close));
+  
+    const wickHighY = priceToY(high);
+    const wickLowY = priceToY(low);
+  
+    // Fallback for NaN or invalid values
+    if (isNaN(bodyY) || isNaN(bodyHeight) || isNaN(wickHighY) || isNaN(wickLowY)) {
+        return null;
+    }
+  
+    return (
+      <g stroke={stroke} fill="none" strokeWidth={1}>
+        {/* Wick */}
+        <path d={`M ${x + width / 2} ${wickHighY} L ${x + width / 2} ${wickLowY}`} />
+        {/* Body */}
+        <rect x={x} y={bodyY} width={width} height={Math.max(1, bodyHeight)} fill={fill} />
+      </g>
+    );
   };
-
-  const bodyY = priceToY(Math.max(open, close));
-  const bodyHeight = Math.max(1, Math.abs(priceToY(open) - priceToY(close)));
-
-  const wickHighY = priceToY(high);
-  const wickLowY = priceToY(low);
-
-  // Fallback for NaN values
-  if (isNaN(bodyY) || isNaN(bodyHeight)) {
-      return null;
-  }
-
-  return (
-    <g stroke={stroke} fill="none" strokeWidth={1}>
-      {/* Wick */}
-      <path d={`M ${x + width / 2} ${wickHighY} L ${x + width / 2} ${wickLowY}`} />
-      {/* Body */}
-      <rect x={x} y={bodyY} width={width} height={bodyHeight} fill={fill} />
-    </g>
-  );
-};
   
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -352,3 +351,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

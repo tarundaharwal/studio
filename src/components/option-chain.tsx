@@ -40,14 +40,14 @@ const optionChainData = [
 export function OptionChain() {
   return (
     <Card className="h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-row items-center justify-between p-4">
         <div>
             <CardTitle>Option Chain</CardTitle>
-            <CardDescription>NIFTY 50 - 29 AUG 2024</CardDescription>
+            <CardDescription className="text-xs">NIFTY 50 - 29 AUG 2024</CardDescription>
         </div>
         <div className="flex items-center gap-2">
             <Select defaultValue="10">
-                <SelectTrigger className="w-28 text-xs">
+                <SelectTrigger className="w-28 text-xs h-8">
                     <SelectValue placeholder="Strikes" />
                 </SelectTrigger>
                 <SelectContent>
@@ -63,27 +63,27 @@ export function OptionChain() {
         <Table>
           <TableHeader>
             <TableRow className="text-xs">
-              <TableHead className="w-[100px] text-center">OI (Lacs)</TableHead>
-              <TableHead className="w-[80px] text-center">IV</TableHead>
-              <TableHead className="w-[100px] text-center">LTP</TableHead>
-              <TableHead className="w-[120px] text-center font-bold text-foreground">Strike</TableHead>
-              <TableHead className="w-[100px] text-center">LTP</TableHead>
-              <TableHead className="w-[80px] text-center">IV</TableHead>
-              <TableHead className="w-[100px] text-center">OI (Lacs)</TableHead>
+              <TableHead className="w-[100px] text-center p-2">OI (Lacs)</TableHead>
+              <TableHead className="w-[80px] text-center p-2">IV</TableHead>
+              <TableHead className="w-[100px] text-center p-2">LTP</TableHead>
+              <TableHead className="w-[120px] text-center font-bold text-foreground p-2">Strike</TableHead>
+              <TableHead className="w-[100px] text-center p-2">LTP</TableHead>
+              <TableHead className="w-[80px] text-center p-2">IV</TableHead>
+              <TableHead className="w-[100px] text-center p-2">OI (Lacs)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {optionChainData.map((row) => (
               <TableRow key={row.strike} className="text-center text-xs">
-                <TableCell className="bg-red-900/10 text-red-600 p-2">{ (row.callOI / 100000).toFixed(2) }</TableCell>
-                <TableCell className="bg-red-900/10 p-2">{row.callIV.toFixed(1)}</TableCell>
-                <TableCell className="bg-red-900/10 hover:bg-red-900/20 cursor-pointer p-2">{row.callLTP.toFixed(2)}</TableCell>
-                <TableCell className="font-bold text-sm bg-muted/50 p-2">
-                    <Badge variant={row.strike === 22800 ? "default" : "outline"} className="text-sm px-3 py-0.5">{row.strike}</Badge>
+                <TableCell className="bg-red-900/10 text-red-600 p-1.5">{ (row.callOI / 100000).toFixed(2) }</TableCell>
+                <TableCell className="bg-red-900/10 p-1.5">{row.callIV.toFixed(1)}</TableCell>
+                <TableCell className="bg-red-900/10 hover:bg-red-900/20 cursor-pointer p-1.5">{row.callLTP.toFixed(2)}</TableCell>
+                <TableCell className="font-bold text-sm bg-muted/50 p-1.5">
+                    <Badge variant={row.strike === 22800 ? "default" : "outline"} className="text-xs px-2 py-0.5">{row.strike}</Badge>
                 </TableCell>
-                <TableCell className="bg-green-900/10 hover:bg-green-900/20 cursor-pointer p-2">{row.putLTP.toFixed(2)}</TableCell>
-                <TableCell className="bg-green-900/10 p-2">{row.putIV.toFixed(1)}</TableCell>
-                <TableCell className="bg-green-900/10 text-green-600 p-2">{ (row.putOI / 100000).toFixed(2) }</TableCell>
+                <TableCell className="bg-green-900/10 hover:bg-green-900/20 cursor-pointer p-1.5">{row.putLTP.toFixed(2)}</TableCell>
+                <TableCell className="bg-green-900/10 p-1.5">{row.putIV.toFixed(1)}</TableCell>
+                <TableCell className="bg-green-900/10 text-green-600 p-1.5">{ (row.putOI / 100000).toFixed(2) }</TableCell>
               </TableRow>
             ))}
           </TableBody>

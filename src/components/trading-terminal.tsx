@@ -100,7 +100,7 @@ export function TradingTerminal() {
       <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-2">
         <div>
           <Select defaultValue="NIFTY 50">
-            <SelectTrigger className="w-40 border-0 text-base font-bold shadow-none focus:ring-0">
+            <SelectTrigger className="w-40 border-0 text-base font-bold shadow-none focus:ring-0 h-8">
               <SelectValue placeholder="Select Instrument" />
             </SelectTrigger>
             <SelectContent>
@@ -112,7 +112,7 @@ export function TradingTerminal() {
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="font-medium text-green-600">22,780.50</span>
-          <span className="text-green-600">(+0.34%)</span>
+          <span className="text-green-600 text-xs">(+0.34%)</span>
         </div>
       </CardHeader>
       <CardContent className="p-0 flex-1">
@@ -120,7 +120,7 @@ export function TradingTerminal() {
             <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={{ top: 15, right: 15, bottom: 5, left: -25 }}
+              margin={{ top: 15, right: 15, bottom: 0, left: -25 }}
             >
               <CartesianGrid vertical={false} strokeDasharray="3 3" />
               <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval={8} />

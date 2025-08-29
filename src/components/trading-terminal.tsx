@@ -25,7 +25,6 @@ import {
     Cell,
     CartesianGrid,
 } from "recharts"
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
 import { Button } from "./ui/button"
 import { Minus, Plus, CandlestickChart, BarChart3 } from "lucide-react"
@@ -63,16 +62,21 @@ const calculateHeikinAshi = (data: ChartData[]) => {
     return haData;
 };
 
+
 // --- Custom Shape Components for Dynamic Coloring ---
 
+// Custom shape for wick (thin line-like bar)
 const CustomWick = (props: any) => {
     const { x, y, width, height, payload } = props;
+    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
   
+// Custom shape for body (thicker bar)
 const CustomBody = (props: any) => {
     const { x, y, width, height, payload } = props;
+    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke="none" />;
 };
@@ -82,9 +86,13 @@ const getVolumeColor = (isGain: boolean) => isGain ? 'hsl(var(--chart-2-light))'
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      if (!data || !data.original_ohlc) return null;
+      // Use original_ohlc from the first relevant payload
+      const pricePayload = payload.find(p => p.dataKey === 'candleBody' || p.dataKey === 'candleWick');
+      const volumePayload = payload.find(p => p.dataKey === 'volume');
       
+      if (!pricePayload || !pricePayload.payload.original_ohlc) return null;
+      
+      const data = pricePayload.payload;
       const [open, high, low, close] = data.original_ohlc;
 
       return (
@@ -95,8 +103,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="text-muted-foreground">H:</span><span className="font-mono text-right">{high.toFixed(2)}</span>
             <span className="text-muted-foreground">L:</span><span className="font-mono text-right">{low.toFixed(2)}</span>
             <span className="text-muted-foreground">C:</span><span className="font-mono text-right">{close.toFixed(2)}</span>
-            {data.volume && <span className="text-muted-foreground">Vol:</span>}
-            {data.volume && <span className="font-mono text-right">{(data.volume / 1000).toFixed(1)}k</span>}
+            {volumePayload && <span className="text-muted-foreground">Vol:</span>}
+            {volumePayload && <span className="font-mono text-right">{(volumePayload.value / 1000).toFixed(1)}k</span>}
           </div>
         </div>
       );
@@ -231,7 +239,6 @@ export function TradingTerminal() {
       <CardContent className="p-0 flex-1">
         <ScrollArea className="w-full h-full">
             <div className="h-full" style={{ width: '100%', minWidth: `${chartData.length * (CANDLE_WIDTH + 4)}px` }}>
-                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 
                 <ResponsiveContainer width="100%" height="75%">
                     <ComposedChart data={chartData} syncId="stockChart" margin={{ top: 20, right: 45, bottom: 0, left: 5 }}>
@@ -253,12 +260,11 @@ export function TradingTerminal() {
                         
                         <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH} isAnimationActive={false}>
                             {chartData.map((entry, index) => (
-                            <Cell key={`cell-volume-${index}`} fill={getVolumeColor(entry.isGain)} />
+                                <Cell key={`cell-volume-${index}`} fill={getVolumeColor(entry.isGain)} />
                             ))}
                         </Bar>
                     </ComposedChart>
                 </ResponsiveContainer>
-                </div>
             </div>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>

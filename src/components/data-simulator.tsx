@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { useStore } from '@/store/use-store';
 
 const timeframes: { [key: string]: number } = {
+    '1m': 1 * 60 * 1000,
     '5m': 5 * 60 * 1000,
     '15m': 15 * 60 * 1000,
     '1h': 60 * 60 * 1000,
@@ -146,3 +147,5 @@ export function DataSimulator() {
 
   return null;
 }
+
+    

@@ -229,8 +229,9 @@ export function TradingTerminal() {
        <div className="flex items-center justify-between w-full gap-2">
             <div className="flex items-center gap-1">
                 <ToggleGroup type="single" value={timeframe} size="sm" className="h-7" onValueChange={(value) => value && setTimeframe(value)}>
-                    <ToggleGroupItem value="5m" className="text-xs px-2 h-full">5m</ToggleGroupItem>
-                    <ToggleGroupItem value="15m" className="text-xs px-2 h-full">15m</ToggleGroupItem>
+                    <ToggleGroupItem value="1m" className="text-xs px-2 h-full">1M</ToggleGroupItem>
+                    <ToggleGroupItem value="5m" className="text-xs px-2 h-full">5M</ToggleGroupItem>
+                    <ToggleGroupItem value="15m" className="text-xs px-2 h-full">15M</ToggleGroupItem>
                     <ToggleGroupItem value="1h" className="text-xs px-2 h-full">1H</ToggleGroupItem>
                 </ToggleGroup>
 
@@ -334,3 +335,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

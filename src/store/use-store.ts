@@ -30,6 +30,7 @@ const generateCandlestickData = (count: number, timeframeMinutes: number) => {
 }
 
 const timeframes: { [key: string]: number } = {
+    '1m': 1,
     '5m': 5,
     '15m': 15,
     '1h': 60,
@@ -96,7 +97,6 @@ type StoreState = {
     optionChain: Option[];
     signals: Signal[];
     setChartData: (newData: ChartData[]) => void;
-    updateChart: (updatedCandle: ChartData) => void;
     addCandle: (newCandle: ChartData) => void;
     setTimeframe: (newTimeframe: string) => void;
     updatePositions: (newPositions: Position[]) => void;
@@ -152,10 +152,6 @@ export const useStore = create<StoreState>((set, get) => ({
         timeframe: newTimeframe,
         chartData: generateCandlestickData(78, timeframes[newTimeframe] || 5)
     }),
-    updateChart: (updatedCandle) => set(state => {
-        const newChartData = [...state.chartData.slice(0, -1), updatedCandle];
-        return { chartData: newChartData };
-    }),
     addCandle: (newCandle) => set(state => ({
         chartData: [...state.chartData.slice(1), newCandle]
     })),
@@ -172,3 +168,5 @@ export const useStore = create<StoreState>((set, get) => ({
         return { orders: newOrders };
     }),
 }));
+
+    

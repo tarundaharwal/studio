@@ -17,7 +17,7 @@ const generateCandlestickData = (count: number) => {
       const high = open + getRandom(0, 25);
       const low = open - getRandom(0, 25);
       const close = getRandom(low, high);
-      const volume = getRandom(500000, 1000000);
+      const volume = getRandom(50000, 200000);
       lastClose = close;
       data.push({
         time: new Date(Date.now() - (count - i) * 300000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),

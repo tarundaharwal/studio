@@ -108,7 +108,7 @@ export function DataSimulator() {
     }, 2000); // Update every 2 seconds
 
     return () => clearInterval(interval);
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, [addSignal, chartData, indicators, optionChain, orders, positions, updateChart, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions]); // Empty dependency array ensures this runs only once on mount
 
   return null; // This component does not render anything
 }

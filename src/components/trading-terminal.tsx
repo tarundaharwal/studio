@@ -29,7 +29,7 @@ import {
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
 import { Button } from "./ui/button"
-import { Minus, Plus, Waves, Tally5, CandlestickChart, LineChartIcon, BarChart3 } from "lucide-react"
+import { Minus, Plus, Waves, Tally5, CandlestickChart, LineChart as LineChartIcon, BarChart3 } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
 import { useStore, ChartData } from "@/store/use-store"
 
@@ -152,6 +152,7 @@ export function TradingTerminal() {
   const chartDataWithIndicators = React.useMemo(() => {
     if (!fullChartData || fullChartData.length === 0) return [];
     
+    // Heikin-Ashi calculation now happens on the client-side for display purposes
     const baseData = candleType === 'heikin-ashi' ? calculateHeikinAshi(fullChartData) : fullChartData;
     
     const sma20 = calculateSMA(baseData, 20);
@@ -162,9 +163,13 @@ export function TradingTerminal() {
     return baseData.map((d, i) => {
         const [open, high, low, close] = d.ohlc;
         const isGain = close >= open;
+        const originalCandle = fullChartData[i];
+        const originalIsGain = originalCandle.ohlc[3] >= originalCandle.ohlc[0];
+
         return { 
             ...d, 
             isGain,
+            originalIsGain, // For volume color
             // For candlestick
             body: [open, close],
             wick: [low, high],
@@ -220,9 +225,14 @@ export function TradingTerminal() {
       )
   }
   
-  const yDomain = [
+  const yDomainPrice = [
     (dataMin: number) => Math.floor(dataMin * 0.98),
     (dataMax: number) => Math.ceil(dataMax * 1.02)
+  ];
+
+  const yDomainVolume = [
+      0,
+      (dataMax: number) => dataMax * 4
   ];
 
   return (
@@ -296,7 +306,7 @@ export function TradingTerminal() {
                     <YAxis 
                         yAxisId="right"
                         orientation="right"
-                        domain={yDomain}
+                        domain={yDomainPrice}
                         tickFormatter={(value) => value.toLocaleString()}
                         tickLine={false}
                         axisLine={false}
@@ -308,7 +318,7 @@ export function TradingTerminal() {
                     <YAxis
                         yAxisId="left"
                         orientation="left"
-                        domain={[0, (dataMax: number) => dataMax * 4]}
+                        domain={yDomainVolume}
                         tickCount={4}
                         tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`}
                         tickLine={false}
@@ -345,7 +355,7 @@ export function TradingTerminal() {
                     {/* Volume Bar */}
                     <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH * 0.8}>
                          {chartData.map((entry, index) => (
-                            <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
+                            <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
                         ))}
                     </Bar>
 

@@ -112,15 +112,13 @@ const timeframes: { [key: string]: number } = {
     '1h': 60 * 60 * 1000,
 };
 
-const getNextTime = (time: string, timeframeMinutes: number): string => {
+// A more robust way to get the next candle time
+const getNextTime = (lastTime: string, timeframeMinutes: number): string => {
+    const [hours, minutes] = lastTime.split(':').map(Number);
     const date = new Date();
-    const [hours, minutes] = time.split(':').map(Number);
-    // Find the last candle's time in today's context
-    const lastCandleDate = new Date();
-    lastCandleDate.setHours(hours, minutes, 0, 0);
-
-    const newCandleDate = new Date(lastCandleDate.getTime() + timeframeMinutes * 60 * 1000);
-    return newCandleDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    date.setHours(hours, minutes, 0, 0);
+    date.setMinutes(date.getMinutes() + timeframeMinutes);
+    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 };
 
 
@@ -148,27 +146,26 @@ export const simulationFlow = ai.defineFlow(
     const newPrice = lastKnownPrice + change;
 
     // Determine if the timeframe for the current candle has elapsed
-    const now = Date.now();
     const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
-    const timeSinceLastTick = now - lastTickTime;
-
-    // This is a simplified way to check if a candle period has passed.
-    // In a real scenario, you'd align with actual market time.
-    const timeframeMinutes = timeframeDuration / (60 * 1000);
-    const lastCandleDate = new Date();
-    const [hours, minutes] = currentCandle.time.split(':').map(Number);
-    lastCandleDate.setHours(hours, minutes, 0, 0);
     
+    const [lastCandleHours, lastCandleMinutes] = currentCandle.time.split(':').map(Number);
+    const lastCandleDate = new Date();
+    lastCandleDate.setHours(lastCandleHours, lastCandleMinutes, 0, 0);
+    
+    // We need to check if the current time has crossed into the next timeframe interval
+    const now = Date.now();
     const isNewCandleTime = (now - lastCandleDate.getTime()) >= timeframeDuration;
 
     if (isNewCandleTime) {
         // Finalize the current candle (it's already been updated in previous ticks)
         // and create a new one.
+        const timeframeMinutes = timeframeDuration / (60 * 1000);
         const newTime = getNextTime(currentCandle.time, timeframeMinutes);
+        const prevCandleForLogic = newChartData.length > 1 ? newChartData[newChartData.length - 2] : currentCandle;
 
         // --- TRADING LOGIC (Only on new candle & if trading is active) ---
         if (tradingStatus === 'ACTIVE') {
-            const priceAction = currentCandle.ohlc[3] - (newChartData[newChartData.length - 2]?.ohlc[3] || currentCandle.ohlc[3]);
+            const priceAction = currentCandle.ohlc[3] - prevCandleForLogic.ohlc[3];
             const hasOpenPosition = positions.length > 0;
             
             if (Math.random() < 0.1) { // 10% chance to trade
@@ -184,7 +181,7 @@ export const simulationFlow = ai.defineFlow(
                     
                     const pnlFromTrade = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
                     overview.equity += pnlFromTrade;
-                    overview.pnl += pnlFromTrade; // This PNL is now fully realized
+                    // overview.pnl is unrealized + realized, so we don't add here. It gets recalculated below.
                     
                     positions = positions.filter(p => p.symbol !== positionToClose.symbol);
                     newSignals.push({ time: nowLocale, strategy: 'SIM-TREND', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: 'Simulated bearish momentum.'});
@@ -192,7 +189,7 @@ export const simulationFlow = ai.defineFlow(
             }
         }
         
-        // Create the new candle for the next period
+        // Create the new candle for the next period, starting with the current price
         const newCandle = {
             time: newTime,
             ohlc: [newPrice, newPrice, newPrice, newPrice] as [number, number, number, number],
@@ -222,26 +219,24 @@ export const simulationFlow = ai.defineFlow(
         if (ind.name.includes('RSI')) newValue = Math.max(0, Math.min(100, ind.value + priceMovement * 2));
         else if (ind.name.includes('MACD')) newValue = ind.value + priceMovement / 10;
         else if (ind.name.includes('ADX')) newValue = Math.max(10, ind.value + (Math.abs(priceMovement) > 1 ? 0.5 : -0.2));
-        return {...ind, value: newValue};
+        return {...ind, value: parseFloat(newValue.toFixed(2))};
     });
 
-    // --- UPDATE PORTFOLIO DATA (if trading active) ---
-    if (tradingStatus === 'ACTIVE') {
-        let totalUnrealizedPnl = 0;
-        positions = positions.map(pos => {
-            const newLtp = newClosePrice; // Simplified: all positions track main instrument
-            const pnl = (newLtp - pos.avgPrice) * pos.qty;
-            totalUnrealizedPnl += pnl;
-            return { ...pos, ltp: newLtp, pnl: pnl };
-        });
-        
-        const realizedPnl = overview.equity - overview.initialEquity;
-        overview.pnl = realizedPnl + totalUnrealizedPnl;
-        const currentTotalEquity = overview.equity + totalUnrealizedPnl;
-        
-        overview.peakEquity = Math.max(overview.peakEquity, currentTotalEquity);
-        overview.maxDrawdown = Math.max(overview.maxDrawdown, overview.peakEquity - currentTotalEquity);
-    }
+    // --- UPDATE PORTFOLIO DATA ---
+    let totalUnrealizedPnl = 0;
+    positions = positions.map(pos => {
+        const newLtp = newClosePrice; // Simplified: all positions track main instrument
+        const pnl = (newLtp - pos.avgPrice) * pos.qty;
+        totalUnrealizedPnl += pnl;
+        return { ...pos, ltp: newLtp, pnl: parseFloat(pnl.toFixed(2)) };
+    });
+    
+    const realizedPnl = overview.equity - overview.initialEquity;
+    overview.pnl = parseFloat((realizedPnl + totalUnrealizedPnl).toFixed(2));
+    const currentTotalEquity = overview.equity + totalUnrealizedPnl;
+    
+    overview.peakEquity = Math.max(overview.peakEquity, currentTotalEquity);
+    overview.maxDrawdown = Math.max(overview.maxDrawdown, overview.peakEquity - currentTotalEquity);
     
     // Return the new state
     return {

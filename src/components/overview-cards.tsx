@@ -35,7 +35,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 
 export function OverviewCards() {
-  const { overview, emergencyStop, tradingStatus, toggleTradingStatus } = useStore();
+  const { overview, tradingStatus, toggleTradingStatus } = useStore();
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
 
@@ -44,12 +44,14 @@ export function OverviewCards() {
   }, []);
 
   const handleEmergencyStop = () => {
-    emergencyStop();
+    // This action will now be handled by the backend logic.
+    // The frontend can show a toast, but the core logic is server-side.
     toast({
       title: "Emergency Stop Activated!",
-      description: "All positions are being liquidated and pending orders cancelled.",
+      description: "A signal has been sent to liquidate all positions.",
       variant: "destructive",
     })
+    // In a real app, you might call a specific '/api/emergency-stop' route
   }
 
   const handleToggleTrading = (checked: boolean) => {
@@ -92,18 +94,18 @@ export function OverviewCards() {
 
           <div className="flex items-center justify-center">
             <AlertDialog>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="h-10 w-12">
-                                <Power className="h-5 w-5" />
-                            </Button>
-                        </AlertDialogTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Emergency Stop</p>
-                    </TooltipContent>
-                </Tooltip>
+              <Tooltip>
+                  <TooltipTrigger asChild>
+                      <AlertDialogTrigger asChild>
+                          <Button variant="destructive" className="h-10 w-12">
+                              <Power className="h-5 w-5" />
+                          </Button>
+                      </AlertDialogTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                      <p>Emergency Stop</p>
+                  </TooltipContent>
+              </Tooltip>
                 <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

@@ -83,7 +83,7 @@ export function OverviewCards() {
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full text-xs">
+              <Button variant="destructive" className="text-xs">
                 <Power className="mr-1 h-3 w-3" /> Emergency Stop
               </Button>
             </AlertDialogTrigger>

@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import * as React from "react"
@@ -25,6 +26,7 @@ import {
   ComposedChart,
   Line,
   Area,
+  Cell,
 } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
@@ -285,7 +287,7 @@ export function TradingTerminal() {
                                 {chartData.map((entry, index) => {
                                     const [open, , , close] = entry.ohlc;
                                     const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-                                    return <Bar key={`bar-${index}`} fill={fill} />;
+                                    return <Cell key={`cell-${index}`} fill={fill} />;
                                 })}
                             </Bar>
                         </BarChart>

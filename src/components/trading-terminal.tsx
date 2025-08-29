@@ -91,20 +91,34 @@ const Candlestick = (props: any) => {
     const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     const stroke = fill;
   
-    const bodyHeight = Math.max(1, Math.abs(y - (isGain ? y + (open-close) : y + (close-open))  ));
-    const bodyY = isGain ? y + (close - high) : y + (open - high);
+    const wickHeight = height;
+    const wickY = y;
 
-    const highWickY = y;
-    const lowWickY = y + (high - low);
-
-    const bodyAbsoluteY = isGain ? y + (high - close) : y + (high-open)
+    const priceRange = high - low;
+    
+    // Prevent division by zero
+    if (priceRange === 0) {
+        return (
+            <g stroke={stroke} fill="none" strokeWidth={1}>
+                {/* Wick */}
+                <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
+                {/* Body (flat line) */}
+                <path d={`M ${x} ${y + height / 2} L ${x + width} ${y + height / 2}`} />
+            </g>
+        );
+    }
+  
+    const bodyHeight = Math.abs(wickHeight * (open - close) / priceRange);
+    const bodyY = isGain 
+      ? wickY + (wickHeight * (high - close) / priceRange)
+      : wickY + (wickHeight * (high - open) / priceRange);
 
     return (
       <g stroke={stroke} fill="none" strokeWidth={1}>
         {/* Wick */}
-        <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
+        <path d={`M ${x + width / 2} ${wickY} L ${x + width / 2} ${wickY + wickHeight}`} />
         {/* Body */}
-        <rect x={x} y={isGain ? y + (height * (high-close))/(high-low) : y + (height * (high-open))/(high-low)} width={width} height={Math.abs((height*(open-close))/(high-low))} fill={fill} />
+        <rect x={x} y={bodyY} width={width} height={bodyHeight} fill={fill} />
       </g>
     );
   };

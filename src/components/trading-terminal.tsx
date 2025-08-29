@@ -64,38 +64,6 @@ const calculateHeikinAshi = (data: ChartData[]) => {
     return haData;
 };
 
-// A custom shape for the candlestick
-const Candle = (props: any) => {
-  const { x, y, width, height, isGain, original_ohlc, yAxis } = props;
-  
-  if (!original_ohlc || !yAxis || !yAxis.scale) {
-    return null;
-  }
-  
-  const ohlcY = yAxis.scale;
-  const [open, high, low, close] = original_ohlc;
-
-  const yOpen = ohlcY(open);
-  const yClose = ohlcY(close);
-  const yHigh = ohlcY(high);
-  const yLow = ohlcY(low);
-
-  const bodyY = Math.min(yOpen, yClose);
-  const bodyHeight = Math.abs(yOpen - yClose);
-  const wickX = x + width / 2;
-
-  const color = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-
-  return (
-    <g>
-      {/* Wick */}
-      <path d={`M ${wickX},${yHigh} L ${wickX},${yLow}`} stroke={color} />
-      {/* Body */}
-      <rect x={x} y={bodyY} width={width} height={bodyHeight > 1 ? bodyHeight : 1} fill={color} />
-    </g>
-  );
-};
-
 
 const chartConfig = {
   price: {
@@ -162,7 +130,7 @@ export function TradingTerminal() {
             ...d, 
             isGain,
             originalIsGain, // For volume color
-            original_ohlc: originalCandle.ohlc, // For tooltip and custom shape
+            original_ohlc: originalCandle.ohlc, // For tooltip
             
             // This is the structure Recharts needs for floating bars
             candleBody: [open, close],
@@ -296,8 +264,7 @@ export function TradingTerminal() {
                         axisLine={false}
                         tickMargin={8}
                         fontSize={10}
-                        height="75%"
-                        y="0%"
+                        width={60}
                     />
 
                     <YAxis
@@ -311,8 +278,6 @@ export function TradingTerminal() {
                         tickMargin={8}
                         fontSize={10}
                         hide={true}
-                        height="25%"
-                        y="75%"
                     />
                     
                     <Tooltip content={<CustomTooltip />} />
@@ -320,16 +285,25 @@ export function TradingTerminal() {
                     {candleType === 'line' ? (
                          <Line type="monotone" dataKey="closePrice" strokeWidth={2} yAxisId="right" dot={false} name="Price" stroke="hsl(var(--primary))"/>
                     ) : (
-                       <Bar dataKey="ohlc" yAxisId="right" shape={<Candle />} barSize={CANDLE_WIDTH}>
-                            {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}/>
-                            ))}
-                        </Bar>
+                        <>
+                            {/* Candle Wicks */}
+                            <Bar dataKey="candleWick" yAxisId="right" barSize={1} zIndex={1}>
+                                {chartData.map((entry, index) => (
+                                    <Cell key={`wick-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}/>
+                                ))}
+                            </Bar>
+                             {/* Candle Bodies */}
+                            <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH} zIndex={2}>
+                                {chartData.map((entry, index) => (
+                                    <Cell key={`body-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}/>
+                                ))}
+                            </Bar>
+                        </>
                     )}
 
 
                     {/* Volume Bar */}
-                    <Bar dataKey="volume" yAxisId="left" y={0}>
+                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH} y={0}>
                          {chartData.map((entry, index) => (
                             <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
                         ))}
@@ -342,3 +316,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

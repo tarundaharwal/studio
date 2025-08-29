@@ -46,14 +46,14 @@ const chartConfig = {
 export function IndicatorCards() {
   return (
     <Card className="h-full flex flex-col">
-        <CardHeader>
+        <CardHeader className="py-4">
           <CardTitle>Market Indicators</CardTitle>
-          <CardDescription>RSI, MACD, ADX, and ATR</CardDescription>
+          <CardDescription className="text-xs">RSI, MACD, ADX, and ATR</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 pb-0">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 20, left: -10 }}>
+              <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 10, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                     dataKey="x"
@@ -67,7 +67,7 @@ export function IndicatorCards() {
                     axisLine={false}
                     tickMargin={8}
                     width={30}
-                    fontSize={10}
+                    fontSize={9}
                 />
                 <Tooltip
                     cursor={false}

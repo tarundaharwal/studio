@@ -163,7 +163,7 @@ export function TradingTerminal() {
                 <ResponsiveContainer width="100%" height="70%">
                     <ComposedChart
                         data={chartData}
-                        margin={{ top: 15, right: 15, bottom: 0, left: -25 }}
+                        margin={{ top: 10, right: 15, bottom: 0, left: -25 }}
                     >
                         <CartesianGrid vertical={false} strokeDasharray="3 3" />
                         <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval={6} tick={false} />
@@ -174,7 +174,7 @@ export function TradingTerminal() {
                             tickLine={false}
                             axisLine={false}
                             tickMargin={8}
-                            fontSize={10}
+                            fontSize={9}
                         />
                         <Tooltip
                             content={<CustomTooltip />}
@@ -195,11 +195,11 @@ export function TradingTerminal() {
                 <ResponsiveContainer width="100%" height="30%">
                     <BarChart
                         data={chartData}
-                        margin={{ top: 0, right: 15, bottom: 20, left: -25 }}
+                        margin={{ top: 5, right: 15, bottom: 15, left: -25 }}
                     >
                         <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval={6} />
-                        <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval={6} />
+                        <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
                         <Tooltip
                             cursor={{ strokeDasharray: '3 3' }}
                             content={<></>}

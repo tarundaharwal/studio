@@ -7,7 +7,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
-import { ScrollArea } from './ui/scroll-area';
 
 const positions = [
   {
@@ -32,8 +31,8 @@ export function PositionsTable() {
       <CardHeader className="p-4">
         <CardTitle>Positions</CardTitle>
       </CardHeader>
-      <CardContent className="p-0 flex-1 overflow-x-auto">
-        <ScrollArea className="h-full">
+      <CardContent className="p-0 flex-1 overflow-hidden">
+        <div className="h-full overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="text-xs">
@@ -60,7 +59,7 @@ export function PositionsTable() {
               ))}
             </TableBody>
           </Table>
-        </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );

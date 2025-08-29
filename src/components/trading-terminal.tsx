@@ -367,7 +367,7 @@ export function TradingTerminal() {
                         <Bar
                             dataKey="price"
                             yAxisId="right"
-                            shape={(props) => <Candle {...props} />}
+                            shape={<Candle />}
                         >
                         {chartData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />

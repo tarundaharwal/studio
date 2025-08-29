@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import * as React from "react"
@@ -132,18 +133,25 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   };
 
   const Candle = (props: any) => {
-    const { x, y, width, height, payload, isGain } = props;
+    const { x, y, width, height, payload, yAxis } = props;
+    if (!payload || !payload.ohlc) return null;
+
+    const isGain = payload.ohlc[3] >= payload.ohlc[0];
     const { ohlc } = payload;
     const [open, high, low, close] = ohlc;
+
+    if (!yAxis || typeof yAxis.scale !== 'function') {
+        return null;
+    }
   
-    const ohlcY = props.yAxis.scale;
+    const ohlcY = yAxis.scale;
     const yOpen = ohlcY(open);
     const yClose = ohlcY(close);
     const yHigh = ohlcY(high);
     const yLow = ohlcY(low);
   
     const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-    const bodyHeight = Math.abs(yOpen - yClose);
+    const bodyHeight = Math.max(1, Math.abs(yOpen - yClose));
     const bodyY = Math.min(yOpen, yClose);
   
     return (
@@ -359,10 +367,10 @@ export function TradingTerminal() {
                         <Bar
                             dataKey="price"
                             yAxisId="right"
-                            shape={<Candle />}
+                            shape={(props) => <Candle {...props} />}
                         >
                         {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} isGain={entry.isGain} />
+                            <Cell key={`cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
                         ))}
                         </Bar>
                     )}

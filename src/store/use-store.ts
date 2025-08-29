@@ -97,6 +97,8 @@ export type Signal = {
 }
 
 type TradingStatus = 'ACTIVE' | 'STOPPED';
+type CandleType = 'candlestick' | 'heikin-ashi' | 'line';
+
 
 export type StoreState = {
     chartData: ChartData[];
@@ -108,7 +110,8 @@ export type StoreState = {
     optionChain: Option[];
     signals: Signal[];
     tradingStatus: TradingStatus;
-    lastTickTime: number; // Added to track when the last tick was processed
+    lastTickTime: number; 
+    candleType: CandleType;
     setChartData: (newData: ChartData[]) => void;
     setTimeframe: (newTimeframe: string) => void;
     updatePositions: (newPositions: Position[]) => void;
@@ -118,7 +121,8 @@ export type StoreState = {
     updateOptionChain: (newOptionChain: Option[]) => void;
     addSignal: (newSignal: Signal) => void;
     toggleTradingStatus: () => void;
-    setLastTickTime: (time: number) => void; // Added action to update time
+    setLastTickTime: (time: number) => void; 
+    setCandleType: (type: CandleType) => void;
 };
 
 const INITIAL_EQUITY = 500000;
@@ -128,6 +132,7 @@ export const useStore = create<StoreState>((set, get) => ({
     chartData: generateCandlestickData(78, timeframes['5m']),
     timeframe: '5m',
     tradingStatus: 'ACTIVE',
+    candleType: 'candlestick',
     positions: [],
     orders: [],
     overview: {
@@ -157,6 +162,7 @@ export const useStore = create<StoreState>((set, get) => ({
     lastTickTime: Date.now(),
 
     // Actions
+    setCandleType: (type) => set({ candleType: type }),
     setChartData: (newData) => set({ chartData: newData }),
     setTimeframe: (newTimeframe) => set((state) => {
         const newChartData = generateCandlestickData(78, timeframes[newTimeframe] || 5);

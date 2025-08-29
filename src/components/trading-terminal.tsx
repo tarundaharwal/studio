@@ -29,13 +29,42 @@ import {
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
 import { Button } from "./ui/button"
-import { Minus, Plus, Waves, Tally5 } from "lucide-react"
+import { Minus, Plus, Waves, Tally5, CandlestickChart, LineChartIcon, BarChart3 } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
-import { useStore } from "@/store/use-store"
+import { useStore, ChartData } from "@/store/use-store"
 
 const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
 const CANDLE_WIDTH = 10;
+
+
+const calculateHeikinAshi = (data: ChartData[]) => {
+    const haData: ChartData[] = [];
+    data.forEach((d, i) => {
+        const [open, high, low, close] = d.ohlc;
+
+        const haClose = (open + high + low + close) / 4;
+        let haOpen;
+
+        if (i === 0) {
+            haOpen = (open + close) / 2;
+        } else {
+            const prevHaOpen = haData[i-1].ohlc[0];
+            const prevHaClose = haData[i-1].ohlc[3];
+            haOpen = (prevHaOpen + prevHaClose) / 2;
+        }
+
+        const haHigh = Math.max(high, haOpen, haClose);
+        const haLow = Math.min(low, haOpen, haClose);
+
+        haData.push({
+            ...d,
+            ohlc: [haOpen, haHigh, haLow, haClose],
+        });
+    });
+    return haData;
+};
+
 
 const calculateSMA = (data: any[], period: number) => {
     return data.map((d, i, arr) => {
@@ -104,7 +133,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   };
 
 export function TradingTerminal() {
-  const { chartData: fullChartData, timeframe, setTimeframe } = useStore();
+  const { chartData: fullChartData, timeframe, setTimeframe, candleType, setCandleType } = useStore();
   const [visibleCandles, setVisibleCandles] = React.useState(50);
   const [indicator, setIndicator] = React.useState('sma');
   
@@ -121,13 +150,16 @@ export function TradingTerminal() {
   }, []);
 
   const chartDataWithIndicators = React.useMemo(() => {
-    if (!fullChartData) return [];
-    const sma20 = calculateSMA(fullChartData, 20);
-    const stdDev20 = calculateStdDev(fullChartData.map(d => d.ohlc[3]), 20);
-    const sma50 = calculateSMA(fullChartData, 50);
-    const sma100 = calculateSMA(fullChartData, 100);
+    if (!fullChartData || fullChartData.length === 0) return [];
+    
+    const baseData = candleType === 'heikin-ashi' ? calculateHeikinAshi(fullChartData) : fullChartData;
+    
+    const sma20 = calculateSMA(baseData, 20);
+    const stdDev20 = calculateStdDev(baseData.map(d => d.ohlc[3]), 20);
+    const sma50 = calculateSMA(baseData, 50);
+    const sma100 = calculateSMA(baseData, 100);
 
-    return fullChartData.map((d, i) => {
+    return baseData.map((d, i) => {
         const [open, high, low, close] = d.ohlc;
         const isGain = close >= open;
         return { 
@@ -136,6 +168,7 @@ export function TradingTerminal() {
             // For candlestick
             body: [open, close],
             wick: [low, high],
+            closePrice: d.ohlc[3], // For line chart
             // For indicators
             sma50: sma50[i],
             sma100: sma100[i],
@@ -144,7 +177,7 @@ export function TradingTerminal() {
             bb_lower: sma20[i] && stdDev20[i] ? sma20[i]! - (stdDev20[i]! * 2) : null,
         }
     });
-  }, [fullChartData]);
+  }, [fullChartData, candleType]);
 
   const chartData = chartDataWithIndicators.slice(-visibleCandles);
   const maxCandles = fullChartData.length;
@@ -221,6 +254,12 @@ export function TradingTerminal() {
                     <ToggleGroupItem value="15m" className="text-xs px-2 h-full">15M</ToggleGroupItem>
                     <ToggleGroupItem value="1h" className="text-xs px-2 h-full">1H</ToggleGroupItem>
                 </ToggleGroup>
+                
+                <ToggleGroup type="single" value={candleType} size="sm" className="h-7" onValueChange={(value) => value && setCandleType(value as any)}>
+                    <ToggleGroupItem value="candlestick" className="text-xs px-1 h-full"><CandlestickChart className="h-4 w-4" /></ToggleGroupItem>
+                    <ToggleGroupItem value="heikin-ashi" className="text-xs px-1 h-full"><BarChart3 className="h-4 w-4" /></ToggleGroupItem>
+                    <ToggleGroupItem value="line" className="text-xs px-1 h-full"><LineChartIcon className="h-4 w-4" /></ToggleGroupItem>
+                </ToggleGroup>
 
                  <ToggleGroup type="single" defaultValue={indicator} size="sm" className="h-7" onValueChange={(value) => value && setIndicator(value)}>
                     <ToggleGroupItem value="sma" className="text-xs px-1 h-full"><Tally5 className="h-4 w-4" /></ToggleGroupItem>
@@ -281,20 +320,27 @@ export function TradingTerminal() {
                     />
                     
                     <Tooltip content={<CustomTooltip />} />
+                    
+                    {candleType === 'line' ? (
+                         <Line type="monotone" dataKey="closePrice" strokeWidth={2} yAxisId="right" dot={false} name="Price" stroke="hsl(var(--primary))"/>
+                    ) : (
+                        <>
+                            {/* Wick */}
+                            <Bar dataKey="wick" yAxisId="right" barSize={1} >
+                                {chartData.map((d, i) => (
+                                    <Cell key={`wick-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
+                                ))}
+                            </Bar>
 
-                     {/* Wick */}
-                     <Bar dataKey="wick" yAxisId="right" barSize={1} >
-                        {chartData.map((d, i) => (
-                            <Cell key={`wick-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
-                        ))}
-                    </Bar>
+                            {/* Body */}
+                            <Bar dataKey="body" yAxisId="right" barSize={CANDLE_WIDTH} >
+                                {chartData.map((d, i) => (
+                                    <Cell key={`body-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
+                                ))}
+                            </Bar>
+                        </>
+                    )}
 
-                    {/* Body */}
-                    <Bar dataKey="body" yAxisId="right" barSize={CANDLE_WIDTH} >
-                        {chartData.map((d, i) => (
-                            <Cell key={`body-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
-                        ))}
-                    </Bar>
 
                     {/* Volume Bar */}
                     <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH * 0.8}>

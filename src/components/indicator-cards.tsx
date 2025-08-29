@@ -47,7 +47,7 @@ const chartConfig = {
 export function IndicatorCards() {
   return (
     <Card className="h-[250px] flex flex-col">
-        <CardHeader className="py-4 flex flex-row items-center justify-between">
+        <CardHeader className="py-4 px-4 flex flex-row items-center justify-between">
           <div>
             <CardTitle>Market Indicators</CardTitle>
             <CardDescription className="text-xs">RSI, MACD, ADX, and ATR</CardDescription>

@@ -1,5 +1,5 @@
 
-import { IndicatorCards } from '@/components/indicator-cards';
+import { IndicatorGauge } from '@/components/indicator-gauge';
 import { OptionChain } from '@/components/option-chain';
 import { OrdersTable } from '@/components/orders-table';
 import { OverviewCards } from '@/components/overview-cards';
@@ -28,6 +28,7 @@ export default function DashboardPage() {
         {/* Right Column 2 */}
         <div className="col-span-1 flex flex-col gap-6">
           <PerformanceChart />
+          <IndicatorGauge />
           <OptionChain />
         </div>
       </div>

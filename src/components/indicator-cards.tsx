@@ -57,7 +57,7 @@ export function IndicatorCards() {
               <span className="sr-only">Expand Chart</span>
           </Button>
         </CardHeader>
-        <div className="flex-1 relative">
+        <CardContent className="flex-1 p-0 relative">
           <div className="absolute inset-0">
             <ChartContainer config={chartConfig} className="h-full w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -91,7 +91,7 @@ export function IndicatorCards() {
               </ResponsiveContainer>
             </ChartContainer>
           </div>
-        </div>
+        </CardContent>
       </Card>
   );
 }

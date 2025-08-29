@@ -277,7 +277,7 @@ export function TradingTerminal() {
                             <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
                             <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
                             <Tooltip
-                                cursor={{ strokeDasharray: '3-3' }}
+                                cursor={{ strokeDasharray: '3 3' }}
                                 position={{ y: 5 }}
                             />
                             <Bar dataKey="volume" yAxisId="right" barSize={8}>

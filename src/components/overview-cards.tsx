@@ -87,8 +87,8 @@ export function OverviewCards() {
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon">
-                                <Power className="h-4 w-4" />
+                            <Button variant="destructive" className="h-10 w-12">
+                                <Power className="h-5 w-5" />
                             </Button>
                         </AlertDialogTrigger>
                     </TooltipTrigger>

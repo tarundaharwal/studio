@@ -1,5 +1,3 @@
-
-
 "use client"
 
 import * as React from "react"
@@ -110,8 +108,8 @@ const chartConfig = {
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      if (!data.ohlc) return null;
-      const [open, high, low, close] = data.ohlc;
+      if (!data.original_ohlc) return null;
+      const [open, high, low, close] = data.original_ohlc;
       const volumeData = payload.find(p => p.dataKey === 'volume');
 
       return (
@@ -169,9 +167,10 @@ export function TradingTerminal() {
             ...d, 
             isGain,
             originalIsGain, // For volume color
-            // For candlestick
-            wick: [low, high],
+            original_ohlc: originalCandle.ohlc, // For tooltip
+            // For candlestick floating bars
             body: [open, close],
+            wick: [low, high],
             closePrice: d.ohlc[3], // For line chart
             // For indicators
             sma50: sma50[i],
@@ -312,6 +311,7 @@ export function TradingTerminal() {
                         tickMargin={8}
                         fontSize={10}
                         height="75%"
+                        y="0%"
                     />
 
                     <YAxis
@@ -325,8 +325,8 @@ export function TradingTerminal() {
                         tickMargin={8}
                         fontSize={10}
                         hide={true}
-                        y="75%"
                         height="25%"
+                        y="75%"
                     />
                     
                     <Tooltip content={<CustomTooltip />} />
@@ -352,7 +352,7 @@ export function TradingTerminal() {
 
 
                     {/* Volume Bar */}
-                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH * 0.8}>
+                    <Bar dataKey="volume" yAxisId="left" y={0}>
                          {chartData.map((entry, index) => (
                             <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
                         ))}

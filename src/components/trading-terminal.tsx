@@ -260,12 +260,13 @@ export function TradingTerminal() {
                         axisLine={false}
                         tickMargin={8}
                         fontSize={10}
+                        height="75%"
                     />
 
                     <YAxis
                         yAxisId="left"
                         orientation="left"
-                        domain={[0, (dataMax) => dataMax * 1.5]}
+                        domain={[0, (dataMax: number) => dataMax * 1.5]}
                         tickCount={4}
                         tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`}
                         tickLine={false}
@@ -273,6 +274,7 @@ export function TradingTerminal() {
                         tickMargin={8}
                         fontSize={10}
                         hide={true}
+                        height="25%"
                     />
                     
                     <Tooltip content={<CustomTooltip />} />
@@ -292,7 +294,7 @@ export function TradingTerminal() {
                     </Bar>
 
                     {/* Volume Bar */}
-                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH * 0.8} >
+                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH * 0.8}>
                         {chartData.map((entry, index) => (
                             <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
                         ))}

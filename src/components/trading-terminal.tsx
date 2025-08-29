@@ -67,29 +67,24 @@ const calculateHeikinAshi = (data: ChartData[]) => {
 
 const CustomWick = (props: any) => {
     const { x, y, width, height, payload } = props;
-    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
   
 const CustomBody = (props: any) => {
     const { x, y, width, height, payload } = props;
-    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke="none" />;
 };
 
 const getVolumeColor = (isGain: boolean) => isGain ? 'hsl(var(--chart-2-light))' : 'hsl(var(--chart-1-light))';
 
+
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      // Find the payload for the price chart (it will have 'candleBody')
-      const pricePayload = payload.find(p => p.dataKey === 'candleBody');
-      const volumePayload = payload.find(p => p.dataKey === 'volume');
+      const data = payload[0].payload;
+      if (!data || !data.original_ohlc) return null;
       
-      if (!pricePayload) return null;
-
-      const data = pricePayload.payload;
       const [open, high, low, close] = data.original_ohlc;
 
       return (
@@ -100,8 +95,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="text-muted-foreground">H:</span><span className="font-mono text-right">{high.toFixed(2)}</span>
             <span className="text-muted-foreground">L:</span><span className="font-mono text-right">{low.toFixed(2)}</span>
             <span className="text-muted-foreground">C:</span><span className="font-mono text-right">{close.toFixed(2)}</span>
-            {volumePayload && <span className="text-muted-foreground">Vol:</span>}
-            {volumePayload && <span className="font-mono text-right">{(volumePayload.value / 1000).toFixed(1)}k</span>}
+            {data.volume && <span className="text-muted-foreground">Vol:</span>}
+            {data.volume && <span className="font-mono text-right">{(data.volume / 1000).toFixed(1)}k</span>}
           </div>
         </div>
       );
@@ -138,14 +133,14 @@ export function TradingTerminal() {
 
         return { 
             ...d,
-            candleWick: [low, high], 
+            candleWick: [low, high],
             candleBody: [Math.min(open, close), Math.max(open, close)],
             isGain,
-            originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0],
             original_ohlc: originalCandle.ohlc,
         }
     });
   }, [fullChartData, candleType]);
+
 
   const chartData = chartDataWithIndicators.slice(-visibleCandles);
   const maxCandles = fullChartData.length;
@@ -237,7 +232,7 @@ export function TradingTerminal() {
         <ScrollArea className="w-full h-full">
             <div className="h-full" style={{ width: '100%', minWidth: `${chartData.length * (CANDLE_WIDTH + 4)}px` }}>
                 <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                {/* Price Candlestick Chart (Top 75%) */}
+                
                 <ResponsiveContainer width="100%" height="75%">
                     <ComposedChart data={chartData} syncId="stockChart" margin={{ top: 20, right: 45, bottom: 0, left: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -250,11 +245,10 @@ export function TradingTerminal() {
                     </ComposedChart>
                 </ResponsiveContainer>
 
-                {/* Volume Bar Chart (Bottom 25%) */}
                 <ResponsiveContainer width="100%" height="25%">
                     <ComposedChart data={chartData} syncId="stockChart" margin={{ top: 10, right: 45, bottom: 20, left: 5 }}>
                         <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
-                        <YAxis yAxisId="left" orientation="right" domain={['auto', 'auto']} tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
+                        <YAxis yAxisId="left" orientation="right" domain={[0, 'dataMax * 2']} tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
                         
                         <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH} isAnimationActive={false}>
@@ -272,5 +266,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

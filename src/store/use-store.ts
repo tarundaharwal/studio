@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 
 // Helper to generate a random number within a range
@@ -87,6 +86,8 @@ type Signal = {
     reason: string;
 }
 
+type TradingStatus = 'ACTIVE' | 'STOPPED';
+
 type StoreState = {
     chartData: ChartData[];
     timeframe: string;
@@ -96,6 +97,7 @@ type StoreState = {
     indicators: Indicator[];
     optionChain: Option[];
     signals: Signal[];
+    tradingStatus: TradingStatus;
     setChartData: (newData: ChartData[]) => void;
     addCandle: (newCandle: ChartData) => void;
     setTimeframe: (newTimeframe: string) => void;
@@ -112,6 +114,7 @@ export const useStore = create<StoreState>((set, get) => ({
     // Initial State
     chartData: generateCandlestickData(78, timeframes['5m']),
     timeframe: '5m',
+    tradingStatus: 'ACTIVE',
     positions: [
         { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: 22750.50, ltp: 22775.25, pnl: 1237.50 },
         { symbol: 'NIFTY 29 AUG 22800 CE', qty: 100, avgPrice: 118.40, ltp: 125.90, pnl: 750.00 },
@@ -122,7 +125,7 @@ export const useStore = create<StoreState>((set, get) => ({
         { time: '11:30:00', symbol: 'NIFTY AUG FUT', type: 'SELL', qty: 50, price: 22850.00, status: 'PENDING' },
     ],
     overview: {
-        pnl: 1250.75,
+        pnl: 1987.50,
         drawdown: -4530.10,
     },
     indicators: [
@@ -200,7 +203,7 @@ export const useStore = create<StoreState>((set, get) => ({
             positions: [], // All positions are liquidated
             orders: newOrders,
             signals: [newSignal, ...state.signals].slice(0, 20),
-            overview: { ...state.overview, pnl: 0 }
+            tradingStatus: 'STOPPED' // Stop all trading activity
         };
     }),
 }));

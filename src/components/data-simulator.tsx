@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -24,6 +23,7 @@ export function DataSimulator() {
     orders,
     optionChain,
     indicators,
+    tradingStatus,
     updatePositions,
     updateOverview,
     updateOptionChain,
@@ -39,6 +39,12 @@ export function DataSimulator() {
   useEffect(() => {
     const interval = setInterval(() => {
         const now = Date.now();
+        
+        // Stop all data updates if trading status is STOPPED
+        if (useStore.getState().tradingStatus === 'STOPPED') {
+            return;
+        }
+
         const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
         const currentChartData = useStore.getState().chartData;
         const lastCandleInStore = currentChartData[currentChartData.length - 1];
@@ -156,7 +162,7 @@ export function DataSimulator() {
     return () => {
         clearInterval(interval);
     };
-  }, [timeframe, positions, orders, optionChain, indicators, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, setChartData]);
+  }, [timeframe, positions, orders, optionChain, indicators, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, setChartData, tradingStatus]);
 
   return null;
 }

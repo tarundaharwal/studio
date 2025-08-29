@@ -22,12 +22,12 @@ export default function DashboardPage() {
         {/* Right Column 1 */}
         <div className="col-span-1 flex flex-col gap-6">
           <OverviewCards />
-          <OptionChain />
+          <PerformanceChart />
         </div>
 
         {/* Right Column 2 */}
         <div className="col-span-1 flex flex-col gap-6">
-          <PerformanceChart />
+          <OptionChain />
           <IndicatorGauge />
           <SignalsFeed />
         </div>

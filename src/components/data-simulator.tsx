@@ -131,7 +131,6 @@ export function DataSimulator() {
 
     return () => {
         clearInterval(interval);
-        lastCandleTime.current = Date.now(); // Reset on re-mount
     };
   }, [timeframe, addCandle, addSignal, chartData, indicators, optionChain, orders, positions, updateChart, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions]);
 

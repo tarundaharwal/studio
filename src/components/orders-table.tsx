@@ -1,4 +1,3 @@
-
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -49,13 +48,15 @@ export function OrdersTable() {
       <CardHeader className="p-4">
         <CardTitle>Orders</CardTitle>
       </CardHeader>
-      <CardContent className="p-0 flex-1">
+      <CardContent className="p-0 flex-1 overflow-x-auto">
         <ScrollArea className="h-full">
         <Table>
           <TableHeader>
             <TableRow className="text-xs">
-              <TableHead className="p-2">Symbol</TableHead>
+              <TableHead className="p-2 min-w-[120px]">Symbol</TableHead>
               <TableHead className="p-2">Type</TableHead>
+              <TableHead className="p-2 text-right">Qty</TableHead>
+              <TableHead className="p-2 text-right">Price</TableHead>
               <TableHead className="p-2 text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
@@ -71,6 +72,8 @@ export function OrdersTable() {
                     {order.type}
                   </Badge>
                 </TableCell>
+                <TableCell className="p-2 text-right">{order.qty}</TableCell>
+                <TableCell className="p-2 text-right">₹{order.price.toFixed(2)}</TableCell>
                 <TableCell className="p-2 text-right">
                     <Badge variant="outline" className={order.status === 'EXECUTED' ? 'text-blue-600 border-blue-600' : 'text-amber-600 border-amber-600'}>
                         {order.status}

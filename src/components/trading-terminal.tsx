@@ -83,6 +83,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       const data = payload[0].payload;
       if (!data.ohlc) return null;
       const [open, high, low, close] = data.ohlc;
+      const volumeData = payload.find(p => p.dataKey === 'volume');
+
       return (
         <div className="p-2 text-xs bg-background/90 border rounded-md shadow-lg backdrop-blur-sm">
           <p className="font-bold mb-1">{label}</p>
@@ -91,7 +93,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
             <span className="text-muted-foreground">H:</span><span className="font-mono text-right">{high.toFixed(2)}</span>
             <span className="text-muted-foreground">L:</span><span className="font-mono text-right">{low.toFixed(2)}</span>
             <span className="text-muted-foreground">C:</span><span className="font-mono text-right">{close.toFixed(2)}</span>
-            <span className="text-muted-foreground">Vol:</span><span className="font-mono text-right">{(data.volume / 1000).toFixed(1)}k</span>
+            {volumeData && <span className="text-muted-foreground">Vol:</span>}
+            {volumeData && <span className="font-mono text-right">{(volumeData.value / 1000).toFixed(1)}k</span>}
           </div>
         </div>
       );
@@ -266,7 +269,7 @@ export function TradingTerminal() {
                     <YAxis
                         yAxisId="left"
                         orientation="left"
-                        domain={[0, (dataMax: number) => dataMax * 1.5]}
+                        domain={[0, (dataMax: number) => dataMax * 4]}
                         tickCount={4}
                         tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`}
                         tickLine={false}
@@ -295,7 +298,7 @@ export function TradingTerminal() {
 
                     {/* Volume Bar */}
                     <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH * 0.8}>
-                        {chartData.map((entry, index) => (
+                         {chartData.map((entry, index) => (
                             <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
                         ))}
                     </Bar>

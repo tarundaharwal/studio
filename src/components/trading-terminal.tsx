@@ -22,34 +22,69 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  LineChart,
+  Line,
+  ComposedChart,
 } from "recharts"
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 
-// Generate more realistic OHLC data
+// Helper to calculate SMA
+const calculateSMA = (data: any[], period: number) => {
+    const sma = [];
+    for (let i = 0; i < data.length; i++) {
+        if (i < period - 1) {
+            sma.push(null);
+        } else {
+            const sum = data.slice(i - period + 1, i + 1).reduce((acc: any, val: any) => acc + val.ohlc[3], 0);
+            sma.push(sum / period);
+        }
+    }
+    return sma;
+};
+
+
+// Generate more realistic OHLCV data
 const generateCandlestickData = (count: number) => {
   let lastClose = 22750
   const data = []
   for (let i = 0; i < count; i++) {
-    const open = lastClose + (Math.random() - 0.5) * 10;
-    const high = Math.max(open, lastClose) + Math.random() * 15;
-    const low = Math.min(open, lastClose) - Math.random() * 15;
+    const open = lastClose + (Math.random() - 0.5) * 20;
+    const high = Math.max(open, lastClose) + Math.random() * 25;
+    const low = Math.min(open, lastClose) - Math.random() * 25;
     const close = low + Math.random() * (high - low);
+    const volume = Math.random() * 1000000 + 500000;
     lastClose = close;
     data.push({
       time: `${String(9 + Math.floor((i * 5) / 60)).padStart(2, '0')}:${String(
         (i * 5) % 60
       ).padStart(2, '0')}`,
       ohlc: [open, high, low, close],
+      volume: volume,
     })
   }
-  return data
+
+  const sma50 = calculateSMA(data, 50);
+  const sma200 = calculateSMA(data, 20); // Using 20 for visibility on smaller dataset
+
+  return data.map((d, i) => ({ ...d, sma50: sma50[i], sma200: sma200[i] }));
 }
 
-const chartData = generateCandlestickData(50); // Reduced data points for better fit
+const chartData = generateCandlestickData(78); // 5-min candles for a trading day
 
 const chartConfig = {
   price: {
     label: "Price",
+  },
+  volume: {
+    label: "Volume",
+  },
+  sma50: {
+      label: "SMA 50",
+      color: "hsl(var(--chart-4))",
+  },
+  sma200: {
+      label: "SMA 20",
+      color: "hsl(var(--chart-5))",
   },
 }
 
@@ -62,11 +97,11 @@ const Candlestick = (props: any) => {
     const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     const stroke = fill;
   
-    const bodyHeight = Math.abs(open - close);
+    const bodyHeight = Math.max(1, Math.abs(y - (y + height - Math.abs(open-close)) ));
     const bodyY = isGain ? y + (height - bodyHeight) : y;
   
     return (
-      <g stroke={stroke} fill="none" strokeWidth={1.5}>
+      <g stroke={stroke} fill="none" strokeWidth={1}>
         {/* Wick */}
         <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
         {/* Body */}
@@ -75,18 +110,20 @@ const Candlestick = (props: any) => {
     );
   };
   
-
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const [open, high, low, close] = data.ohlc;
       return (
-        <div className="p-2 text-xs bg-background border rounded-md shadow-lg">
-          <p className="font-bold">{label}</p>
-          <p>O: <span className="font-mono">{open.toFixed(2)}</span></p>
-          <p>H: <span className="font-mono">{high.toFixed(2)}</span></p>
-          <p>L: <span className="font-mono">{low.toFixed(2)}</span></p>
-          <p>C: <span className="font-mono">{close.toFixed(2)}</span></p>
+        <div className="p-2 text-xs bg-background/90 border rounded-md shadow-lg backdrop-blur-sm">
+          <p className="font-bold mb-1">{label}</p>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+            <span className="text-muted-foreground">O:</span><span className="font-mono text-right">{open.toFixed(2)}</span>
+            <span className="text-muted-foreground">H:</span><span className="font-mono text-right">{high.toFixed(2)}</span>
+            <span className="text-muted-foreground">L:</span><span className="font-mono text-right">{low.toFixed(2)}</span>
+            <span className="text-muted-foreground">C:</span><span className="font-mono text-right">{close.toFixed(2)}</span>
+            <span className="text-muted-foreground">Vol:</span><span className="font-mono text-right">{(data.volume / 1000).toFixed(1)}k</span>
+          </div>
         </div>
       );
     }
@@ -118,32 +155,64 @@ export function TradingTerminal() {
       <CardContent className="p-0 flex-1">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 15, right: 15, bottom: 0, left: -25 }}
-            >
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval={8} />
-              <YAxis
-                domain={['dataMin - 50', 'dataMax + 50']}
-                orientation="right"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                fontSize={10}
-              />
-              <Tooltip
-                cursor={{ strokeDasharray: '3 3' }}
-                content={<CustomTooltip />}
-              />
-               <Bar
-                dataKey="ohlc"
-                shape={<Candlestick />}
-              />
-            </BarChart>
+              <div>
+                {/* Main Price Chart */}
+                <ComposedChart
+                    data={chartData}
+                    margin={{ top: 15, right: 15, bottom: 0, left: -25 }}
+                    width={500}
+                    height={200}
+                >
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval={12} tick={false} />
+                    <YAxis
+                        yAxisId="left"
+                        domain={['dataMin - 50', 'dataMax + 50']}
+                        orientation="right"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        fontSize={10}
+                    />
+                    <Tooltip
+                        content={<CustomTooltip />}
+                        cursor={{ strokeDasharray: '3 3' }}
+                    />
+                    <Bar
+                        dataKey="ohlc"
+                        shape={<Candlestick />}
+                        yAxisId="left"
+                    />
+                    <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 50"/>
+                    <Line type="monotone" dataKey="sma200" stroke="var(--color-sma200)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 20"/>
+                </ComposedChart>
+                
+                {/* Volume Chart */}
+                <BarChart
+                    data={chartData}
+                    margin={{ top: 0, right: 15, bottom: 20, left: -25 }}
+                    width={500}
+                    height={80}
+                    >
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                    <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval={12} />
+                    <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                        cursor={{ strokeDasharray: '3 3' }}
+                        content={<></>}
+                    />
+                    <Bar dataKey="volume" yAxisId="right">
+                        {chartData.map((entry, index) => (
+                        <rect key={`bar-${index}`} fill={entry.ohlc[3] >= entry.ohlc[0] ? 'hsl(var(--chart-2)/0.5)' : 'hsl(var(--chart-1)/0.5)'} />
+                        ))}
+                    </Bar>
+                </BarChart>
+              </div>
             </ResponsiveContainer>
           </ChartContainer>
       </CardContent>
     </Card>
   )
 }
+
+    

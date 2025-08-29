@@ -84,37 +84,26 @@ const chartConfig = {
 
 // Custom shape for candlestick
 const Candlestick = (props: any) => {
-    const { x, y, width, height, ohlc } = props;
+    const { x, y, width, height, ohlc, low: domainLow, high: domainHigh } = props;
     if (!ohlc) return null;
     const [open, high, low, close] = ohlc;
     const isGain = close >= open;
     const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     const stroke = fill;
-
-    const priceRange = high - low;
-
-    // Handle the case where high equals low to prevent division by zero
-    if (priceRange === 0) {
-      const bodyY = y + height / 2;
-      return (
-        <g stroke={stroke} fill="none" strokeWidth={1}>
-          {/* Wick (a single vertical line) */}
-          <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
-          {/* Body (a single horizontal line) */}
-          <path d={`M ${x} ${bodyY} L ${x + width} ${bodyY}`} />
-        </g>
-      );
-    }
   
-    const bodyHeight = Math.abs(height * (open - close) / priceRange) || 1; // Ensure minimum 1px height
-    const bodyY = isGain 
-      ? y + (height * (high - close) / priceRange)
-      : y + (height * (high - open) / priceRange);
-
+    const domainRange = domainHigh - domainLow;
+    const priceToY = (price: number) => y + ((domainHigh - price) / domainRange) * height;
+  
+    const bodyY = priceToY(Math.max(open, close));
+    const bodyHeight = Math.abs(priceToY(open) - priceToY(close));
+  
+    const wickHighY = priceToY(high);
+    const wickLowY = priceToY(low);
+  
     return (
       <g stroke={stroke} fill="none" strokeWidth={1}>
         {/* Wick */}
-        <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
+        <path d={`M ${x + width / 2} ${wickHighY} L ${x + width / 2} ${wickLowY}`} />
         {/* Body */}
         <rect x={x} y={bodyY} width={width} height={bodyHeight} fill={fill} />
       </g>

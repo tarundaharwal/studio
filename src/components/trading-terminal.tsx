@@ -23,7 +23,6 @@ import {
     YAxis,
     Cell,
     Line,
-    Area,
     CartesianGrid,
 } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
@@ -152,7 +151,6 @@ export function TradingTerminal() {
   const chartDataWithIndicators = React.useMemo(() => {
     if (!fullChartData || fullChartData.length === 0) return [];
     
-    // Heikin-Ashi calculation now happens on the client-side for display purposes
     const baseData = candleType === 'heikin-ashi' ? calculateHeikinAshi(fullChartData) : fullChartData;
     
     const sma20 = calculateSMA(baseData, 20);
@@ -369,8 +367,8 @@ export function TradingTerminal() {
                     {indicator === 'bb' && (
                         <>
                              <Line type="monotone" dataKey="bb_middle" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="right" dot={false} strokeOpacity={0.5} />
-                             <Area type="monotone" dataKey="bb_upper" fill="var(--color-bb)" stroke="transparent" strokeWidth={1.5} yAxisId="right" dot={false} fillOpacity={0.1} name="Bollinger Band" />
-                             <Area type="monotone" dataKey="bb_lower" fill="var(--color-bb)" stroke="transparent" strokeWidth={1.5} yAxisId="right" dot={false} fillOpacity={0.1} name="Bollinger Band" />
+                             <Line type="monotone" dataKey="bb_upper" fill="var(--color-bb)" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="right" dot={false} fillOpacity={0.1} name="Bollinger Band" />
+                             <Line type="monotone" dataKey="bb_lower" fill="var(--color-bb)" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="right" dot={false} fillOpacity={0.1} name="Bollinger Band" />
                         </>
                     )}
                 </ComposedChart>
@@ -381,3 +379,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

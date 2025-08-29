@@ -141,11 +141,7 @@ export const useStore = create<StoreState>((set, get) => ({
         { strike: 22950, callOI: 210000, callIV: 12.2, callLTP: 60.1, putLTP: 155.4, putIV: 14.2, putOI: 80000 },
         { strike: 23000, callOI: 400000, callIV: 12.0, callLTP: 45.5, putLTP: 180.2, putIV: 13.9, putOI: 75000 },
     ],
-    signals: [
-        { time: '11:15:05', strategy: 'RSI-MR', action: 'SELL', instrument: 'NIFTYBEES', reason: 'TP hit at 252.10. Profit: +1.2%' },
-        { time: '11:15:04', strategy: 'SYSTEM', action: 'MODIFY', instrument: 'NIFTYBEES', reason: 'Trailing SL updated to 251.50.' },
-        { time: '10:05:14', strategy: 'SMA-TREND', action: 'ENTER LONG', instrument: 'NIFTYBEES', reason: 'Price crossed above SMA(50). Placing BUY order.' },
-    ],
+    signals: [],
 
     // Actions
     setChartData: (newData) => set({ chartData: newData }),
@@ -212,3 +208,5 @@ export const useStore = create<StoreState>((set, get) => ({
         };
     }),
 }));
+
+    

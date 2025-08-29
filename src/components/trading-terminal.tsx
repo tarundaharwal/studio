@@ -278,11 +278,14 @@ export function TradingTerminal() {
                             <Tooltip
                                 cursor={{ strokeDasharray: '3 3' }}
                                 position={{ y: 5 }}
+                                contentStyle={{ display: 'none' }}
                             />
                             <Bar dataKey="volume" yAxisId="right" barSize={8}>
-                                {chartData.map((entry, index) => (
-                                    <Bar key={`bar-${index}`} fill={entry.ohlc[3] >= entry.ohlc[0] ? 'hsl(var(--chart-2)/0.5)' : 'hsl(var(--chart-1)/0.5)'} />
-                                ))}
+                                {chartData.map((entry, index) => {
+                                    const [open, , , close] = entry.ohlc;
+                                    const fill = close >= open ? 'hsl(var(--chart-2)/0.5)' : 'hsl(var(--chart-1)/0.5)';
+                                    return <Bar key={`bar-${index}`} fill={fill} />;
+                                })}
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>

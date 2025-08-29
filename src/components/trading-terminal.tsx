@@ -22,7 +22,8 @@ import {
     XAxis,
     YAxis,
     Rectangle,
-    CartesianGrid
+    CartesianGrid,
+    Area
 } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
@@ -62,6 +63,23 @@ const calculateHeikinAshi = (data: ChartData[]) => {
     return haData;
 };
 
+const CustomWick = (props: any) => {
+    const { x, y, width, height, payload } = props;
+    const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+    return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
+};
+  
+const CustomBody = (props: any) => {
+    const { x, y, width, height, payload } = props;
+    const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+    return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
+};
+
+const CustomVolumeBar = (props: any) => {
+    const { x, y, width, height, payload } = props;
+    const color = payload.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)';
+    return <Rectangle {...props} fill={color} />;
+};
 
 const chartConfig = {
   price: {
@@ -80,7 +98,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
       const volumeData = payload.find(p => p.dataKey === 'volume');
 
       return (
-        <div className="p-2 text-xs bg-background/90 border rounded-md shadow-lg backdrop-blur-sm">
+        <div className="p-2 text-xs bg-background/90 border rounded-md shadow-lg backdrop-blur-sm z-50">
           <p className="font-bold mb-1">{label}</p>
           <div className="grid grid-cols-2 gap-x-2 gap-y-1">
             <span className="text-muted-foreground">O:</span><span className="font-mono text-right">{open.toFixed(2)}</span>
@@ -96,27 +114,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   
     return null;
   };
-
-const ColoredBar = (props: any) => {
-    const { fill, x, y, width, height, payload } = props;
-    const color = payload.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'
-    return <Rectangle {...props} fill={color} />;
-};
-
-
-// Custom shape components for dynamic coloring
-const CustomWick = (props: any) => {
-    const { x, y, width, height, payload } = props;
-    const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-    return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
-};
-  
-const CustomBody = (props: any) => {
-    const { x, y, width, height, payload } = props;
-    const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-    return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
-};
-
 
 export function TradingTerminal() {
   const { chartData: fullChartData, timeframe, setTimeframe, candleType, setCandleType } = useStore();
@@ -184,7 +181,7 @@ export function TradingTerminal() {
     setVisibleCandles(prev => Math.min(maxCandles, prev + ZOOM_STEP));
   };
   
-  if (!isClient) {
+  if (!isClient || !chartData.length) {
       return (
         <Card className="overflow-hidden h-full flex flex-col">
              <CardHeader className="flex flex-col items-start justify-between border-b p-2 gap-2">
@@ -203,7 +200,7 @@ export function TradingTerminal() {
 
   const yDomainVolume = [
       0,
-      (dataMax: number) => dataMax * 4
+      (dataMax: number) => dataMax * 2 // Adjusted for better visualization
   ];
 
   return (
@@ -253,59 +250,68 @@ export function TradingTerminal() {
       </CardHeader>
       <CardContent className="p-0 flex-1">
         <ScrollArea className="w-full h-full">
-            <ChartContainer 
-                config={chartConfig} 
-                className="h-full"
-                style={{
-                    width: '100%',
-                    minWidth: `${chartData.length * CANDLE_WIDTH}px`,
-                }}
-            >
-                <ComposedChart
-                    data={chartData}
-                    barGap={0}
-                    barCategoryGap={0}
-                    margin={{ top: 20, right: 45, bottom: 20, left: 5 }}
-                >
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
-                    
-                    <YAxis 
-                        yAxisId="right"
-                        orientation="right"
-                        domain={yDomainPrice}
-                        tickFormatter={(value) => value.toLocaleString()}
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        fontSize={10}
-                        width={60}
-                    />
+            <div className="h-full" style={{ width: '100%', minWidth: `${chartData.length * CANDLE_WIDTH}px` }}>
+                <ChartContainer config={chartConfig} className="h-[75%] w-full">
+                    <ComposedChart
+                        data={chartData}
+                        barGap={0}
+                        barCategoryGap={0}
+                        margin={{ top: 20, right: 45, bottom: 0, left: 5 }}
+                    >
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" hide={true}/>
+                        
+                        <YAxis 
+                            yAxisId="right"
+                            orientation="right"
+                            domain={yDomainPrice}
+                            tickFormatter={(value) => value.toLocaleString()}
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            fontSize={10}
+                            width={60}
+                        />
 
-                    <YAxis
-                        yAxisId="left"
-                        orientation="left"
-                        domain={yDomainVolume}
-                        tickCount={4}
-                        tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`}
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        fontSize={10}
-                        hide={true}
-                    />
-                    
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
-                    
-                    <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" shape={<CustomWick />} />
-                    <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="price" shape={<CustomBody />} />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
+                        
+                        <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" shape={<CustomWick />} />
+                        <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="price" shape={<CustomBody />} />
 
-                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH / 1.5} shape={<ColoredBar />} />
-                </ComposedChart>
-            </ChartContainer>
+                    </ComposedChart>
+                </ChartContainer>
+
+                <ChartContainer config={chartConfig} className="h-[25%] w-full">
+                    <ComposedChart
+                        data={chartData}
+                        barGap={0}
+                        barCategoryGap={0}
+                        margin={{ top: 10, right: 45, bottom: 20, left: 5 }}
+                    >
+                        <CartesianGrid vertical={false} />
+                         <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
+                        <YAxis
+                            yAxisId="left"
+                            orientation="right"
+                            domain={yDomainVolume}
+                            tickCount={4}
+                            tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`}
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            fontSize={10}
+                            width={60}
+                        />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
+                        <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH / 1.5} shape={<CustomVolumeBar />} />
+                    </ComposedChart>
+                </ChartContainer>
+            </div>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </CardContent>
     </Card>
   )
 }
+
+    

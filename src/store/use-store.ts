@@ -151,8 +151,8 @@ export const useStore = create<StoreState>((set, get) => ({
         chartData: generateCandlestickData(78, timeframes[newTimeframe] || 5)
     }),
     updateChart: (updatedCandle) => set(state => {
-        const newChartData = [...state.chartData];
-        newChartData[newChartData.length - 1] = updatedCandle;
+        const newChartData = state.chartData.slice(0, -1);
+        newChartData.push(updatedCandle);
         return { chartData: newChartData };
     }),
     addCandle: (newCandle) => set(state => ({

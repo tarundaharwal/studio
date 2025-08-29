@@ -133,7 +133,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   };
 
 export function TradingTerminal() {
-  const chartWidth = Math.max(chartData.length * 12, 500); // 12px per candle, min 500px
+  const chartWidth = chartData.length * 12;
 
   return (
     <Card className="overflow-hidden h-full flex flex-col">
@@ -157,62 +157,62 @@ export function TradingTerminal() {
       </CardHeader>
       <CardContent className="p-0 flex-1">
         <ScrollArea className="w-full h-full whitespace-nowrap">
-          <ChartContainer config={chartConfig} className="h-full">
             <div style={{ width: chartWidth, height: '100%' }}>
-                {/* Main Price Chart */}
-                <ResponsiveContainer width="100%" height="70%">
-                    <ComposedChart
-                        data={chartData}
-                        margin={{ top: 10, right: 15, bottom: 0, left: -25 }}
-                    >
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval={6} tick={false} />
-                        <YAxis
-                            yAxisId="left"
-                            domain={['dataMin - 50', 'dataMax + 50']}
-                            orientation="right"
-                            tickLine={false}
-                            axisLine={false}
-                            tickMargin={8}
-                            fontSize={9}
-                        />
-                        <Tooltip
-                            content={<CustomTooltip />}
-                            cursor={{ strokeDasharray: '3 3' }}
-                        />
-                        <Bar
-                            dataKey="ohlc"
-                            shape={<Candlestick />}
-                            yAxisId="left"
-                            barSize={8}
-                        />
-                        <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 50"/>
-                        <Line type="monotone" dataKey="sma200" stroke="var(--color-sma200)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 20"/>
-                    </ComposedChart>
-                </ResponsiveContainer>
-                
-                {/* Volume Chart */}
-                <ResponsiveContainer width="100%" height="30%">
-                    <BarChart
-                        data={chartData}
-                        margin={{ top: 5, right: 15, bottom: 15, left: -25 }}
-                    >
-                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval={6} />
-                        <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
-                        <Tooltip
-                            cursor={{ strokeDasharray: '3 3' }}
-                            content={<></>}
-                        />
-                        <Bar dataKey="volume" yAxisId="right" barSize={8}>
-                            {chartData.map((entry, index) => (
-                                <rect key={`bar-${index}`} fill={entry.ohlc[3] >= entry.ohlc[0] ? 'hsl(var(--chart-2)/0.5)' : 'hsl(var(--chart-1)/0.5)'} />
-                            ))}
-                        </Bar>
-                    </BarChart>
-                </ResponsiveContainer>
+                <ChartContainer config={chartConfig} className="h-full w-full">
+                    {/* Main Price Chart */}
+                    <ResponsiveContainer width="100%" height="70%">
+                        <ComposedChart
+                            data={chartData}
+                            margin={{ top: 10, right: 15, bottom: 0, left: -25 }}
+                        >
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval={6} tick={false} />
+                            <YAxis
+                                yAxisId="left"
+                                domain={['dataMin - 50', 'dataMax + 50']}
+                                orientation="right"
+                                tickLine={false}
+                                axisLine={false}
+                                tickMargin={8}
+                                fontSize={9}
+                            />
+                            <Tooltip
+                                content={<CustomTooltip />}
+                                cursor={{ strokeDasharray: '3 3' }}
+                            />
+                            <Bar
+                                dataKey="ohlc"
+                                shape={<Candlestick />}
+                                yAxisId="left"
+                                barSize={8}
+                            />
+                            <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 50"/>
+                            <Line type="monotone" dataKey="sma200" stroke="var(--color-sma200)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 20"/>
+                        </ComposedChart>
+                    </ResponsiveContainer>
+                    
+                    {/* Volume Chart */}
+                    <ResponsiveContainer width="100%" height="30%">
+                        <BarChart
+                            data={chartData}
+                            margin={{ top: 5, right: 15, bottom: 15, left: -25 }}
+                        >
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval={6} />
+                            <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                            <Tooltip
+                                cursor={{ strokeDasharray: '3 3' }}
+                                content={<></>}
+                            />
+                            <Bar dataKey="volume" yAxisId="right" barSize={8}>
+                                {chartData.map((entry, index) => (
+                                    <rect key={`bar-${index}`} fill={entry.ohlc[3] >= entry.ohlc[0] ? 'hsl(var(--chart-2)/0.5)' : 'hsl(var(--chart-1)/0.5)'} />
+                                ))}
+                            </Bar>
+                        </BarChart>
+                    </ResponsiveContainer>
+                </ChartContainer>
             </div>
-          </ChartContainer>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </CardContent>

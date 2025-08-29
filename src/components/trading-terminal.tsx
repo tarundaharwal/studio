@@ -1,4 +1,3 @@
-
 "use client"
 
 import * as React from "react"
@@ -62,26 +61,26 @@ const calculateHeikinAshi = (data: ChartData[]) => {
     return haData;
 };
 
+// --- Custom Shape Components for Dynamic Coloring ---
+
 const CustomWick = (props: any) => {
     const { x, y, width, height, payload } = props;
-    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
   
 const CustomBody = (props: any) => {
     const { x, y, width, height, payload } = props;
-    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
 
 const CustomVolumeBar = (props: any) => {
     const { x, y, width, height, payload } = props;
-    if (!payload) return null;
-    const color = payload.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)';
+    const color = payload.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)';
     return <Rectangle {...props} fill={color} />;
 };
+
 
 const chartConfig = {
   price: {
@@ -202,7 +201,7 @@ export function TradingTerminal() {
 
   const yDomainVolume = [
       0,
-      (dataMax: number) => dataMax * 2
+      (dataMax: number) => dataMax * 2.5 // Adjust this multiplier to give volume bars more or less space
   ];
 
   return (
@@ -252,12 +251,12 @@ export function TradingTerminal() {
       </CardHeader>
       <CardContent className="p-0 flex-1">
         <ScrollArea className="w-full h-full">
-            <div className="h-full" style={{ width: '100%', minWidth: `${chartData.length * CANDLE_WIDTH}px` }}>
+            <div className="h-full" style={{ width: '100%', minWidth: `${chartData.length * (CANDLE_WIDTH + 4)}px` }}>
                 <ChartContainer config={chartConfig} className="h-full w-full">
                     <ComposedChart
                         data={chartData}
                         barGap={0}
-                        barCategoryGap={0}
+                        barCategoryGap="20%"
                         margin={{ top: 20, right: 45, bottom: 20, left: 5 }}
                     >
                         <CartesianGrid vertical={false} />
@@ -273,7 +272,7 @@ export function TradingTerminal() {
                             tickMargin={8}
                             fontSize={10}
                             width={60}
-                            height={0} // Hide price axis for main chart view
+                            height="70%"
                         />
                         <YAxis
                             yAxisId="left"
@@ -286,14 +285,15 @@ export function TradingTerminal() {
                             tickMargin={8}
                             fontSize={10}
                             width={60}
-                            height={0} // Hide volume axis for main chart view
+                            height="20%"
+                            y={350} // Adjust this to position the volume axis
                         />
 
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
                         
                         <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" shape={<CustomWick />} />
-                        <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="price" shape={<CustomBody />} />
-                        <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH / 1.5} shape={<CustomVolumeBar />} />
+                        <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH} stackId="price" shape={<CustomBody />} />
+                        <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH} shape={<CustomVolumeBar />} />
 
                     </ComposedChart>
                 </ChartContainer>
@@ -304,5 +304,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

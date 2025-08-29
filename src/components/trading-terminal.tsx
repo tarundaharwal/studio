@@ -108,15 +108,15 @@ const Candlestick = (props: any) => {
                 const stroke = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
 
                 const bodyY = Math.min(yOpen, yClose);
-                const bodyHeight = Math.abs(yOpen - yClose);
+                const bodyHeight = Math.max(1, Math.abs(yOpen - yClose));
                 const wickX = x + (CANDLE_WIDTH * 0.7 / 2);
                 
-                if ([x, yOpen, yClose, yHigh, yLow, bodyHeight].some(isNaN)) {
+                if ([x, yOpen, yClose, yHigh, yLow, bodyHeight].some(val => typeof val !== 'number' || isNaN(val))) {
                     return null;
                 }
 
                 return (
-                    <g key={`candle-${i}`}>
+                    <g key={`candle-${d.time}-${i}`}>
                         {/* Wick */}
                         <path
                             d={`M ${wickX} ${yHigh} L ${wickX} ${yLow}`}
@@ -128,7 +128,7 @@ const Candlestick = (props: any) => {
                             x={x}
                             y={bodyY}
                             width={CANDLE_WIDTH * 0.7}
-                            height={bodyHeight > 0 ? bodyHeight : 1} // Ensure min height of 1px
+                            height={bodyHeight}
                             fill={fill}
                         />
                     </g>
@@ -348,7 +348,7 @@ export function TradingTerminal() {
                             {chartData.map((entry, index) => {
                                 const [open, , , close] = entry.ohlc;
                                 const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-                                return <Cell key={`cell-${index}`} fill={fill} />;
+                                return <Cell key={`cell-${entry.time}-${index}`} fill={fill} />;
                             })}
                         </Bar>
                     </BarChart>

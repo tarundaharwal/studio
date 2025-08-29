@@ -16,6 +16,7 @@ const ChartDataSchema = z.object({
   ohlc: z.tuple([z.number(), z.number(), z.number(), z.number()]),
   volume: z.number(),
 });
+export type ChartData = z.infer<typeof ChartDataSchema>;
 
 const PositionSchema = z.object({
   symbol: z.string(),
@@ -24,6 +25,7 @@ const PositionSchema = z.object({
   ltp: z.number(),
   pnl: z.number(),
 });
+export type Position = z.infer<typeof PositionSchema>;
 
 const OrderSchema = z.object({
     time: z.string(),
@@ -33,6 +35,7 @@ const OrderSchema = z.object({
     price: z.number(),
     status: z.enum(['EXECUTED', 'PENDING', 'CANCELLED']),
 });
+export type Order = z.infer<typeof OrderSchema>;
 
 const OverviewSchema = z.object({
   equity: z.number(),
@@ -41,6 +44,7 @@ const OverviewSchema = z.object({
   maxDrawdown: z.number(),
   peakEquity: z.number(),
 });
+export type Overview = z.infer<typeof OverviewSchema>;
 
 const IndicatorSchema = z.object({
   name: z.string(),
@@ -64,6 +68,8 @@ const SignalSchema = z.object({
     instrument: z.string(),
     reason: z.string(),
 });
+export type Signal = z.infer<typeof SignalSchema>;
+
 
 // Define the input schema for our main flow. This is the entire state
 // of the frontend store that we need for the simulation.
@@ -71,7 +77,6 @@ const SimulationInputSchema = z.object({
   chartData: z.array(ChartDataSchema),
   timeframe: z.string(),
   positions: z.array(PositionSchema),
-  orders: z.array(OrderSchema),
   overview: OverviewSchema,
   indicators: z.array(IndicatorSchema),
   optionChain: z.array(OptionSchema),
@@ -82,10 +87,16 @@ export type SimulationInput = z.infer<typeof SimulationInputSchema>;
 
 // Define the output schema. It includes the updated state and also
 // any *new* orders or signals generated during this tick.
-const SimulationOutputSchema = SimulationInputSchema.extend({
+const SimulationOutputSchema = z.object({
+    chartData: z.array(ChartDataSchema),
+    positions: z.array(PositionSchema),
+    overview: OverviewSchema,
+    indicators: z.array(IndicatorSchema),
+    optionChain: z.array(OptionSchema),
     newOrders: z.array(OrderSchema),
     newSignals: z.array(SignalSchema),
 });
+export type SimulationOutput = z.infer<typeof SimulationOutputSchema>;
 
 
 // Helper to generate a random number within a range
@@ -109,7 +120,7 @@ export const simulationFlow = ai.defineFlow(
   },
   async (input) => {
     // Destructure the input to get the current state
-    let { chartData, timeframe, positions, orders, overview, indicators, optionChain, tradingStatus } = input;
+    let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus } = input;
     
     // These arrays will hold any new events generated during this tick
     const newOrders: z.infer<typeof OrderSchema>[] = [];
@@ -126,7 +137,6 @@ export const simulationFlow = ai.defineFlow(
 
     // Simulate a new candle if timeframe has passed
     // NOTE: This logic is simplified and assumes regular tick intervals.
-    // A more robust solution would use actual timestamps.
     const lastCandleTime = new Date(`1970-01-01T${lastCandleInStore.time}Z`).getTime();
     const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
 
@@ -134,7 +144,7 @@ export const simulationFlow = ai.defineFlow(
         const lastClose = lastCandleInStore.ohlc[3];
         const newCandle = {
             time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-            ohlc: [lastClose, lastClose, lastClose, lastClose],
+            ohlc: [lastClose, lastClose, lastClose, lastClose] as [number, number, number, number],
             volume: 0,
         };
         newChartData = [...newChartData.slice(1), newCandle];
@@ -147,7 +157,7 @@ export const simulationFlow = ai.defineFlow(
             
             if (Math.random() < 0.1) { // 10% chance to trade
                 if (priceAction > 10 && !hasOpenPosition) {
-                    const newPosition = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newCandle.ohlc[3], ltp: newCandle.ohlc[3], pnl: 0 };
+                    const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newCandle.ohlc[3], ltp: newCandle.ohlc[3], pnl: 0 };
                     positions = [...positions, newPosition];
                     newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newCandle.ohlc[3], status: 'EXECUTED' });
                     newSignals.push({ time: nowLocale, strategy: 'SIM-TREND', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: 'Simulated bullish momentum.'});
@@ -200,25 +210,33 @@ export const simulationFlow = ai.defineFlow(
             totalUnrealizedPnl += pnl;
             return { ...pos, ltp: newLtp, pnl: pnl };
         });
-
-        const currentPnl = overview.pnl; // Realized PNL
-        const floatingEquity = overview.equity; // Realized Equity
-
+        
         // In a real system, you'd calculate unrealized PNL separately.
         // Here, we just update the main PNL for simplicity of display.
-        overview.pnl = currentPnl + totalUnrealizedPnl;
-        overview.peakEquity = Math.max(overview.peakEquity, floatingEquity + totalUnrealizedPnl);
-        overview.maxDrawdown = Math.max(overview.maxDrawdown, overview.peakEquity - (floatingEquity + totalUnrealizedPnl));
+        const realizedPnl = overview.equity - overview.initialEquity;
+        overview.pnl = realizedPnl + totalUnrealizedPnl;
+        const currentTotalEquity = overview.equity + totalUnrealizedPnl;
+        overview.peakEquity = Math.max(overview.peakEquity, currentTotalEquity);
+        overview.maxDrawdown = Math.max(overview.maxDrawdown, overview.peakEquity - currentTotalEquity);
+
         positions = newPositions;
     }
 
     // Return the new state
     return {
       chartData: newChartData,
-      timeframe,
       positions,
-      orders, // Orders list is managed by the frontend store (append-only)
       overview,
       indicators: newIndicators,
       optionChain: newOptionChain,
-      
+      newOrders,
+      newSignals,
+    };
+  }
+);
+
+// This is the exported function that the API route will call.
+// It wraps the Genkit flow.
+export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
+    return simulationFlow(input);
+}

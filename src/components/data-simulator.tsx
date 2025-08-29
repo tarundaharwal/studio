@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -11,7 +12,6 @@ const pickStateForAPI = (state: StoreState) => ({
   chartData: state.chartData,
   timeframe: state.timeframe,
   positions: state.positions,
-  orders: state.orders,
   overview: state.overview,
   indicators: state.indicators,
   optionChain: state.optionChain,

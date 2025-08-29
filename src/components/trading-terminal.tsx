@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -283,7 +284,7 @@ export function TradingTerminal() {
                             <Bar dataKey="volume" yAxisId="right" barSize={8}>
                                 {chartData.map((entry, index) => {
                                     const [open, , , close] = entry.ohlc;
-                                    const fill = close >= open ? 'hsl(var(--chart-2)/0.5)' : 'hsl(var(--chart-1)/0.5)';
+                                    const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
                                     return <Bar key={`bar-${index}`} fill={fill} />;
                                 })}
                             </Bar>

@@ -124,19 +124,15 @@ export function TradingTerminal() {
         const [open, high, low, close] = d.ohlc;
         const isGain = close >= open;
         const originalCandle = fullChartData[i];
-        const originalIsGain = originalCandle.ohlc[3] >= originalCandle.ohlc[0];
 
         return { 
             ...d, 
             isGain,
-            originalIsGain, // For volume color
+            originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0], // For volume color
             original_ohlc: originalCandle.ohlc, // For tooltip
-            
-            // This is the structure Recharts needs for floating bars
             candleBody: [open, close],
             candleWick: [low, high],
-
-            closePrice: d.ohlc[3], // For line chart
+            closePrice: close,
         }
     });
   }, [fullChartData, candleType]);
@@ -287,13 +283,13 @@ export function TradingTerminal() {
                     ) : (
                         <>
                             {/* Candle Wicks */}
-                            <Bar dataKey="candleWick" yAxisId="right" barSize={1} zIndex={1}>
+                            <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" zIndex={1}>
                                 {chartData.map((entry, index) => (
                                     <Cell key={`wick-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}/>
                                 ))}
                             </Bar>
                              {/* Candle Bodies */}
-                            <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH} zIndex={2}>
+                            <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH} stackId="price" zIndex={2}>
                                 {chartData.map((entry, index) => (
                                     <Cell key={`body-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}/>
                                 ))}
@@ -316,5 +312,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

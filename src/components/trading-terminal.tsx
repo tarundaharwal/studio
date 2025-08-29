@@ -30,11 +30,11 @@ const generateCandlestickData = (count: number) => {
   let lastClose = 22750
   const data = []
   for (let i = 0; i < count; i++) {
-    const open = lastClose
-    const high = open + Math.random() * 20
-    const low = open - Math.random() * 20
-    const close = low + Math.random() * (high - low)
-    lastClose = close
+    const open = lastClose + (Math.random() - 0.5) * 10;
+    const high = Math.max(open, lastClose) + Math.random() * 15;
+    const low = Math.min(open, lastClose) - Math.random() * 15;
+    const close = low + Math.random() * (high - low);
+    lastClose = close;
     data.push({
       time: `${String(9 + Math.floor((i * 5) / 60)).padStart(2, '0')}:${String(
         (i * 5) % 60
@@ -45,7 +45,7 @@ const generateCandlestickData = (count: number) => {
   return data
 }
 
-const chartData = generateCandlestickData(96)
+const chartData = generateCandlestickData(75);
 
 const chartConfig = {
   price: {
@@ -55,21 +55,24 @@ const chartConfig = {
 
 // Custom shape for candlestick
 const Candlestick = (props: any) => {
-  const { x, y, width, height, ohlc } = props
-  const [, high, low, close] = ohlc
-  const isGain = close >= ohlc[0]
-  const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'
-  const bodyHeight = Math.abs(y - props.y) || Math.abs(height)
-
-  return (
-    <g stroke={fill} fill={fill} strokeWidth={1}>
-      <path
-        d={`M ${x + width / 2},${y + (isGain ? bodyHeight : 0)} L ${x + width / 2},${y + (isGain ? 0 : bodyHeight)}`}
-        />
-      <rect x={x} y={y} width={width} height={height} />
-    </g>
-  )
-}
+    const { x, y, width, height, ohlc } = props;
+    const [open, high, low, close] = ohlc;
+    const isGain = close >= open;
+    const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+    const stroke = fill;
+  
+    // The y position from recharts is the top of the body
+    const bodyY = isGain ? y + height : y;
+  
+    return (
+      <g stroke={stroke} fill="none" strokeWidth={1}>
+        {/* Wick */}
+        <path d={`M ${x + width / 2} ${bodyY - (isGain ? (high - open) : (high - close))} L ${x + width / 2} ${bodyY + (isGain ? (close - low) : (open - low))}`} />
+        <rect x={x} y={bodyY} width={width} height={height} fill={fill} />
+      </g>
+    );
+  };
+  
 
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -131,11 +134,10 @@ export function TradingTerminal() {
                 cursor={{ strokeDasharray: '3 3' }}
                 content={<CustomTooltip />}
               />
-              <Bar
+               <Bar
                 dataKey="ohlc"
                 shape={<Candlestick />}
-              >
-              </Bar>
+              />
             </BarChart>
             </ResponsiveContainer>
           </ChartContainer>

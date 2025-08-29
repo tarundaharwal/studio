@@ -132,38 +132,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
   };
 
-  const Candle = (props: any) => {
-    const { x, y, width, height, payload, yAxis } = props;
-    if (!payload || !payload.ohlc) return null;
-
-    const isGain = payload.ohlc[3] >= payload.ohlc[0];
-    const { ohlc } = payload;
-    const [open, high, low, close] = ohlc;
-
-    if (!yAxis || typeof yAxis.scale !== 'function') {
-        return null;
-    }
-  
-    const ohlcY = yAxis.scale;
-    const yOpen = ohlcY(open);
-    const yClose = ohlcY(close);
-    const yHigh = ohlcY(high);
-    const yLow = ohlcY(low);
-  
-    const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-    const bodyHeight = Math.max(1, Math.abs(yOpen - yClose));
-    const bodyY = Math.min(yOpen, yClose);
-  
-    return (
-      <g stroke={fill} fill={fill} strokeWidth={1}>
-        {/* Wick */}
-        <path d={`M ${x + width / 2} ${yHigh} L ${x + width / 2} ${yLow}`} />
-        {/* Body */}
-        <rect x={x} y={bodyY} width={width} height={bodyHeight} />
-      </g>
-    );
-  };
-
 export function TradingTerminal() {
   const { chartData: fullChartData, timeframe, setTimeframe, candleType, setCandleType } = useStore();
   const [visibleCandles, setVisibleCandles] = React.useState(50);
@@ -202,7 +170,8 @@ export function TradingTerminal() {
             isGain,
             originalIsGain, // For volume color
             // For candlestick
-            price: d.ohlc, // for custom shape
+            wick: [low, high],
+            body: [open, close],
             closePrice: d.ohlc[3], // For line chart
             // For indicators
             sma50: sma50[i],
@@ -356,6 +325,7 @@ export function TradingTerminal() {
                         tickMargin={8}
                         fontSize={10}
                         hide={true}
+                        y="75%"
                         height="25%"
                     />
                     
@@ -364,15 +334,20 @@ export function TradingTerminal() {
                     {candleType === 'line' ? (
                          <Line type="monotone" dataKey="closePrice" strokeWidth={2} yAxisId="right" dot={false} name="Price" stroke="hsl(var(--primary))"/>
                     ) : (
-                        <Bar
-                            dataKey="price"
-                            yAxisId="right"
-                            shape={<Candle />}
-                        >
-                        {chartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
-                        ))}
+                        <>
+                        {/* Wick */}
+                        <Bar dataKey="wick" yAxisId="right" barSize={1} >
+                             {chartData.map((entry, index) => (
+                                <Cell key={`wick-cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
+                            ))}
                         </Bar>
+                        {/* Body */}
+                        <Bar dataKey="body" yAxisId="right" barSize={CANDLE_WIDTH}>
+                            {chartData.map((entry, index) => (
+                                <Cell key={`body-cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
+                            ))}
+                        </Bar>
+                        </>
                     )}
 
 

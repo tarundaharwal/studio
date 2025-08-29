@@ -1,3 +1,6 @@
+
+'use client';
+
 import {
   Table,
   TableBody,
@@ -9,25 +12,11 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { Button } from './ui/button';
 import { Zap } from 'lucide-react';
-
-const positions = [
-  {
-    symbol: 'NIFTYBEES',
-    qty: 50,
-    avgPrice: 245.50,
-    ltp: 248.75,
-    pnl: 162.50,
-  },
-  {
-    symbol: 'BANKBEES',
-    qty: 100,
-    avgPrice: 520.10,
-    ltp: 518.90,
-    pnl: -120.00,
-  },
-];
+import { useStore } from '@/store/use-store';
 
 export function PositionsTable() {
+  const { positions } = useStore();
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="p-2">

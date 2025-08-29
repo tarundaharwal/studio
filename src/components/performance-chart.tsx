@@ -1,6 +1,7 @@
+
 'use client';
 
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Area } from 'recharts';
 import {
   Card,
   CardContent,
@@ -9,30 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart';
-
-const chartData = [
-  { date: '2024-07-01', equity: 100000 },
-  { date: '2024-07-02', equity: 100500 },
-  { date: '2024-07-03', equity: 100200 },
-  { date: '2024-07-04', equity: 101000 },
-  { date: '2024-07-05', equity: 101500 },
-  { date: '2024-07-08', equity: 101300 },
-  { date: '2024-07-09', equity: 102000 },
-  { date: '2024-07-10', equity: 102500 },
-  { date: '2024-07-11', equity: 102300 },
-  { date: '2024-07-12', equity: 103000 },
-  { date: '2024-07-15', equity: 103200 },
-  { date: '2024-07-16', equity: 103800 },
-  { date: '2024-07-17', equity: 103500 },
-  { date: '2024-07-18', equity: 104200 },
-  { date: '2024-07-19', equity: 104800 },
-  { date: '2024-07-22', equity: 105000 },
-  { date: '2024-07-23', equity: 104500 },
-  { date: '2024-07-24', equity: 105200 },
-  { date: '2024-07-25', equity: 105800 },
-  { date: '2024-07-26', equity: 106300 },
-  { date: '2024-07-29', equity: 106250 },
-];
+import { useStore } from '@/store/use-store';
 
 const chartConfig = {
     equity: {
@@ -42,18 +20,25 @@ const chartConfig = {
 };
 
 export function PerformanceChart() {
+  const { chartData } = useStore();
+  
+  const performanceData = chartData.map((d, i) => ({
+    date: d.time, // Using time as date for simplicity in simulation
+    equity: 100000 + d.ohlc[3] - chartData[0].ohlc[3] // Simplified equity curve
+  }));
+
   return (
     <Card>
       <CardHeader className="p-4">
         <CardTitle>Performance</CardTitle>
-        <CardDescription>Equity curve over the last month.</CardDescription>
+        <CardDescription>Equity curve over time.</CardDescription>
       </CardHeader>
       <CardContent className="p-4 pt-0">
         <div className="h-[300px]">
         <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
-                <LineChart
-                data={chartData}
+                <AreaChart
+                data={performanceData}
                 margin={{
                     top: 5,
                     right: 10,
@@ -68,7 +53,7 @@ export function PerformanceChart() {
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => value.substring(5)}
+                    tickFormatter={(value) => value.substring(0,5)}
                 />
                 <YAxis
                     stroke="hsl(var(--muted-foreground))"
@@ -76,23 +61,31 @@ export function PerformanceChart() {
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value) => `₹${Number(value) / 1000}k`}
+                    domain={['dataMin - 1000', 'dataMax + 1000']}
                 />
                 <Tooltip
                     cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '3 3' }}
                     content={<ChartTooltipContent
-                        formatter={(value) => `₹${Number(value).toLocaleString()}`}
+                        formatter={(value, name, props) => `₹${Number(props.payload.equity).toLocaleString()}`}
                         labelClassName="font-bold"
                         indicator="dot"
                     />}
                 />
-                <Line
+                 <defs>
+                    <linearGradient id="fillEquity" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-equity)" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="var(--color-equity)" stopOpacity={0.1}/>
+                    </linearGradient>
+                </defs>
+                <Area
                     type="monotone"
                     dataKey="equity"
                     stroke="var(--color-equity)"
                     strokeWidth={2}
                     dot={false}
+                    fill="url(#fillEquity)"
                 />
-                </LineChart>
+                </AreaChart>
             </ResponsiveContainer>
         </ChartContainer>
         </div>

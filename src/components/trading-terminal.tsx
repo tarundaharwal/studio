@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import * as React from "react"
@@ -33,12 +32,17 @@ import { ScrollArea, ScrollBar } from "./ui/scroll-area"
 import { Button } from "./ui/button"
 import { Minus, Plus, Waves, Tally5 } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
+import { useStore } from "@/store/use-store"
+
+const MIN_CANDLES = 15;
+const ZOOM_STEP = 5;
 
 // Helper to calculate SMA
 const calculateSMA = (data: any[], period: number) => {
     return data.map((d, i, arr) => {
         if (i < period - 1) return null;
-        const sum = arr.slice(i - period + 1, i + 1).reduce((acc, val) => acc + val.ohlc[3], 0);
+        const slice = arr.slice(i - period + 1, i + 1);
+        const sum = slice.reduce((acc, val) => acc + val.ohlc[3], 0);
         return sum / period;
     });
 };
@@ -55,44 +59,6 @@ const calculateStdDev = (data: number[], period: number) => {
     });
 };
 
-
-// Generate more realistic OHLCV data
-const generateCandlestickData = (count: number, timeframe: string) => {
-  let lastClose = 22750;
-  const data = [];
-  const multiplier = timeframe === '15m' ? 3 : timeframe === '1h' ? 12 : 1;
-
-  for (let i = 0; i < count; i++) {
-    const open = lastClose + (Math.random() - 0.5) * 20 * multiplier;
-    const high = Math.max(open, lastClose) + Math.random() * 25 * multiplier;
-    const low = Math.min(open, lastClose) - Math.random() * 25 * multiplier;
-    const close = low + Math.random() * (high - low);
-    const volume = Math.random() * 1000000 + 500000;
-    lastClose = close;
-    data.push({
-      time: `${String(9 + Math.floor((i * 5 * multiplier) / 60)).padStart(2, '0')}:${String(
-        (i * 5 * multiplier) % 60
-      ).padStart(2, '0')}`,
-      ohlc: [open, high, low, close],
-      volume: volume,
-    })
-  }
-  
-  const sma20 = calculateSMA(data, 20);
-  const stdDev20 = calculateStdDev(data.map(d => d.ohlc[3]), 20);
-
-  const sma50 = calculateSMA(data, 50);
-  const sma100 = calculateSMA(data, 100);
-
-  return data.map((d, i) => ({ 
-      ...d, 
-      sma50: sma50[i],
-      sma100: sma100[i],
-      bb_middle: sma20[i],
-      bb_upper: sma20[i] ? sma20[i] + (stdDev20[i] * 2) : null,
-      bb_lower: sma20[i] ? sma20[i] - (stdDev20[i] * 2) : null,
-  }));
-}
 
 const chartConfig = {
   price: {
@@ -124,13 +90,21 @@ const Candlestick = (props: any) => {
     const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     const stroke = fill;
   
-    const bodyHeight = Math.max(1, Math.abs(open - close));
-    const bodyY = isGain ? y + height - bodyHeight : y;
+    // Ensure bodyHeight is at least 1 pixel
+    const bodyHeight = Math.max(1, Math.abs(y - (isGain ? y + (open-close) : y + (close-open))  ));
+    const bodyY = isGain ? y + (close - high) : y + (open - high);
+
+    const highWickY = y;
+    const lowWickY = y + (high - low);
+
+    const bodyAbsoluteY = isGain ? y + (high - close) : y + (high-open)
 
     return (
       <g stroke={stroke} fill="none" strokeWidth={1}>
+        {/* Wick */}
         <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
-        <rect x={x} y={bodyY} width={width} height={bodyHeight} fill={fill} />
+        {/* Body */}
+        <rect x={x} y={isGain ? y + (height * (high-close))/(high-low) : y + (height * (high-open))/(high-low)} width={width} height={Math.abs((height*(open-close))/(high-low))} fill={fill} />
       </g>
     );
   };
@@ -138,6 +112,7 @@ const Candlestick = (props: any) => {
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      if (!data.ohlc) return null;
       const [open, high, low, close] = data.ohlc;
       return (
         <div className="p-2 text-xs bg-background/90 border rounded-md shadow-lg backdrop-blur-sm">
@@ -156,26 +131,45 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
   };
 
-const MIN_CANDLES = 15;
-const MAX_CANDLES = 78;
-const ZOOM_STEP = 5;
-
 
 export function TradingTerminal() {
-  const [visibleCandles, setVisibleCandles] = React.useState(MAX_CANDLES);
+  const { chartData: fullChartData } = useStore();
+  const [visibleCandles, setVisibleCandles] = React.useState(50);
   const [timeframe, setTimeframe] = React.useState('5m');
   const [indicator, setIndicator] = React.useState('sma');
 
-  const fullChartData = React.useMemo(() => generateCandlestickData(MAX_CANDLES, timeframe), [timeframe]);
-  const chartData = fullChartData.slice(fullChartData.length - visibleCandles);
+  const chartDataWithIndicators = React.useMemo(() => {
+    const sma20 = calculateSMA(fullChartData, 20);
+    const stdDev20 = calculateStdDev(fullChartData.map(d => d.ohlc[3]), 20);
+    const sma50 = calculateSMA(fullChartData, 50);
+    const sma100 = calculateSMA(fullChartData, 100);
+
+    return fullChartData.map((d, i) => ({ 
+        ...d, 
+        sma50: sma50[i],
+        sma100: sma100[i],
+        bb_middle: sma20[i],
+        bb_upper: sma20[i] && stdDev20[i] ? sma20[i]! + (stdDev20[i]! * 2) : null,
+        bb_lower: sma20[i] && stdDev20[i] ? sma20[i]! - (stdDev20[i]! * 2) : null,
+    }));
+  }, [fullChartData]);
+
+  const chartData = chartDataWithIndicators.slice(-visibleCandles);
+  const maxCandles = fullChartData.length;
 
   const handleZoomIn = () => {
     setVisibleCandles(prev => Math.max(MIN_CANDLES, prev - ZOOM_STEP));
   };
 
   const handleZoomOut = () => {
-    setVisibleCandles(prev => Math.min(MAX_CANDLES, prev + ZOOM_STEP));
+    setVisibleCandles(prev => Math.min(maxCandles, prev + ZOOM_STEP));
   };
+
+  const latestPrice = chartData.length > 0 ? chartData[chartData.length - 1].ohlc[3] : 0;
+  const previousPrice = chartData.length > 1 ? chartData[chartData.length - 2].ohlc[3] : latestPrice;
+  const priceChange = latestPrice - previousPrice;
+  const priceChangePercent = (priceChange / previousPrice) * 100;
+  const isGain = priceChange >= 0;
   
   return (
     <Card className="overflow-hidden h-full flex flex-col">
@@ -193,9 +187,9 @@ export function TradingTerminal() {
                     </SelectContent>
                 </Select>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="font-medium text-green-600">22,780.50</span>
-                <span className="text-green-600 text-xs">(+0.34%)</span>
+            <div className={`flex items-center gap-2 text-sm text-muted-foreground transition-colors ${isGain ? 'text-green-600' : 'text-red-600'}`}>
+                <span className="font-medium">{latestPrice.toFixed(2)}</span>
+                <span className="text-xs">({isGain ? '+' : ''}{priceChangePercent.toFixed(2)}%)</span>
             </div>
        </div>
        <div className="flex items-center justify-between w-full gap-2">
@@ -206,7 +200,7 @@ export function TradingTerminal() {
                     <ToggleGroupItem value="1h" className="text-xs px-2 h-full">1H</ToggleGroupItem>
                 </ToggleGroup>
 
-                 <ToggleGroup type="single" defaultValue="sma" size="sm" className="h-7" onValueChange={(value) => value && setIndicator(value)}>
+                 <ToggleGroup type="single" defaultValue={indicator} size="sm" className="h-7" onValueChange={(value) => value && setIndicator(value)}>
                     <ToggleGroupItem value="sma" className="text-xs px-1 h-full"><Tally5 className="h-4 w-4" /></ToggleGroupItem>
                     <ToggleGroupItem value="bb" className="text-xs px-1 h-full"><Waves className="h-4 w-4" /></ToggleGroupItem>
                 </ToggleGroup>
@@ -215,7 +209,7 @@ export function TradingTerminal() {
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleZoomIn} disabled={visibleCandles <= MIN_CANDLES}>
                     <Minus className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleZoomOut} disabled={visibleCandles >= MAX_CANDLES}>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleZoomOut} disabled={visibleCandles >= maxCandles}>
                     <Plus className="h-4 w-4" />
                 </Button>
             </div>

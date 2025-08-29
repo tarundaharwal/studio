@@ -3,21 +3,12 @@
 
 import {
   Activity,
-  ArrowUpRight,
-  CircleUser,
-  CreditCard,
   DollarSign,
-  Menu,
-  Package2,
-  Search,
-  Users,
   Power,
-  PowerOff,
 } from 'lucide-react';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -36,8 +27,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { useStore } from '@/store/use-store';
+
 
 export function OverviewCards() {
+  const { overview } = useStore();
+
   return (
     <>
       <Card>
@@ -109,9 +104,11 @@ export function OverviewCards() {
           <DollarSign className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="text-2xl font-bold text-green-600">+₹1,250.75</div>
+          <div className={`text-2xl font-bold ${overview.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {overview.pnl >= 0 ? '+' : ''}₹{overview.pnl.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           <p className="text-xs text-muted-foreground">
-            +1.2% from yesterday
+            {overview.pnl >= 0 ? '+' : '-'}1.2% from yesterday
           </p>
         </CardContent>
       </Card>
@@ -122,7 +119,9 @@ export function OverviewCards() {
           <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <div className="text-2xl font-bold">-₹4,530.10</div>
+          <div className="text-2xl font-bold">
+            ₹{overview.drawdown.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
           <p className="text-xs text-muted-foreground">
             -4.5% of total equity
           </p>

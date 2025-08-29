@@ -1,3 +1,6 @@
+
+'use client';
+
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -13,35 +16,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-const orders = [
-    {
-        time: '10:05:14',
-        symbol: 'NIFTYBEES',
-        type: 'BUY',
-        qty: 50,
-        price: 245.50,
-        status: 'EXECUTED',
-      },
-      {
-        time: '09:45:20',
-        symbol: 'BANKBEES',
-        type: 'BUY',
-        qty: 100,
-        price: 520.10,
-        status: 'EXECUTED',
-      },
-      {
-        time: '11:30:00',
-        symbol: 'NIFTYBEES',
-        type: 'SELL',
-        qty: 50,
-        price: 250.00,
-        status: 'PENDING',
-      },
-];
+import { useStore } from '@/store/use-store';
 
 export function OrdersTable() {
+  const { orders } = useStore();
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader className="p-2">

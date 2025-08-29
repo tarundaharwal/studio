@@ -1,4 +1,6 @@
 
+'use client'
+
 import { IndicatorGauge } from '@/components/indicator-gauge';
 import { OptionChain } from '@/components/option-chain';
 import { OrdersTable } from '@/components/orders-table';
@@ -7,31 +9,35 @@ import { PerformanceChart } from '@/components/performance-chart';
 import { PositionsTable } from '@/components/positions-table';
 import { SignalsFeed } from '@/components/signals-feed';
 import { TradingTerminal } from '@/components/trading-terminal';
+import { DataSimulator } from '@/components/data-simulator';
 
 export default function DashboardPage() {
   return (
-    <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {/* Main Column */}
-        <div className="col-span-1 flex flex-col gap-6 lg:col-span-2">
-            <TradingTerminal />
-            <PositionsTable />
-            <OrdersTable />
-        </div>
+    <>
+      <DataSimulator />
+      <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {/* Main Column */}
+          <div className="col-span-1 flex flex-col gap-6 lg:col-span-2">
+              <TradingTerminal />
+              <PositionsTable />
+              <OrdersTable />
+          </div>
 
-        {/* Middle Column (Previously 3rd) */}
-        <div className="col-span-1 flex flex-col gap-6">
-          <OptionChain />
-          <IndicatorGauge />
-          <SignalsFeed />
-        </div>
+          {/* Middle Column */}
+          <div className="col-span-1 flex flex-col gap-6">
+            <OptionChain />
+            <IndicatorGauge />
+            <SignalsFeed />
+          </div>
 
-        {/* Right Column (Previously 2nd) */}
-        <div className="col-span-1 flex flex-col gap-6">
-          <OverviewCards />
-          <PerformanceChart />
+          {/* Right Column */}
+          <div className="col-span-1 flex flex-col gap-6">
+            <OverviewCards />
+            <PerformanceChart />
+          </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

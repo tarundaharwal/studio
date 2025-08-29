@@ -187,12 +187,12 @@ export function TradingTerminal() {
   }
 
   const priceDomain = [
-    Math.min(...chartData.map(d => d.ohlc[2])),
-    Math.max(...chartData.map(d => d.ohlc[1])),
+    'auto',
+    'auto',
   ];
   const volumeDomain = [
     0,
-    Math.max(...chartData.map(d => d.volume)) * 2, // give some headroom
+    Math.max(...chartData.map(d => d.volume)) * 2.5, // give some headroom
   ];
 
   return (
@@ -277,7 +277,8 @@ export function TradingTerminal() {
                     tickMargin={8}
                     fontSize={10}
                     width={80}
-                />
+                    height="25%"
+                 />
                 <Tooltip content={<CustomTooltip />} />
 
                 {/* Candlestick Wicks */}
@@ -296,9 +297,24 @@ export function TradingTerminal() {
                 {/* Volume Bars */}
                 <Bar dataKey="volume" yAxisId="volume" barSize={CANDLE_WIDTH}>
                     {chartData.map((entry, index) => (
-                        <Cell key={`cell-${entry.time}-${index}`} fill={entry.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
+                        <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
                     ))}
                 </Bar>
+
+                {indicator === 'sma' && (
+                    <>
+                        <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={1.5} yAxisId="price" dot={false} />
+                        <Line type="monotone" dataKey="sma100" stroke="var(--color-sma100)" strokeWidth={1.5} yAxisId="price" dot={false} />
+                    </>
+                )}
+                 {indicator === 'bb' && (
+                    <>
+                        <Line type="monotone" dataKey="bb_middle" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="price" dot={false} />
+                        <Area type="monotone" dataKey="bb_upper" fill="var(--color-bb)" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="price" dot={false} />
+                        <Area type="monotone" dataKey="bb_lower" fill="var(--color-bb)" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="price" dot={false} />
+                     </>
+                )}
+
               </ComposedChart>
             </ChartContainer>
           <ScrollBar orientation="horizontal" />
@@ -307,5 +323,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

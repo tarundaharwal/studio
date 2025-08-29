@@ -97,24 +97,36 @@ const Candlestick = (props: any) => {
                 if (!ohlc) return null;
 
                 const [open, high, low, close] = ohlc;
-                const x = xAxis.scale(d.time) - CANDLE_WIDTH * 0.7 / 2;
+                
+                // Ensure scale functions are available
+                if (typeof xAxis.scale.bandwidth !== 'function' || typeof yAxis.scale !== 'function') {
+                    return null;
+                }
+                
+                const bandWidth = xAxis.scale.bandwidth();
+                const x = xAxis.scale(d.time);
+                
+                // Check if x is a valid number
+                if (x === undefined || isNaN(x)) return null;
+
                 const yOpen = yAxis.scale(open);
                 const yClose = yAxis.scale(close);
                 const yHigh = yAxis.scale(high);
                 const yLow = yAxis.scale(low);
+
+                // Check if all y-values are valid numbers
+                if ([yOpen, yClose, yHigh, yLow].some(val => val === undefined || isNaN(val))) {
+                    return null;
+                }
 
                 const isGain = close >= open;
                 const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
                 const stroke = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
 
                 const bodyY = Math.min(yOpen, yClose);
-                const bodyHeight = Math.max(1, Math.abs(yOpen - yClose));
-                const wickX = x + (CANDLE_WIDTH * 0.7 / 2);
+                const bodyHeight = Math.max(1, Math.abs(yOpen - yClose)); // Ensure minimum height of 1px
+                const wickX = x + bandWidth / 2;
                 
-                if ([x, yOpen, yClose, yHigh, yLow, bodyHeight].some(val => typeof val !== 'number' || isNaN(val))) {
-                    return null;
-                }
-
                 return (
                     <g key={`candle-${d.time}-${i}`}>
                         {/* Wick */}
@@ -125,9 +137,9 @@ const Candlestick = (props: any) => {
                         />
                         {/* Body */}
                         <rect
-                            x={x}
+                            x={x + bandWidth * 0.15}
                             y={bodyY}
-                            width={CANDLE_WIDTH * 0.7}
+                            width={bandWidth * 0.7}
                             height={bodyHeight}
                             fill={fill}
                         />

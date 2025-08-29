@@ -1,17 +1,4 @@
 import {
-  File,
-} from 'lucide-react';
-
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
   Table,
   TableBody,
   TableCell,
@@ -19,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 
 const positions = [
   {
@@ -40,23 +28,10 @@ const positions = [
 export function PositionsTable() {
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center">
-        <div className="grid gap-2">
-            <CardTitle>Positions</CardTitle>
-            <CardDescription>
-                Your currently open positions.
-            </CardDescription>
-        </div>
-        <div className="ml-auto flex items-center gap-2">
-            <Button size="sm" variant="outline" className="h-7 gap-1">
-                <File className="h-3.5 w-3.5" />
-                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Export CSV
-                </span>
-            </Button>
-        </div>
+      <CardHeader>
+        <CardTitle>Positions</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         <Table>
           <TableHeader>
             <TableRow>

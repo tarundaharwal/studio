@@ -1,30 +1,28 @@
-import { OverviewCards } from '@/components/overview-cards';
-import { PerformanceChart } from '@/components/performance-chart';
-import { PositionsTable } from '@/components/positions-table';
+import { IndicatorCards } from '@/components/indicator-cards';
+import { OptionChain } from '@/components/option-chain';
 import { OrdersTable } from '@/components/orders-table';
-import { SignalsFeed } from '@/components/signals-feed';
+import { PositionsTable } from '@/components/positions-table';
 import { TradingTerminal } from '@/components/trading-terminal';
 
 export default function DashboardPage() {
   return (
     <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-      <div className="grid grid-cols-1 gap-4 md:gap-8">
-        <TradingTerminal />
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-        <OverviewCards />
-      </div>
-      <div className="grid grid-cols-1 gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <PerformanceChart />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8 xl:grid-cols-5">
+        <div className="xl:col-span-3">
+          <TradingTerminal />
         </div>
-        <SignalsFeed />
+        <div className="grid gap-4 md:gap-8 xl:col-span-2">
+            <IndicatorCards />
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:gap-8">
-        <PositionsTable />
-      </div>
-      <div className="grid grid-cols-1 gap-4 md:gap-8">
-        <OrdersTable />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-8 xl:grid-cols-5">
+        <div className="xl:col-span-3">
+            <OptionChain />
+        </div>
+        <div className="space-y-4 md:space-y-8 xl:col-span-2">
+            <PositionsTable />
+            <OrdersTable />
+        </div>
       </div>
     </main>
   );

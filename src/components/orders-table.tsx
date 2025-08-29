@@ -2,7 +2,6 @@ import { Badge } from '@/components/ui/badge';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -17,7 +16,7 @@ import {
 
 const orders = [
     {
-        time: '2024-07-29 10:05:14',
+        time: '10:05:14',
         symbol: 'NIFTYBEES',
         type: 'BUY',
         qty: 50,
@@ -25,7 +24,7 @@ const orders = [
         status: 'EXECUTED',
       },
       {
-        time: '2024-07-29 09:45:20',
+        time: '09:45:20',
         symbol: 'BANKBEES',
         type: 'BUY',
         qty: 100,
@@ -33,7 +32,7 @@ const orders = [
         status: 'EXECUTED',
       },
       {
-        time: '2024-07-29 11:30:00',
+        time: '11:30:00',
         symbol: 'NIFTYBEES',
         type: 'SELL',
         qty: 50,
@@ -47,16 +46,15 @@ export function OrdersTable() {
     <Card>
       <CardHeader>
         <CardTitle>Recent Orders</CardTitle>
-        <CardDescription>An overview of your recent order activity.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Time</TableHead>
               <TableHead>Symbol</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead className="text-right">Quantity</TableHead>
+              <TableHead className="text-right">Qty</TableHead>
               <TableHead className="text-right">Price</TableHead>
               <TableHead className="text-right">Status</TableHead>
             </TableRow>

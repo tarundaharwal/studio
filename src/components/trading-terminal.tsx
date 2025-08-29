@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import * as React from "react"
@@ -242,7 +241,7 @@ export function TradingTerminal() {
                 className="h-full"
                 style={{
                     width: '100%',
-                    minWidth: `${chartData.length * (CANDLE_WIDTH)}px`,
+                    minWidth: `${chartData.length * CANDLE_WIDTH}px`,
                 }}
             >
                 <ComposedChart
@@ -300,7 +299,7 @@ export function TradingTerminal() {
 
 
                     {/* Volume Bar */}
-                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH} y={0}>
+                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH}>
                          {chartData.map((entry, index) => (
                             <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
                         ))}

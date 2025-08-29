@@ -47,7 +47,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={false}>
           <Sidebar>
             <SidebarHeader>
               <div className="flex items-center gap-2.5">

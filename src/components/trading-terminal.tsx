@@ -21,9 +21,8 @@ import {
     Tooltip,
     XAxis,
     YAxis,
-    Cell,
-    CartesianGrid,
-    Line,
+    Rectangle,
+    CartesianGrid
 } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
@@ -34,7 +33,7 @@ import { useStore, ChartData } from "@/store/use-store"
 
 const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
-const CANDLE_WIDTH = 12;
+const CANDLE_WIDTH = 10;
 
 
 const calculateHeikinAshi = (data: ChartData[]) => {
@@ -99,6 +98,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
   };
 
+const ColoredBar = (props: any) => {
+    const { fill, x, y, width, height } = props;
+    return <Rectangle {...props} fill={fill} />;
+};
+
+
 export function TradingTerminal() {
   const { chartData: fullChartData, timeframe, setTimeframe, candleType, setCandleType } = useStore();
   const [visibleCandles, setVisibleCandles] = React.useState(50);
@@ -133,6 +138,9 @@ export function TradingTerminal() {
             originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0], // For volume color
             original_ohlc: originalCandle.ohlc, // For tooltip
             closePrice: close,
+            // Pre-calculate colors for the shape renderer
+            fill: isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))',
+            volumeFill: originalCandle.ohlc[3] >= originalCandle.ohlc[0] ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)',
         }
     });
   }, [fullChartData, candleType]);
@@ -221,7 +229,6 @@ export function TradingTerminal() {
                 <ToggleGroup type="single" value={candleType} size="sm" className="h-7" onValueChange={(value) => value && setCandleType(value as any)}>
                     <ToggleGroupItem value="candlestick" className="text-xs px-1 h-full"><CandlestickChart className="h-4 w-4" /></ToggleGroupItem>
                     <ToggleGroupItem value="heikin-ashi" className="text-xs px-1 h-full"><BarChart3 className="h-4 w-4" /></ToggleGroupItem>
-                    <ToggleGroupItem value="line" className="text-xs px-1 h-full"><LineChartIcon className="h-4 w-4" /></ToggleGroupItem>
                 </ToggleGroup>
             </div>
             <div className="flex items-center gap-1">
@@ -241,7 +248,7 @@ export function TradingTerminal() {
                 className="h-full"
                 style={{
                     width: '100%',
-                    minWidth: `${chartData.length * CANDLE_WIDTH}px`,
+                    minWidth: `${chartData.length * (CANDLE_WIDTH + 4)}px`,
                 }}
             >
                 <ComposedChart
@@ -280,30 +287,15 @@ export function TradingTerminal() {
                     
                     <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
                     
-                    {candleType === 'line' ? (
-                         <Line type="monotone" dataKey="closePrice" strokeWidth={2} yAxisId="right" dot={false} name="Price" stroke="hsl(var(--primary))"/>
-                    ) : (
+                    {candleType !== 'line' && (
                         <>
-                         <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="candles">
-                           {chartData.map((entry, index) => (
-                             <Cell key={`cell-wick-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
-                           ))}
-                         </Bar>
-                         <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="candles">
-                            {chartData.map((entry, index) => (
-                             <Cell key={`cell-body-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
-                           ))}
-                         </Bar>
+                            <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" shape={<ColoredBar />} />
+                            <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH} stackId="price" shape={<ColoredBar />} />
                         </>
                     )}
 
-
                     {/* Volume Bar */}
-                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH}>
-                         {chartData.map((entry, index) => (
-                            <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
-                        ))}
-                    </Bar>
+                    <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH} shape={<ColoredBar />} />
                 </ComposedChart>
             </ChartContainer>
           <ScrollBar orientation="horizontal" />
@@ -312,5 +304,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -23,11 +24,13 @@
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
     --ring: 231 48% 54%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
+    --chart-1: 0 72% 51%;
+    --chart-2: 142 76% 36%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
+    --chart-1-light: 0 72% 51% / 0.5;
+    --chart-2-light: 142 76% 36% / 0.5;
     --radius: 0.5rem;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -58,11 +61,13 @@
     --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 231 48% 54%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
+    --chart-1: 0 63% 51%;
+    --chart-2: 142 71% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --chart-1-light: 0 63% 51% / 0.5;
+    --chart-2-light: 142 71% 45% / 0.5;
     --sidebar-background: 222 47% 8%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 231 48% 54%;
@@ -82,3 +87,5 @@
     @apply bg-background text-foreground;
   }
 }
+
+    

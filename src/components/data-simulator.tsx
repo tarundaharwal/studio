@@ -1,190 +1,100 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useStore } from '@/store/use-store';
+import { useStore, StoreState } from '@/store/use-store';
+import { useToast } from '@/hooks/use-toast';
 
-const timeframes: { [key: string]: number } = {
-    '1m': 1 * 60 * 1000,
-    '5m': 5 * 60 * 1000,
-    '15m': 15 * 60 * 1000,
-    '1h': 60 * 60 * 1000,
-};
 const TICK_INTERVAL = 2000; // 2 seconds
 
-// Helper to generate a random number within a range
-const getRandom = (min: number, max: number, precision: number = 2) => {
-    return parseFloat((Math.random() * (max - min) + min).toFixed(precision));
-};
+// Helper function to pick only the required state for the API call
+const pickStateForAPI = (state: StoreState) => ({
+  chartData: state.chartData,
+  timeframe: state.timeframe,
+  positions: state.positions,
+  orders: state.orders,
+  overview: state.overview,
+  indicators: state.indicators,
+  optionChain: state.optionChain,
+  tradingStatus: state.tradingStatus,
+});
+
 
 export function DataSimulator() {
-  const {
-    timeframe,
-    addCandle,
-    updateOptionChain,
-    updateIndicators,
-    setChartData,
-    addOrder,
-    addPosition,
-    closePosition,
-    updatePositions,
-    tradingStatus,
-    overview,
-    updateOverview,
-    addSignal
-  } = useStore();
+  const store = useStore();
+  const { toast } = useToast();
+  const isRunning = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const lastCandleTime = useRef(Date.now());
-  const maxDrawdownRef = useRef(overview.maxDrawdown);
-  const peakEquityRef = useRef(overview.equity);
+  const tick = async () => {
+    if (isRunning.current) {
+      // If a request is already in flight, skip this tick.
+      return;
+    }
 
+    try {
+      isRunning.current = true;
+      const currentState = pickStateForAPI(useStore.getState());
+      
+      const response = await fetch('/api/simulate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(currentState),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API call failed with status: ${response.status}`);
+      }
+
+      const newState = await response.json();
+
+      // Update the store with the new state from the backend
+      store.setChartData(newState.chartData);
+      store.updatePositions(newState.positions);
+      store.updateOverview(newState.overview);
+      store.updateIndicators(newState.indicators);
+      store.updateOptionChain(newState.optionChain);
+      
+      // We don't directly set orders and signals, as they are append-only.
+      // The simulation flow returns the *new* orders/signals for this tick.
+      if (newState.newOrders && newState.newOrders.length > 0) {
+        newState.newOrders.forEach((order: any) => store.addOrder(order));
+      }
+      if (newState.newSignals && newState.newSignals.length > 0) {
+        newState.newSignals.forEach((signal: any) => store.addSignal(signal));
+      }
+
+    } catch (error) {
+      console.error("Error during simulation tick:", error);
+      toast({
+        title: "Simulation Error",
+        description: "Could not connect to the simulation backend.",
+        variant: "destructive",
+      });
+       // Stop the loop on error
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      return; 
+    } finally {
+      isRunning.current = false;
+       // Schedule the next tick
+      timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
+    }
+  };
 
   useEffect(() => {
-    const interval = setInterval(() => {
-        const now = Date.now();
-        const nowLocale = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        const currentStore = useStore.getState();
-        const { chartData, tradingStatus } = currentStore;
-        
-        // --- MARKET DATA SIMULATION (Always runs) ---
-        const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
-        let newClosePrice: number;
-        let lastCandleInStore = chartData[chartData.length - 1];
+    // Start the simulation loop
+    timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
 
-        // 1. Update or Create Candle
-        if (now - lastCandleTime.current >= timeframeDuration) {
-            lastCandleTime.current = now;
-            const lastClose = lastCandleInStore.ohlc[3];
-            const newCandle = {
-                time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-                ohlc: [lastClose, lastClose, lastClose, lastClose], // Start new candle from last close
-                volume: 0,
-            };
-            addCandle(newCandle);
-            newClosePrice = newCandle.ohlc[3];
-            lastCandleInStore = newCandle; // For trading logic below
-
-            // --- TRADING LOGIC (Only runs on new candle and if trading is active) ---
-            if (tradingStatus === 'ACTIVE') {
-                const priceAction = newCandle.ohlc[3] - chartData[chartData.length - 2].ohlc[3];
-                const hasOpenPosition = currentStore.positions.length > 0;
-                
-                // Simple logic: 10% chance to trade on a new candle
-                if (Math.random() < 0.1) {
-                    if (priceAction > 10 && !hasOpenPosition) { // If price moved up and no open position
-                        // ENTER LONG
-                        const newPosition = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newCandle.ohlc[3], ltp: newCandle.ohlc[3], pnl: 0 };
-                        addPosition(newPosition);
-                        addOrder({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newCandle.ohlc[3], status: 'EXECUTED' });
-                        addSignal({ time: nowLocale, strategy: 'SIM-TREND', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: 'Simulated bullish momentum.'});
-
-                    } else if (priceAction < -10 && hasOpenPosition) { // If price moved down and has open position
-                        // EXIT LONG
-                        const positionToClose = currentStore.positions[0]; // Assuming one position for simplicity
-                        addOrder({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newCandle.ohlc[3], status: 'EXECUTED' });
-                        closePosition(positionToClose.symbol, newCandle.ohlc[3]);
-                        addSignal({ time: nowLocale, strategy: 'SIM-TREND', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: 'Simulated bearish momentum.'});
-                    }
-                }
-            }
-             // --- END TRADING LOGIC ---
-
-        } else {
-            const newChartData = chartData.slice();
-            const currentCandle = { ...newChartData[newChartData.length - 1] };
-            currentCandle.ohlc = [...currentCandle.ohlc]; 
-
-            const [open, high, low, close] = currentCandle.ohlc;
-            const volumeSpurt = Math.random() * 1000;
-            const change = (Math.random() - 0.5) * (volumeSpurt / 100); 
-            newClosePrice = close + change;
-            
-            const newHigh = Math.max(high, newClosePrice);
-            const newLow = Math.min(low, newClosePrice);
-
-            currentCandle.ohlc = [open, newHigh, newLow, newClosePrice];
-            currentCandle.volume += volumeSpurt;
-            
-            newChartData[newChartData.length - 1] = currentCandle;
-            setChartData(newChartData);
-        }
-
-        // 2. Update Option Chain based on new market price
-        const atmStrike = Math.round(newClosePrice / 50) * 50;
-        const newOptionChain = currentStore.optionChain.map(opt => {
-            const priceInfluence = (newClosePrice - opt.strike) / 100;
-            return {
-            ...opt,
-            callLTP: Math.max(0, opt.callLTP + getRandom(-0.5, 0.5) - priceInfluence),
-            putLTP: Math.max(0, opt.putLTP + getRandom(-0.5, 0.5) + priceInfluence),
-            callOI: Math.max(0, opt.callOI + getRandom(-100, 100, 0)),
-            putOI: Math.max(0, opt.putOI + getRandom(-100, 100, 0)),
-            };
-        });
-        updateOptionChain(newOptionChain);
-
-        // 3. Update Indicators based on new market price
-        const priceMovement = newClosePrice - (chartData[chartData.length - 2]?.ohlc[3] || newClosePrice);
-        const newIndicators = currentStore.indicators.map(ind => {
-            let newValue = ind.value;
-            if (ind.name.includes('RSI')) {
-                newValue = Math.max(0, Math.min(100, ind.value + priceMovement * 2));
-            } else if (ind.name.includes('MACD')) {
-                newValue = ind.value + priceMovement / 10;
-            } else if (ind.name.includes('ADX')) {
-                newValue = Math.max(10, ind.value + (Math.abs(priceMovement) > 1 ? 0.5 : -0.2));
-            }
-            return {...ind, value: newValue};
-        });
-        updateIndicators(newIndicators);
-
-        // --- TRADING DATA SIMULATION (Only runs if trading is active) ---
-        if (tradingStatus === 'ACTIVE') {
-            let totalUnrealizedPnl = 0;
-            
-            // 4. Update Positions based on new close price (LTP)
-            const newPositions = currentStore.positions.map(pos => {
-                let newLtp;
-                if (pos.symbol.includes('FUT')) {
-                    newLtp = newClosePrice;
-                } else {
-                    const optionChange = getRandom(-2.5, 2.5);
-                    newLtp = Math.max(0.05, pos.ltp + optionChange);
-                }
-                const pnl = (newLtp - pos.avgPrice) * pos.qty;
-                totalUnrealizedPnl += pnl;
-                return { ...pos, ltp: newLtp, pnl: pnl };
-            });
-            updatePositions(newPositions);
-
-            // 5. Update Overview Cards based on new positions
-            const realizedEquity = currentStore.overview.equity;
-            const currentTotalValue = newPositions.reduce((acc, pos) => acc + (pos.ltp * pos.qty), 0);
-            const floatingEquity = realizedEquity + currentTotalValue;
-
-            const newPeakEquity = Math.max(peakEquityRef.current, floatingEquity);
-            peakEquityRef.current = newPeakEquity;
-            
-            const drawdown = newPeakEquity - floatingEquity;
-            if(drawdown > maxDrawdownRef.current) {
-                maxDrawdownRef.current = drawdown;
-            }
-
-            const pnl = floatingEquity - currentStore.overview.initialEquity;
-            
-            updateOverview({
-                pnl: pnl,
-                equity: floatingEquity,
-                peakEquity: newPeakEquity,
-                maxDrawdown: maxDrawdownRef.current,
-            });
-        }
-    }, TICK_INTERVAL);
-
+    // Cleanup function to stop the loop when the component unmounts
     return () => {
-        clearInterval(interval);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
     };
-  }, [timeframe, addCandle, addSignal, updateIndicators, updateOptionChain, updateOverview, updatePositions, setChartData, addOrder, addPosition, closePosition]);
+  }, []); // Empty dependency array ensures this runs only once on mount
 
-  return null;
+  return null; // This component does not render anything
 }

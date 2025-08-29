@@ -19,17 +19,17 @@ export default function DashboardPage() {
             <OrdersTable />
         </div>
 
-        {/* Right Column 1 */}
-        <div className="col-span-1 flex flex-col gap-6">
-          <OverviewCards />
-          <PerformanceChart />
-        </div>
-
-        {/* Right Column 2 */}
+        {/* Middle Column (Previously 3rd) */}
         <div className="col-span-1 flex flex-col gap-6">
           <OptionChain />
           <IndicatorGauge />
           <SignalsFeed />
+        </div>
+
+        {/* Right Column (Previously 2nd) */}
+        <div className="col-span-1 flex flex-col gap-6">
+          <OverviewCards />
+          <PerformanceChart />
         </div>
       </div>
     </main>

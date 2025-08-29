@@ -23,7 +23,7 @@ import {
     SelectTrigger,
     SelectValue,
   } from '@/components/ui/select';
-import { ScrollArea } from './ui/scroll-area';
+import { ScrollArea, ScrollBar } from './ui/scroll-area';
 import { Progress } from './ui/progress';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Label } from './ui/label';
@@ -104,7 +104,7 @@ export function OptionChain() {
         </div>
       </CardHeader>
       <CardContent className="p-0 flex-1">
-      <ScrollArea className="h-full">
+      <ScrollArea className="h-full w-full">
         <Table>
           <TableHeader>
             <TableRow className="text-xs">
@@ -133,6 +133,7 @@ export function OptionChain() {
             ))}
           </TableBody>
         </Table>
+        <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </CardContent>
     </Card>

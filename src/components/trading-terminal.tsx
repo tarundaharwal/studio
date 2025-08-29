@@ -36,6 +36,7 @@ import { useStore } from "@/store/use-store"
 
 const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
+const CANDLE_WIDTH = 12;
 
 // Helper to calculate SMA
 const calculateSMA = (data: any[], period: number) => {
@@ -253,7 +254,7 @@ export function TradingTerminal() {
       </CardHeader>
       <CardContent className="p-0 flex-1">
         <ScrollArea className="w-full h-full whitespace-nowrap">
-            <div style={{ width: '100%', height: '100%' }}>
+            <div style={{ width: chartData.length * CANDLE_WIDTH, minWidth: '100%', height: '100%' }}>
                 <ChartContainer config={chartConfig} className="h-full w-full">
                     {/* Main Price Chart */}
                     <ResponsiveContainer width="100%" height="70%">
@@ -280,7 +281,6 @@ export function TradingTerminal() {
                                 dataKey="ohlc"
                                 shape={<Candlestick />}
                                 yAxisId="left"
-                                barSize={8}
                             >
                                {chartData.map((entry, index) => {
                                     const [open, , , close] = entry.ohlc;
@@ -318,7 +318,7 @@ export function TradingTerminal() {
                                 position={{ y: 5 }}
                                 contentStyle={{ display: 'none' }}
                             />
-                            <Bar dataKey="volume" yAxisId="right" barSize={8}>
+                            <Bar dataKey="volume" yAxisId="right">
                                 {chartData.map((entry, index) => {
                                     const [open, , , close] = entry.ohlc;
                                     const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
@@ -335,5 +335,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

@@ -170,7 +170,7 @@ export function TradingTerminal() {
             originalIsGain, // For volume color
             // For candlestick
             body: [open, close],
-            wick: [low, high],
+            wick: [high, low],
             closePrice: d.ohlc[3], // For line chart
             // For indicators
             sma50: sma50[i],

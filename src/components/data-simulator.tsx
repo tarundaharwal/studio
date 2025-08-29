@@ -42,28 +42,25 @@ export function DataSimulator() {
         const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
         const currentChartData = useStore.getState().chartData;
         const lastCandleInStore = currentChartData[currentChartData.length - 1];
-
-        // 1. Update or Create Candle
         let newClosePrice: number;
 
+        // 1. Update or Create Candle
         if (now - lastCandleTime.current >= timeframeDuration) {
-            // --- Create a new candle ---
             lastCandleTime.current = now;
+            const lastClose = lastCandleInStore.ohlc[3];
             const newCandle = {
                 time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-                ohlc: [lastCandleInStore.ohlc[3], lastCandleInStore.ohlc[3], lastCandleInStore.ohlc[3], lastCandleInStore.ohlc[3]],
+                ohlc: [lastClose, lastClose, lastClose, lastClose], // Start new candle from last close
                 volume: 0,
             };
             addCandle(newCandle);
             newClosePrice = newCandle.ohlc[3];
         } else {
-            // --- Update Current Candle ---
             const newChartData = currentChartData.slice();
             const currentCandle = { ...newChartData[newChartData.length - 1] };
-            currentCandle.ohlc = [...currentCandle.ohlc]; // Crucial for re-render
+            currentCandle.ohlc = [...currentCandle.ohlc]; 
 
             const [open, high, low, close] = currentCandle.ohlc;
-            
             const volumeSpurt = Math.random() * 1000;
             const change = (Math.random() - 0.5) * (volumeSpurt / 100); 
             newClosePrice = close + change;
@@ -80,16 +77,24 @@ export function DataSimulator() {
 
         // 2. Update Positions based on new close price (LTP)
         const newPositions = positions.map(pos => {
-            // For simplicity, we'll assume the chart instrument affects all positions
-            const ltp = newClosePrice; 
-            const newPnl = (ltp - pos.avgPrice) * pos.qty;
-            return { ...pos, ltp: ltp, pnl: newPnl };
+            let newLtp;
+            // Differentiate between Futures/Stocks and Options
+            if (pos.symbol.includes('FUT') || !pos.symbol.includes('CE') && !pos.symbol.includes('PE')) {
+                // For futures, use the chart's price
+                newLtp = newClosePrice;
+            } else {
+                // For options, simulate a smaller, more realistic price change
+                const optionChange = getRandom(-2.5, 2.5); // Options price fluctuates less
+                newLtp = Math.max(0.05, pos.ltp + optionChange); // Ensure price doesn't go negative
+            }
+            const newPnl = (newLtp - pos.avgPrice) * pos.qty;
+            return { ...pos, ltp: newLtp, pnl: newPnl };
         });
         updatePositions(newPositions);
 
+
         // 3. Update Overview Cards from new positions
         const totalPnl = newPositions.reduce((acc, pos) => acc + pos.pnl, 0);
-        // Make drawdown slightly dynamic
         const drawdownChange = (Math.random() - 0.5) * (totalPnl > 0 ? 10 : -50); 
         updateOverview({
             pnl: totalPnl,
@@ -100,7 +105,6 @@ export function DataSimulator() {
         const atmStrike = Math.round(newClosePrice / 50) * 50;
         const newOptionChain = optionChain.map(opt => {
             const isATM = opt.strike === atmStrike;
-            // Simulate some activity around the current price
             const priceInfluence = (newClosePrice - opt.strike) / 100;
             return {
             ...opt,
@@ -117,7 +121,6 @@ export function DataSimulator() {
         const newIndicators = indicators.map(ind => {
             let newValue = ind.value;
             if (ind.name.includes('RSI')) {
-                // Simplified RSI logic
                 newValue = Math.max(0, Math.min(100, ind.value + priceMovement * 2));
             } else if (ind.name.includes('MACD')) {
                 newValue = ind.value + priceMovement / 10;
@@ -129,7 +132,7 @@ export function DataSimulator() {
         updateIndicators(newIndicators);
 
         // 6. Add a new signal occasionally (10% chance)
-        if (Math.random() < 0.1) { 
+        if (Math.random() < 0.02) { 
             const actions = ['ENTER LONG', 'EXIT LONG', 'MONITOR', 'CONFIRM'];
             const instruments = ['NIFTYBEES', 'BANKBEES'];
             addSignal({

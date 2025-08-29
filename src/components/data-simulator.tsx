@@ -32,8 +32,9 @@ export function DataSimulator() {
       const currentCandle = { ...chartData[chartData.length - 1] };
       const [open, high, low, close] = currentCandle.ohlc;
       
-      // Simulate price change
-      const change = (Math.random() - 0.5) * 10;
+      // Simulate a volume spurt, then correlate price change to it
+      const volumeSpurt = Math.random() * 10000;
+      const change = (Math.random() - 0.5) * (volumeSpurt / 500); // Bigger volume = bigger potential price change
       let newClose = close + change;
       
       // Update H, L, C. Keep O the same.
@@ -41,8 +42,9 @@ export function DataSimulator() {
       const newLow = Math.min(low, newClose);
       currentCandle.ohlc = [open, newHigh, newLow, newClose];
       
-      const newVolume = currentCandle.volume + (Math.random() * 10000);
-      currentCandle.volume = Math.max(0, newVolume);
+      // Volume should only increase during the lifetime of a candle
+      const newVolume = currentCandle.volume + volumeSpurt;
+      currentCandle.volume = newVolume;
       
       updateChart(currentCandle);
 

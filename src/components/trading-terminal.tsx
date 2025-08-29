@@ -1,6 +1,7 @@
 
 "use client"
 
+import * as React from "react"
 import {
   Card,
   CardContent,
@@ -21,13 +22,13 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
-  LineChart,
-  Line,
   ComposedChart,
+  Line,
 } from "recharts"
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
+import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
+import { Button } from "./ui/button"
+import { Minus, Plus } from "lucide-react"
 
 // Helper to calculate SMA
 const calculateSMA = (data: any[], period: number) => {
@@ -70,7 +71,7 @@ const generateCandlestickData = (count: number) => {
   return data.map((d, i) => ({ ...d, sma50: sma50[i], sma200: sma200[i] }));
 }
 
-const chartData = generateCandlestickData(78); // 5-min candles for a trading day
+const fullChartData = generateCandlestickData(78); // 5-min candles for a trading day
 
 const chartConfig = {
   price: {
@@ -98,9 +99,9 @@ const Candlestick = (props: any) => {
     const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     const stroke = fill;
   
-    const bodyHeight = Math.max(1, Math.abs(y - (y + height - Math.abs(open-close)) ));
-    const bodyY = isGain ? y + (height - bodyHeight) : y;
-  
+    const bodyHeight = Math.max(1, Math.abs(open - close));
+    const bodyY = isGain ? y + height - bodyHeight : y;
+
     return (
       <g stroke={stroke} fill="none" strokeWidth={1}>
         {/* Wick */}
@@ -132,13 +133,29 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
   };
 
+const MIN_CANDLES = 15;
+const MAX_CANDLES = 78;
+const ZOOM_STEP = 5;
+
+
 export function TradingTerminal() {
-  const chartWidth = chartData.length * 12;
+  const [visibleCandles, setVisibleCandles] = React.useState(MAX_CANDLES);
+
+  const handleZoomIn = () => {
+    setVisibleCandles(prev => Math.max(MIN_CANDLES, prev - ZOOM_STEP));
+  };
+
+  const handleZoomOut = () => {
+    setVisibleCandles(prev => Math.min(MAX_CANDLES, prev + ZOOM_STEP));
+  };
+  
+  const chartData = fullChartData.slice(fullChartData.length - visibleCandles);
+  const chartWidth = Math.max(500, visibleCandles * 12);
 
   return (
     <Card className="overflow-hidden h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-2">
-        <div>
+        <div className="flex items-center gap-2">
           <Select defaultValue="NIFTY 50">
             <SelectTrigger className="w-40 border-0 text-base font-bold shadow-none focus:ring-0 h-8">
               <SelectValue placeholder="Select Instrument" />
@@ -149,6 +166,14 @@ export function TradingTerminal() {
               <SelectItem value="NIFTYBEES">NIFTYBEES</SelectItem>
             </SelectContent>
           </Select>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleZoomIn} disabled={visibleCandles <= MIN_CANDLES}>
+                <Minus className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleZoomOut} disabled={visibleCandles >= MAX_CANDLES}>
+                <Plus className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span className="font-medium text-green-600">22,780.50</span>
@@ -166,7 +191,7 @@ export function TradingTerminal() {
                             margin={{ top: 10, right: 15, bottom: 0, left: -25 }}
                         >
                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval={6} tick={false} />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
                             <YAxis
                                 yAxisId="left"
                                 domain={['dataMin - 50', 'dataMax + 50']}
@@ -198,15 +223,16 @@ export function TradingTerminal() {
                             margin={{ top: 5, right: 15, bottom: 15, left: -25 }}
                         >
                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval={6} />
+                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
                             <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
                             <Tooltip
-                                cursor={{ strokeDasharray: '3 3' }}
+                                cursor={{ strokeDasharray: '3-3' }}
                                 content={<></>}
+                                position={{ y: 5 }}
                             />
                             <Bar dataKey="volume" yAxisId="right" barSize={8}>
                                 {chartData.map((entry, index) => (
-                                    <rect key={`bar-${index}`} fill={entry.ohlc[3] >= entry.ohlc[0] ? 'hsl(var(--chart-2)/0.5)' : 'hsl(var(--chart-1)/0.5)'} />
+                                    <Bar key={`bar-${index}`} fill={entry.ohlc[3] >= entry.ohlc[0] ? 'hsl(var(--chart-2)/0.5)' : 'hsl(var(--chart-1)/0.5)'} />
                                 ))}
                             </Bar>
                         </BarChart>
@@ -219,3 +245,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

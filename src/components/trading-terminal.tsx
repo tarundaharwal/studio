@@ -170,9 +170,9 @@ export function TradingTerminal() {
   const maxCandles = fullChartData.length;
 
   React.useEffect(() => {
-    if (chartData.length > 1) {
-        const latestPrice = chartData[chartData.length - 1].ohlc[3];
-        const previousPrice = chartData[chartData.length - 2].ohlc[3];
+    if (fullChartData.length > 1) {
+        const latestPrice = fullChartData[fullChartData.length - 1].ohlc[3];
+        const previousPrice = fullChartData[fullChartData.length - 2].ohlc[3];
         const priceChange = latestPrice - previousPrice;
         const priceChangePercent = previousPrice !== 0 ? (priceChange / previousPrice) * 100 : 0;
         const isGain = priceChange >= 0;
@@ -184,7 +184,7 @@ export function TradingTerminal() {
             isGain,
         });
     }
-  }, [chartData]);
+  }, [fullChartData]);
 
 
   const handleZoomIn = () => {
@@ -330,3 +330,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

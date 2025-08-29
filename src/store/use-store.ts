@@ -117,7 +117,7 @@ type StoreState = {
     emergencyStop: () => void;
 };
 
-const INITIAL_EQUITY = 5000000; // 50 Lakhs
+const INITIAL_EQUITY = 500000; // 5 Lakhs
 
 export const useStore = create<StoreState>((set, get) => ({
     // Initial State

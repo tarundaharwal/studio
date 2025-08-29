@@ -9,7 +9,9 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { Maximize2 } from 'lucide-react';
 import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Button } from './ui/button';
 
 const generateIndicatorData = (min: number, max: number, count: number) => {
     return Array.from({ length: count }, () => Math.random() * (max - min) + min);
@@ -45,28 +47,35 @@ const chartConfig = {
 export function IndicatorCards() {
   return (
     <Card className="h-[250px] flex flex-col">
-        <CardHeader className="py-4">
-          <CardTitle>Market Indicators</CardTitle>
-          <CardDescription className="text-xs">RSI, MACD, ADX, and ATR</CardDescription>
+        <CardHeader className="py-4 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Market Indicators</CardTitle>
+            <CardDescription className="text-xs">RSI, MACD, ADX, and ATR</CardDescription>
+          </div>
+          <Button variant="ghost" size="icon" className="h-6 w-6">
+              <Maximize2 className="h-4 w-4" />
+              <span className="sr-only">Expand Chart</span>
+          </Button>
         </CardHeader>
         <div className="flex-1 relative">
           <div className="absolute inset-0">
             <ChartContainer config={chartConfig} className="h-full w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -10 }}>
+                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -25 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
                       dataKey="x"
                       tickLine={false}
                       axisLine={false}
                       tickMargin={8}
+                      fontSize={9}
                       tickFormatter={(value) => ''} // Hide X-axis labels to keep it clean
                   />
                    <YAxis
                       tickLine={false}
                       axisLine={false}
                       tickMargin={8}
-                      width={30}
+                      width={45}
                       fontSize={9}
                   />
                   <Tooltip

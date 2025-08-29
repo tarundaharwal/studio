@@ -7,6 +7,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+import { Button } from './ui/button';
+import { Zap } from 'lucide-react';
 
 const positions = [
   {
@@ -41,6 +43,7 @@ export function PositionsTable() {
                 <TableHead className="p-2 text-right">Avg. Price</TableHead>
                 <TableHead className="p-2 text-right">LTP</TableHead>
                 <TableHead className="p-2 text-right">P&L</TableHead>
+                <TableHead className="p-2 text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -54,6 +57,12 @@ export function PositionsTable() {
                   <TableCell className="p-2 text-right">₹{pos.ltp.toFixed(2)}</TableCell>
                   <TableCell className={`p-2 text-right font-medium ${pos.pnl > 0 ? 'text-green-600' : 'text-red-600'}`}>
                     {pos.pnl > 0 ? '+' : ''}₹{pos.pnl.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="p-2 text-right">
+                    <Button variant="outline" size="sm" className="h-7 text-xs">
+                        <Zap className="mr-1 h-3 w-3" />
+                        Exit
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

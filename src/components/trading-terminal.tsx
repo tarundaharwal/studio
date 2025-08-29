@@ -27,14 +27,13 @@ import {
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
 import { Button } from "./ui/button"
-import { Minus, Plus, CandlestickChart, LineChart as LineChartIcon, BarChart3 } from "lucide-react"
+import { Minus, Plus, CandlestickChart, BarChart3 } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
 import { useStore, ChartData } from "@/store/use-store"
 
 const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
-const CANDLE_WIDTH = 10;
-
+const CANDLE_WIDTH = 12;
 
 const calculateHeikinAshi = (data: ChartData[]) => {
     const haData: ChartData[] = [];
@@ -100,7 +99,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 const ColoredBar = (props: any) => {
     const { fill, x, y, width, height, payload } = props;
-    const color = payload.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'
+    const color = payload.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'
     return <Rectangle {...props} fill={color} />;
 };
 
@@ -108,14 +107,12 @@ const ColoredBar = (props: any) => {
 // Custom shape components for dynamic coloring
 const CustomWick = (props: any) => {
     const { x, y, width, height, payload } = props;
-    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
   
 const CustomBody = (props: any) => {
     const { x, y, width, height, payload } = props;
-    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
@@ -154,7 +151,6 @@ export function TradingTerminal() {
             isGain,
             originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0], // For volume color and tooltip
             original_ohlc: originalCandle.ohlc, // For tooltip
-            closePrice: close,
         }
     });
   }, [fullChartData, candleType]);
@@ -262,7 +258,7 @@ export function TradingTerminal() {
                 className="h-full"
                 style={{
                     width: '100%',
-                    minWidth: `${chartData.length * (CANDLE_WIDTH)}px`,
+                    minWidth: `${chartData.length * CANDLE_WIDTH}px`,
                 }}
             >
                 <ComposedChart
@@ -304,7 +300,6 @@ export function TradingTerminal() {
                     <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" shape={<CustomWick />} />
                     <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="price" shape={<CustomBody />} />
 
-                    {/* Volume Bar */}
                     <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH / 1.5} shape={<ColoredBar />} />
                 </ComposedChart>
             </ChartContainer>

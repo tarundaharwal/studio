@@ -169,9 +169,11 @@ export function TradingTerminal() {
             isGain,
             originalIsGain, // For volume color
             original_ohlc: originalCandle.ohlc, // For tooltip
-            // For candlestick floating bars
-            body: [open, close],
-            wick: [low, high],
+            
+            // This is the structure Recharts needs for floating bars
+            candleBody: [open, close],
+            candleWick: [low, high],
+
             closePrice: d.ohlc[3], // For line chart
             // For indicators
             sma50: sma50[i],
@@ -337,13 +339,13 @@ export function TradingTerminal() {
                     ) : (
                         <>
                         {/* Wick */}
-                        <Bar dataKey="wick" yAxisId="right" barSize={1} >
+                        <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="candles">
                              {chartData.map((entry, index) => (
                                 <Cell key={`wick-cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
                             ))}
                         </Bar>
                         {/* Body */}
-                        <Bar dataKey="body" yAxisId="right" barSize={CANDLE_WIDTH}>
+                        <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH} stackId="candles">
                             {chartData.map((entry, index) => (
                                 <Cell key={`body-cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
                             ))}

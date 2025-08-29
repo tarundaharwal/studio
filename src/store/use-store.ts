@@ -105,6 +105,7 @@ type StoreState = {
     updateOptionChain: (newOptionChain: Option[]) => void;
     addSignal: (newSignal: Signal) => void;
     updateOrderStatus: (orderIndex: number, newStatus: Order['status']) => void;
+    emergencyStop: () => void;
 };
 
 export const useStore = create<StoreState>((set, get) => ({
@@ -167,6 +168,39 @@ export const useStore = create<StoreState>((set, get) => ({
         }
         return { orders: newOrders };
     }),
-}));
-
+    emergencyStop: () => set(state => {
+        const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
+        // Create liquidation orders from open positions
+        const liquidationOrders: Order[] = state.positions.map(pos => ({
+            time: now,
+            symbol: pos.symbol,
+            type: 'SELL', // Assuming all positions are long for simplicity
+            qty: pos.qty,
+            price: pos.ltp, // Liquidate at current market price
+            status: 'EXECUTED'
+        }));
+    
+        // Cancel all pending orders
+        const remainingOrders = state.orders.filter(order => order.status !== 'PENDING');
+    
+        // Add new liquidation orders to the list
+        const newOrders = [...liquidationOrders, ...remainingOrders];
+    
+        // Add a signal for emergency stop
+        const newSignal: Signal = {
+            time: now,
+            strategy: 'SYSTEM',
+            action: 'EMERGENCY STOP',
+            instrument: 'ALL',
+            reason: 'User triggered emergency stop. Liquidating all positions.'
+        };
+    
+        return {
+            positions: [], // All positions are liquidated
+            orders: newOrders,
+            signals: [newSignal, ...state.signals].slice(0, 20),
+            overview: { ...state.overview, pnl: 0 }
+        };
+    }),
+}));

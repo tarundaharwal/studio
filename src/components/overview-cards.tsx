@@ -29,15 +29,26 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useStore } from '@/store/use-store';
 import React from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 
 export function OverviewCards() {
-  const { overview } = useStore();
+  const { overview, emergencyStop } = useStore();
+  const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
     setIsClient(true);
   }, []);
+
+  const handleEmergencyStop = () => {
+    emergencyStop();
+    toast({
+      title: "Emergency Stop Activated!",
+      description: "All positions are being liquidated and pending orders cancelled.",
+      variant: "destructive",
+    })
+  }
 
 
   if (!isClient) {
@@ -107,7 +118,7 @@ export function OverviewCards() {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction>Confirm Emergency Stop</AlertDialogAction>
+                <AlertDialogAction onClick={handleEmergencyStop}>Confirm Emergency Stop</AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

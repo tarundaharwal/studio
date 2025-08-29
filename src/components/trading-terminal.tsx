@@ -87,7 +87,7 @@ const chartConfig = {
 const Candlestick = (props: any) => {
     const { x, y, width, height, ohlc, low: domainLow, high: domainHigh } = props;
   
-    if (!ohlc || !domainHigh || !domainLow) {
+    if (!ohlc || domainHigh === undefined || domainLow === undefined) {
       return null;
     }
   
@@ -97,17 +97,18 @@ const Candlestick = (props: any) => {
     const stroke = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
   
     const domainRange = domainHigh - domainLow;
-    if (domainRange <= 0) return null;
   
-    const priceToY = (price: number) => y + ((domainHigh - price) / domainRange) * height;
+    const priceToY = (price: number) => {
+      if (domainRange <= 0) return y;
+      return y + ((domainHigh - price) / domainRange) * height;
+    };
   
     const bodyY = priceToY(Math.max(open, close));
-    const bodyHeight = Math.abs(priceToY(open) - priceToY(close));
+    const bodyHeight = Math.max(1, Math.abs(priceToY(open) - priceToY(close)));
   
     const wickHighY = priceToY(high);
     const wickLowY = priceToY(low);
   
-    // Ensure all calculated values are numbers before rendering
     if (isNaN(bodyY) || isNaN(bodyHeight) || isNaN(wickHighY) || isNaN(wickLowY)) {
       return null;
     }
@@ -117,7 +118,7 @@ const Candlestick = (props: any) => {
         {/* Wick */}
         <path d={`M ${x + width / 2} ${wickHighY} L ${x + width / 2} ${wickLowY}`} />
         {/* Body */}
-        <rect x={x} y={bodyY} width={width} height={Math.max(1, bodyHeight)} fill={fill} />
+        <rect x={x} y={bodyY} width={width} height={bodyHeight} fill={fill} />
       </g>
     );
   };

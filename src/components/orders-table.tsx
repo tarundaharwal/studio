@@ -1,3 +1,4 @@
+
 import { Badge } from '@/components/ui/badge';
 import {
   Card,
@@ -13,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ScrollArea } from './ui/scroll-area';
 
 const orders = [
     {
@@ -43,39 +45,33 @@ const orders = [
 
 export function OrdersTable() {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Recent Orders</CardTitle>
+    <Card className="h-full">
+      <CardHeader className="p-4">
+        <CardTitle>Orders</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
+        <ScrollArea className="h-40">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Time</TableHead>
-              <TableHead>Symbol</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Price</TableHead>
-              <TableHead className="text-right">Status</TableHead>
+              <TableHead className="p-4">Symbol</TableHead>
+              <TableHead className="p-4">Type</TableHead>
+              <TableHead className="p-4 text-right">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {orders.map((order, index) => (
               <TableRow key={index}>
-                <TableCell>
-                  <div className="font-mono text-xs">{order.time}</div>
-                </TableCell>
-                <TableCell>
+                <TableCell className="p-4">
                   <div className="font-medium">{order.symbol}</div>
+                  <div className="font-mono text-xs text-muted-foreground">{order.time}</div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="p-4">
                   <Badge variant={order.type === 'BUY' ? 'outline' : 'secondary'} className={order.type === 'BUY' ? 'text-green-600 border-green-600' : 'text-red-600 border-red-600'}>
                     {order.type}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">{order.qty}</TableCell>
-                <TableCell className="text-right">₹{order.price.toFixed(2)}</TableCell>
-                <TableCell className="text-right">
+                <TableCell className="p-4 text-right">
                     <Badge variant="outline" className={order.status === 'EXECUTED' ? 'text-blue-600 border-blue-600' : 'text-amber-600 border-amber-600'}>
                         {order.status}
                     </Badge>
@@ -84,6 +80,7 @@ export function OrdersTable() {
             ))}
           </TableBody>
         </Table>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

@@ -1,3 +1,4 @@
+
 import {
   Table,
   TableBody,
@@ -7,6 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+import { ScrollArea } from './ui/scroll-area';
 
 const positions = [
   {
@@ -27,37 +29,36 @@ const positions = [
 
 export function PositionsTable() {
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-full">
+      <CardHeader className="p-4">
         <CardTitle>Positions</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
+        <ScrollArea className="h-40">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Symbol</TableHead>
-              <TableHead className="text-right">Quantity</TableHead>
-              <TableHead className="text-right">Avg. Price</TableHead>
-              <TableHead className="text-right">LTP</TableHead>
-              <TableHead className="text-right">P&L</TableHead>
+              <TableHead className="p-4">Symbol</TableHead>
+              <TableHead className="p-4 text-right">Qty</TableHead>
+              <TableHead className="p-4 text-right">P&L</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {positions.map((pos) => (
               <TableRow key={pos.symbol}>
-                <TableCell>
+                <TableCell className="p-4">
                   <div className="font-medium">{pos.symbol}</div>
+                  <div className="text-xs text-muted-foreground">LTP: ₹{pos.ltp.toFixed(2)}</div>
                 </TableCell>
-                <TableCell className="text-right">{pos.qty}</TableCell>
-                <TableCell className="text-right">₹{pos.avgPrice.toFixed(2)}</TableCell>
-                <TableCell className="text-right">₹{pos.ltp.toFixed(2)}</TableCell>
-                <TableCell className={`text-right font-medium ${pos.pnl > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <TableCell className="p-4 text-right">{pos.qty}</TableCell>
+                <TableCell className={`p-4 text-right font-medium ${pos.pnl > 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {pos.pnl > 0 ? '+' : ''}₹{pos.pnl.toFixed(2)}
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

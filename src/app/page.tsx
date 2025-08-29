@@ -7,26 +7,26 @@ import { TradingTerminal } from '@/components/trading-terminal';
 
 export default function DashboardPage() {
   return (
-    <main className="flex-1 overflow-auto p-4 md:p-6">
-      <div className="grid h-[calc(100vh-8rem)] grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
-        {/* Left (smaller) */}
-        <div className="col-span-1 flex flex-col gap-4 md:gap-6">
-          <div className="flex-1">
+    <main className="overflow-hidden p-4 md:p-6 h-screen flex flex-col">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 flex-1 h-[calc(100vh-5rem)]">
+        {/* Left Column */}
+        <div className="flex flex-col gap-4 md:gap-6">
+          <div className="flex-[3]"> {/* Takes more space */}
             <TradingTerminal />
           </div>
-          <div className="flex-1">
+          <div className="flex-[2]"> {/* Takes less space */}
             <OptionChain />
           </div>
         </div>
-        {/* Right (larger) */}
-        <div className="col-span-2 flex flex-col gap-4 md:gap-6">
-            <div className="flex-1">
-                <IndicatorCards />
-            </div>
-            <div className="grid grid-cols-2 gap-4 md:gap-6 flex-1">
-                <PositionsTable />
-                <OrdersTable />
-            </div>
+        {/* Right Column */}
+        <div className="flex flex-col gap-4 md:gap-6">
+          <div className="flex-[2]"> {/* Takes less space */}
+            <IndicatorCards />
+          </div>
+          <div className="flex-[3] grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6"> {/* Takes more space */}
+            <PositionsTable />
+            <OrdersTable />
+          </div>
         </div>
       </div>
     </main>

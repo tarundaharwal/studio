@@ -92,10 +92,13 @@ const Candlestick = (props: any) => {
     const stroke = fill;
   
     const domainRange = domainHigh - domainLow;
-    const priceToY = (price: number) => y + ((domainHigh - price) / domainRange) * height;
+    const priceToY = (price: number) => {
+        if (domainRange === 0) return y; // Prevent division by zero
+        return y + ((domainHigh - price) / domainRange) * height;
+    };
   
     const bodyY = priceToY(Math.max(open, close));
-    const bodyHeight = Math.abs(priceToY(open) - priceToY(close));
+    const bodyHeight = Math.max(1, Math.abs(priceToY(open) - priceToY(close))); // Ensure bodyHeight is at least 1
   
     const wickHighY = priceToY(high);
     const wickLowY = priceToY(low);

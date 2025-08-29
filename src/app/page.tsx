@@ -12,7 +12,7 @@ export default function DashboardPage() {
         <div className="md:col-span-3 md:row-span-2">
           <TradingTerminal />
         </div>
-        <div className="grid grid-cols-2 gap-4 md:col-span-2 md:row-span-1 md:grid-cols-4">
+        <div className="md:col-span-2 md:row-span-1">
             <IndicatorCards />
         </div>
         <div className="md:col-span-2 md:row-span-1">

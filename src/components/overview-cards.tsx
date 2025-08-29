@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -40,54 +41,47 @@ export function OverviewCards() {
   return (
     <>
       <Card>
-        <CardHeader className="p-4">
-          <CardTitle>Live Status</CardTitle>
-          <CardDescription>Real-time system & market health.</CardDescription>
+        <CardHeader className="p-2">
+          <CardTitle className="text-base">Live Status</CardTitle>
         </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="grid grid-cols-2 gap-4 text-sm">
+        <CardContent className="p-2 pt-0">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
             <div className="font-medium">Market Status</div>
             <div className="text-right">
-              <Badge variant="outline" className="text-green-600 border-green-600">
+              <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
                 Open
               </Badge>
             </div>
             <div className="font-medium">Broker</div>
             <div className="text-right">
-              <Badge variant="outline" className="text-green-600 border-green-600">
+              <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
                 Connected
               </Badge>
             </div>
             <div className="font-medium">Latency</div>
             <div className="text-right">
-              <Badge variant="outline">12ms</Badge>
+              <Badge variant="outline" className="text-xs">12ms</Badge>
             </div>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="p-4">
-          <CardTitle>Global Controls</CardTitle>
-          <CardDescription>
-            Manual overrides for all strategies.
-          </CardDescription>
+        <CardHeader className="p-2">
+          <CardTitle className="text-base">Global Controls</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 p-4 pt-0">
+        <CardContent className="space-y-2 p-2 pt-0">
           <div className="flex items-center justify-between space-x-2">
-            <Label htmlFor="trading-enabled" className="flex flex-col space-y-1">
-              <span>Global Trading</span>
-              <span className="text-xs font-normal leading-snug text-muted-foreground">
-                Enable or disable all trading activity.
-              </span>
+            <Label htmlFor="trading-enabled" className="flex flex-col">
+              <span className="text-xs">Global Trading</span>
             </Label>
-            <Switch id="trading-enabled" defaultChecked />
+            <Switch id="trading-enabled" defaultChecked className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:translate-x-4"/>
           </div>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="w-full h-9">
-                <Power className="mr-2 h-4 w-4" /> Emergency Stop
+              <Button variant="destructive" className="w-full h-8 text-xs">
+                <Power className="mr-1 h-3 w-3" /> Emergency Stop
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>

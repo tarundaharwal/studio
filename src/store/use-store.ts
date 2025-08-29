@@ -135,7 +135,11 @@ export const useStore = create<StoreState>((set, get) => ({
     ],
 
     // Actions
-    updateChart: (newCandle) => set(state => ({ chartData: [...state.chartData.slice(1), newCandle] })),
+    updateChart: (updatedCandle) => set(state => {
+        const newChartData = [...state.chartData];
+        newChartData[newChartData.length - 1] = updatedCandle;
+        return { chartData: newChartData };
+    }),
     updatePositions: (newPositions) => set({ positions: newPositions }),
     updateOverview: (newOverview) => set(state => ({ overview: { ...state.overview, ...newOverview } })),
     updateIndicators: (newIndicators) => set({ indicators: newIndicators }),

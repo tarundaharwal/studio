@@ -28,26 +28,24 @@ export function DataSimulator() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // 1. Update Chart Data
-      const lastDataPoint = chartData[chartData.length - 1];
-      const newOhlc = [...lastDataPoint.ohlc]; // a new array
-      const lastClose = newOhlc[3];
+      // 1. Update Chart Data (current candle)
+      const currentCandle = { ...chartData[chartData.length - 1] };
+      const [open, high, low, close] = currentCandle.ohlc;
       
       // Simulate price change
-      const change = (Math.random() - 0.5) * 50;
-      let newClose = lastClose + change;
-      newOhlc[0] = lastClose; // open
-      newOhlc[1] = Math.max(lastClose, newClose) + getRandom(0,10); // high
-      newOhlc[2] = Math.min(lastClose, newClose) - getRandom(0,10); // low
-      newOhlc[3] = newClose; // close
+      const change = (Math.random() - 0.5) * 10;
+      let newClose = close + change;
       
-      const newVolume = lastDataPoint.volume + (Math.random() - 0.5) * 100000;
+      // Update H, L, C. Keep O the same.
+      const newHigh = Math.max(high, newClose);
+      const newLow = Math.min(low, newClose);
+      currentCandle.ohlc = [open, newHigh, newLow, newClose];
       
-      updateChart({
-        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-        ohlc: newOhlc,
-        volume: newVolume,
-      });
+      const newVolume = currentCandle.volume + (Math.random() - 0.5) * 10000;
+      currentCandle.volume = Math.max(0, newVolume);
+      
+      updateChart(currentCandle);
+
 
       // 2. Update Positions
       const newPositions = positions.map(pos => {

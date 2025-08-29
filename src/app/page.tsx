@@ -9,25 +9,21 @@ export default function DashboardPage() {
   return (
     <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-2">
-        {/* Column 1 */}
-        <div className="flex flex-col gap-4">
-          <div>
+        {/* Top Row */}
+        <div className="col-span-1">
             <TradingTerminal />
-          </div>
-          <div className="flex-1">
-            <OptionChain />
-          </div>
+        </div>
+        <div className="col-span-1">
+            <IndicatorCards />
         </div>
 
-        {/* Column 2 */}
-        <div className="flex flex-col gap-4">
-          <div>
-            <IndicatorCards />
-          </div>
-          <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">
+        {/* Bottom Row */}
+        <div className="col-span-1">
+            <OptionChain />
+        </div>
+        <div className="col-span-1 grid grid-cols-1 gap-4 md:grid-cols-2">
             <PositionsTable />
             <OrdersTable />
-          </div>
         </div>
       </div>
     </main>

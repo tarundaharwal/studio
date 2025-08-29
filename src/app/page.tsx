@@ -8,7 +8,7 @@ import { TradingTerminal } from '@/components/trading-terminal';
 export default function DashboardPage() {
   return (
     <main className="flex-1 p-4 md:p-6">
-      <div className="grid h-[calc(100vh-6rem)] grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+      <div className="grid h-[calc(100vh-8rem)] grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
         {/* Top-Left */}
         <div className="col-span-1">
           <TradingTerminal />

@@ -1,5 +1,3 @@
-
-
 "use client"
 
 import * as React from "react"
@@ -27,6 +25,7 @@ import {
   Line,
   Area,
   Cell,
+  Customized,
 } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
@@ -83,45 +82,61 @@ const chartConfig = {
   }
 }
 
-// Custom shape for candlestick
+// Custom component to render candlesticks using Customized component
 const Candlestick = (props: any) => {
-    const { x, y, width, height, ohlc, low: domainLow, high: domainHigh } = props;
-  
-    if (!ohlc || domainHigh === undefined || domainLow === undefined) {
-      return null;
+    const { data, xAxis, yAxis } = props;
+
+    if (!data || !xAxis || !yAxis) {
+        return null;
     }
-  
-    const [open, high, low, close] = ohlc;
-    const isGain = close >= open;
-    const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-    const stroke = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-  
-    const domainRange = domainHigh - domainLow;
-  
-    const priceToY = (price: number) => {
-      if (domainRange <= 0) return y;
-      return y + ((domainHigh - price) / domainRange) * height;
-    };
-  
-    const bodyY = priceToY(Math.max(open, close));
-    const bodyHeight = Math.max(1, Math.abs(priceToY(open) - priceToY(close)));
-  
-    const wickHighY = priceToY(high);
-    const wickLowY = priceToY(low);
-  
-    if (isNaN(bodyY) || isNaN(bodyHeight) || isNaN(wickHighY) || isNaN(wickLowY)) {
-      return null;
-    }
-  
+
     return (
-      <g stroke={stroke} fill="none" strokeWidth="1">
-        {/* Wick */}
-        <path d={`M ${x + width / 2} ${wickHighY} L ${x + width / 2} ${wickLowY}`} />
-        {/* Body */}
-        <rect x={x} y={bodyY} width={width} height={bodyHeight} fill={fill} />
-      </g>
+        <g>
+            {data.map((d: any, i: number) => {
+                const { ohlc } = d;
+                if (!ohlc) return null;
+
+                const [open, high, low, close] = ohlc;
+                const x = xAxis.scale(d.time) - CANDLE_WIDTH * 0.7 / 2;
+                const yOpen = yAxis.scale(open);
+                const yClose = yAxis.scale(close);
+                const yHigh = yAxis.scale(high);
+                const yLow = yAxis.scale(low);
+
+                const isGain = close >= open;
+                const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+                const stroke = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+
+                const bodyY = Math.min(yOpen, yClose);
+                const bodyHeight = Math.abs(yOpen - yClose);
+                const wickX = x + (CANDLE_WIDTH * 0.7 / 2);
+                
+                if ([x, yOpen, yClose, yHigh, yLow, bodyHeight].some(isNaN)) {
+                    return null;
+                }
+
+                return (
+                    <g key={`candle-${i}`}>
+                        {/* Wick */}
+                        <path
+                            d={`M ${wickX} ${yHigh} L ${wickX} ${yLow}`}
+                            stroke={stroke}
+                            strokeWidth={1}
+                        />
+                        {/* Body */}
+                        <rect
+                            x={x}
+                            y={bodyY}
+                            width={CANDLE_WIDTH * 0.7}
+                            height={bodyHeight > 0 ? bodyHeight : 1} // Ensure min height of 1px
+                            fill={fill}
+                        />
+                    </g>
+                );
+            })}
+        </g>
     );
-  };
+};
   
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -283,7 +298,7 @@ export function TradingTerminal() {
                         margin={{ top: 10, right: 15, bottom: 0, left: -25 }}
                     >
                         <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
+                        <XAxis dataKey="time" type="category" scale="band" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
                         <YAxis
                             yAxisId="left"
                             domain={['dataMin - 50', 'dataMax + 50']}
@@ -297,18 +312,7 @@ export function TradingTerminal() {
                             content={<CustomTooltip />}
                             cursor={{ strokeDasharray: '3 3' }}
                         />
-                        <Bar
-                            dataKey="ohlc"
-                            shape={<Candlestick />}
-                            yAxisId="left"
-                            barSize={CANDLE_WIDTH * 0.7}
-                        >
-                           {chartData.map((entry, index) => {
-                                const [open, , , close] = entry.ohlc;
-                                const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-                                return <Cell key={`cell-${index}`} fill={fill} />;
-                            })}
-                        </Bar>
+                         <Customized component={(props: any) => <Candlestick {...props} data={chartData} />} />
                          {indicator === 'sma' && (
                             <>
                                 <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 50"/>
@@ -333,7 +337,7 @@ export function TradingTerminal() {
                         barGap={1}
                     >
                         <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
+                        <XAxis dataKey="time" type="category" scale="band" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
                         <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
                         <Tooltip
                             cursor={{ strokeDasharray: '3 3' }}

@@ -53,7 +53,7 @@ export function IndicatorCards() {
         <CardContent className="flex-1 p-0">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }}>
+              <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                     dataKey="x"

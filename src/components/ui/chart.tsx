@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -88,7 +89,13 @@ ${colorConfig
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
+    const [h, s, l] = color?.split(" ") ?? [];
+
+    return color
+      ? `  --color-${key}: ${color};
+  --color-fill: ${h} ${s} ${l} / 0.1;
+  --color-stroke: ${h} ${s} ${l};`
+      : null
   })
   .join("\n")}
 }

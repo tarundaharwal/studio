@@ -284,12 +284,12 @@ export function TradingTerminal() {
                          <Line type="monotone" dataKey="closePrice" strokeWidth={2} yAxisId="right" dot={false} name="Price" stroke="hsl(var(--primary))"/>
                     ) : (
                         <>
-                         <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="candles" fill="hsl(var(--foreground))" z={0}>
+                         <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="candles">
                            {chartData.map((entry, index) => (
                              <Cell key={`cell-wick-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
                            ))}
                          </Bar>
-                         <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="candles" z={1}>
+                         <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="candles">
                             {chartData.map((entry, index) => (
                              <Cell key={`cell-body-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
                            ))}
@@ -312,3 +312,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

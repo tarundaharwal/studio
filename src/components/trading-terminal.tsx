@@ -28,13 +28,13 @@ import {
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
 import { Button } from "./ui/button"
-import { Minus, Plus, CandlestickChart, LineChart as LineChartIcon, BarChart3, Waves, Tally5 } from "lucide-react"
+import { Minus, Plus, CandlestickChart, LineChart as LineChartIcon, BarChart3 } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
 import { useStore, ChartData } from "@/store/use-store"
 
 const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
-const CANDLE_WIDTH = 10;
+const CANDLE_WIDTH = 12;
 
 
 const calculateHeikinAshi = (data: ChartData[]) => {
@@ -99,29 +99,30 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
   };
 
-  const Candle = (props: any) => {
-    const { x, y, width, height, isGain, low, high, open, close } = props;
-  
-    const bodyHeight = Math.abs(y - (y + height));
-    const bodyY = isGain ? y + height : y;
-  
+const Candle = (props: any) => {
+    const { x, y, width, height, isGain, ohlc } = props;
+
+    if (!ohlc) return null;
+
+    const [open, high, low, close] = ohlc;
+
+    const ohlcY = props.yAxis.scale;
+    const yOpen = ohlcY(open);
+    const yClose = ohlcY(close);
+    const yHigh = ohlcY(high);
+    const yLow = ohlcY(low);
+
+    const bodyHeight = Math.abs(yOpen - yClose);
+    const bodyY = Math.min(yOpen, yClose);
+    const stroke = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+
     return (
-      <g>
-        <path
-          d={`M${x + width / 2},${high} L${x + width / 2},${low}`}
-          stroke={isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}
-          strokeWidth={1}
-        />
-        <rect
-          x={x}
-          y={bodyY}
-          width={width}
-          height={bodyHeight}
-          fill={isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}
-        />
+      <g stroke={stroke} fill={stroke} strokeWidth={1}>
+        <path d={`M${x + width / 2},${yHigh} L${x + width / 2},${yLow}`} />
+        <rect x={x} y={bodyY} width={width} height={bodyHeight} />
       </g>
     );
-  };
+};
 
 
 export function TradingTerminal() {
@@ -267,11 +268,13 @@ export function TradingTerminal() {
                 className="h-full"
                 style={{
                     width: '100%',
-                    minWidth: `${chartData.length * (CANDLE_WIDTH + 4)}px`,
+                    minWidth: `${chartData.length * CANDLE_WIDTH}px`,
                 }}
             >
                 <ComposedChart
                     data={chartData}
+                    barGap={0}
+                    barCategoryGap={0}
                     margin={{ top: 20, right: 45, bottom: 20, left: 5 }}
                 >
                     <CartesianGrid vertical={false} />
@@ -302,22 +305,18 @@ export function TradingTerminal() {
                         hide={true}
                     />
                     
-                    <Tooltip content={<CustomTooltip />} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
                     
                     {candleType === 'line' ? (
                          <Line type="monotone" dataKey="closePrice" strokeWidth={2} yAxisId="right" dot={false} name="Price" stroke="hsl(var(--primary))"/>
                     ) : (
-                        <Bar dataKey="ohlc_shape" yAxisId="right" barSize={CANDLE_WIDTH} shape={<Candle/>}>
+                        <Bar dataKey="ohlc" yAxisId="right" barSize={CANDLE_WIDTH} shape={<Candle/>}>
                              {chartData.map((entry, index) => {
-                                const [open, high, low, close] = entry.ohlc;
                                 return (
                                 <Cell
                                     key={`cell-${index}`}
                                     isGain={entry.isGain}
-                                    low={low}
-                                    high={high}
-                                    open={open}
-                                    close={close}
+                                    ohlc={entry.ohlc}
                                 />
                                 );
                             })}

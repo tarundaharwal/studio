@@ -133,9 +133,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 
 export function TradingTerminal() {
-  const { chartData: fullChartData } = useStore();
+  const { chartData: fullChartData, timeframe, setTimeframe } = useStore();
   const [visibleCandles, setVisibleCandles] = React.useState(50);
-  const [timeframe, setTimeframe] = React.useState('5m');
   const [indicator, setIndicator] = React.useState('sma');
   
   const [isClient, setIsClient] = React.useState(false);
@@ -230,7 +229,7 @@ export function TradingTerminal() {
        </div>
        <div className="flex items-center justify-between w-full gap-2">
             <div className="flex items-center gap-1">
-                <ToggleGroup type="single" defaultValue="5m" size="sm" className="h-7" onValueChange={(value) => value && setTimeframe(value)}>
+                <ToggleGroup type="single" value={timeframe} size="sm" className="h-7" onValueChange={(value) => value && setTimeframe(value)}>
                     <ToggleGroupItem value="5m" className="text-xs px-2 h-full">5m</ToggleGroupItem>
                     <ToggleGroupItem value="15m" className="text-xs px-2 h-full">15m</ToggleGroupItem>
                     <ToggleGroupItem value="1h" className="text-xs px-2 h-full">1H</ToggleGroupItem>
@@ -330,5 +329,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

@@ -8,9 +8,10 @@ const getRandom = (min: number, max: number, precision: number = 2) => {
 
 
 // Generate more realistic OHLCV data
-const generateCandlestickData = (count: number) => {
+const generateCandlestickData = (count: number, timeframeMinutes: number) => {
     let lastClose = 22750;
     const data = [];
+    const now = Date.now();
     
     for (let i = 0; i < count; i++) {
       const open = lastClose;
@@ -20,13 +21,19 @@ const generateCandlestickData = (count: number) => {
       const volume = getRandom(50000, 200000);
       lastClose = close;
       data.push({
-        time: new Date(Date.now() - (count - i) * 300000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        time: new Date(now - (count - i) * timeframeMinutes * 60000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
         ohlc: [open, high, low, close],
         volume: volume,
       })
     }
     return data;
 }
+
+const timeframes: { [key: string]: number } = {
+    '5m': 5,
+    '15m': 15,
+    '1h': 60,
+};
 
 type ChartData = {
     time: string;
@@ -81,13 +88,16 @@ type Signal = {
 
 type StoreState = {
     chartData: ChartData[];
+    timeframe: string;
     positions: Position[];
     orders: Order[];
     overview: Overview;
     indicators: Indicator[];
     optionChain: Option[];
     signals: Signal[];
-    updateChart: (newCandle: ChartData) => void;
+    updateChart: (updatedCandle: ChartData) => void;
+    addCandle: (newCandle: ChartData) => void;
+    setTimeframe: (newTimeframe: string) => void;
     updatePositions: (newPositions: Position[]) => void;
     updateOverview: (newOverview: Partial<Overview>) => void;
     updateIndicators: (newIndicators: Indicator[]) => void;
@@ -98,7 +108,8 @@ type StoreState = {
 
 export const useStore = create<StoreState>((set, get) => ({
     // Initial State
-    chartData: generateCandlestickData(78),
+    chartData: generateCandlestickData(78, timeframes['5m']),
+    timeframe: '5m',
     positions: [
         { symbol: 'NIFTYBEES', qty: 50, avgPrice: 245.50, ltp: 248.75, pnl: 162.50 },
         { symbol: 'BANKBEES', qty: 100, avgPrice: 520.10, ltp: 518.90, pnl: -120.00 },
@@ -135,11 +146,18 @@ export const useStore = create<StoreState>((set, get) => ({
     ],
 
     // Actions
+    setTimeframe: (newTimeframe) => set({
+        timeframe: newTimeframe,
+        chartData: generateCandlestickData(78, timeframes[newTimeframe] || 5)
+    }),
     updateChart: (updatedCandle) => set(state => {
         const newChartData = [...state.chartData];
         newChartData[newChartData.length - 1] = updatedCandle;
         return { chartData: newChartData };
     }),
+    addCandle: (newCandle) => set(state => ({
+        chartData: [...state.chartData.slice(1), newCandle]
+    })),
     updatePositions: (newPositions) => set({ positions: newPositions }),
     updateOverview: (newOverview) => set(state => ({ overview: { ...state.overview, ...newOverview } })),
     updateIndicators: (newIndicators) => set({ indicators: newIndicators }),

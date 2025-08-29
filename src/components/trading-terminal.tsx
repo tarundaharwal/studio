@@ -150,8 +150,7 @@ export function TradingTerminal() {
   };
   
   const chartData = fullChartData.slice(fullChartData.length - visibleCandles);
-  const chartWidth = Math.max(500, visibleCandles * 12);
-
+  
   return (
     <Card className="overflow-hidden h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-2">
@@ -182,7 +181,7 @@ export function TradingTerminal() {
       </CardHeader>
       <CardContent className="p-0 flex-1">
         <ScrollArea className="w-full h-full whitespace-nowrap">
-            <div style={{ width: chartWidth, height: '100%' }}>
+            <div style={{ width: '100%', height: '100%' }}>
                 <ChartContainer config={chartConfig} className="h-full w-full">
                     {/* Main Price Chart */}
                     <ResponsiveContainer width="100%" height="70%">
@@ -227,7 +226,6 @@ export function TradingTerminal() {
                             <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
                             <Tooltip
                                 cursor={{ strokeDasharray: '3-3' }}
-                                content={<></>}
                                 position={{ y: 5 }}
                             />
                             <Bar dataKey="volume" yAxisId="right" barSize={8}>
@@ -245,5 +243,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

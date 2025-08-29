@@ -35,7 +35,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 
 
 export function OverviewCards() {
-  const { overview, emergencyStop, tradingStatus } = useStore();
+  const { overview, emergencyStop, tradingStatus, toggleTradingStatus } = useStore();
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
 
@@ -49,6 +49,14 @@ export function OverviewCards() {
       title: "Emergency Stop Activated!",
       description: "All positions are being liquidated and pending orders cancelled.",
       variant: "destructive",
+    })
+  }
+
+  const handleToggleTrading = (checked: boolean) => {
+    toggleTradingStatus();
+    toast({
+      title: `Trading ${checked ? 'Activated' : 'Stopped'}`,
+      description: `The system will ${checked ? 'now execute' : 'no longer execute new'} trades.`,
     })
   }
 
@@ -74,12 +82,12 @@ export function OverviewCards() {
           <CardTitle className="text-base">Global Controls</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-2 p-2 pt-0">
-          <div className="flex items-center justify-between space-x-2 rounded-md bg-muted/50 p-2">
+        <div className="flex items-center justify-between space-x-2 rounded-md bg-muted/50 p-2">
             <Label htmlFor="trading-enabled" className="flex flex-col space-y-0.5">
               <span className="text-xs font-medium">Trading Status</span>
               <Badge variant={tradingStatus === 'ACTIVE' ? 'outline' : 'secondary'} className={`w-min text-xs ${tradingStatus === 'ACTIVE' ? 'border-green-600 text-green-600' : 'border-red-600 text-red-600'}`}>{tradingStatus}</Badge>
             </Label>
-            <Switch id="trading-enabled" checked={tradingStatus === 'ACTIVE'} disabled className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:translate-x-4"/>
+            <Switch id="trading-enabled" checked={tradingStatus === 'ACTIVE'} onCheckedChange={handleToggleTrading} className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:translate-x-4"/>
           </div>
 
           <div className="flex items-center justify-center">

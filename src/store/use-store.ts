@@ -115,9 +115,10 @@ type StoreState = {
     addSignal: (newSignal: Signal) => void;
     updateOrderStatus: (orderIndex: number, newStatus: Order['status']) => void;
     emergencyStop: () => void;
+    toggleTradingStatus: () => void;
 };
 
-const INITIAL_EQUITY = 500000; // 5 Lakhs
+const INITIAL_EQUITY = 500000;
 
 export const useStore = create<StoreState>((set, get) => ({
     // Initial State
@@ -164,8 +165,8 @@ export const useStore = create<StoreState>((set, get) => ({
     addOrder: (newOrder) => set(state => ({ orders: [newOrder, ...state.orders].slice(0, 100) })),
     addPosition: (newPosition) => set(state => {
         const cost = newPosition.avgPrice * newPosition.qty;
-        const newEquity = state.overview.equity - cost;
-        const newPnl = newEquity - state.overview.initialEquity;
+        const newEquity = state.overview.equity; // Equity is now just the total account value
+        const newPnl = newEquity - state.overview.initialEquity + state.positions.reduce((acc, pos) => acc + pos.pnl, 0);
         return { 
             positions: [...state.positions, newPosition],
             overview: { ...state.overview, equity: newEquity, pnl: newPnl }
@@ -175,11 +176,11 @@ export const useStore = create<StoreState>((set, get) => ({
         const positionToClose = state.positions.find(p => p.symbol === symbol);
         if (!positionToClose) return {};
 
-        const proceeds = closePrice * positionToClose.qty;
-        const newEquity = state.overview.equity + proceeds;
+        const pnlFromTrade = (closePrice - positionToClose.avgPrice) * positionToClose.qty;
+        const newEquity = state.overview.equity + pnlFromTrade;
         const newPeakEquity = Math.max(state.overview.peakEquity, newEquity);
-        const newPnl = newEquity - state.overview.initialEquity;
-        const newDrawdown = newPeakEquity - newEquity;
+        const newPnl = state.overview.pnl + pnlFromTrade;
+        const newDrawdown = newPeakEquity > 0 ? newPeakEquity - newEquity : 0;
 
         return { 
             positions: state.positions.filter(p => p.symbol !== symbol),
@@ -203,15 +204,20 @@ export const useStore = create<StoreState>((set, get) => ({
         }
         return { orders: newOrders };
     }),
+    toggleTradingStatus: () => set(state => ({
+        tradingStatus: state.tradingStatus === 'ACTIVE' ? 'STOPPED' : 'ACTIVE'
+    })),
     emergencyStop: () => set(state => {
         const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
-        if (state.tradingStatus === 'STOPPED') return {};
+        if (state.tradingStatus === 'STOPPED' && state.positions.length === 0) return {};
 
         let currentEquity = state.overview.equity;
+        let totalPnlRealizedOnStop = 0;
 
         const liquidationOrders: Order[] = state.positions.map(pos => {
-            currentEquity += pos.ltp * pos.qty; // Add back liquidated value to equity
+            const pnl = (pos.ltp - pos.avgPrice) * pos.qty;
+            totalPnlRealizedOnStop += pnl;
             return {
                 time: now,
                 symbol: pos.symbol,
@@ -222,9 +228,10 @@ export const useStore = create<StoreState>((set, get) => ({
             }
         });
         
-        const finalPnl = currentEquity - state.overview.initialEquity;
-        const finalPeakEquity = Math.max(state.overview.peakEquity, currentEquity);
-        const finalDrawdown = finalPeakEquity - currentEquity;
+        const newEquity = state.overview.equity + totalPnlRealizedOnStop;
+        const finalPnl = state.overview.pnl + totalPnlRealizedOnStop;
+        const finalPeakEquity = Math.max(state.overview.peakEquity, newEquity);
+        const finalDrawdown = finalPeakEquity - newEquity;
     
         const updatedOrders = state.orders.map(order => 
             order.status === 'PENDING' ? { ...order, status: 'CANCELLED' } : order
@@ -242,15 +249,15 @@ export const useStore = create<StoreState>((set, get) => ({
     
         return {
             positions: [], 
-            orders: newOrders,
+            orders: newOrders.slice(0, 100),
             signals: [newSignal, ...state.signals].slice(0, 20),
             tradingStatus: 'STOPPED',
             overview: {
                 ...state.overview,
-                equity: currentEquity,
+                equity: newEquity,
                 pnl: finalPnl,
                 peakEquity: finalPeakEquity,
-                maxDrawdown: Math.max(state.overview.maxDrawdown, finalDrawdown)
+                maxDrawdown: Math.max(state.overview.maxdrawdown, finalDrawdown)
             }
         };
     }),

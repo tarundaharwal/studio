@@ -24,7 +24,6 @@ export function DataSimulator() {
     orders,
     optionChain,
     indicators,
-    signals,
     updatePositions,
     updateOverview,
     updateOptionChain,
@@ -42,84 +41,95 @@ export function DataSimulator() {
         const now = Date.now();
         const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
         const currentChartData = useStore.getState().chartData;
+        const lastCandleInStore = currentChartData[currentChartData.length - 1];
 
-        // Check if it's time to create a new candle
+        // 1. Update or Create Candle
+        let newClosePrice: number;
+
         if (now - lastCandleTime.current >= timeframeDuration) {
+            // --- Create a new candle ---
             lastCandleTime.current = now;
-            const lastCandle = currentChartData[currentChartData.length - 1];
             const newCandle = {
                 time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-                // Open price is the previous close
-                ohlc: [lastCandle.ohlc[3], lastCandle.ohlc[3], lastCandle.ohlc[3], lastCandle.ohlc[3]],
+                ohlc: [lastCandleInStore.ohlc[3], lastCandleInStore.ohlc[3], lastCandleInStore.ohlc[3], lastCandleInStore.ohlc[3]],
                 volume: 0,
             };
             addCandle(newCandle);
+            newClosePrice = newCandle.ohlc[3];
         } else {
-            // Update Current Candle
-            const newChartData = currentChartData.slice(); // Create a copy
+            // --- Update Current Candle ---
+            const newChartData = currentChartData.slice();
             const currentCandle = { ...newChartData[newChartData.length - 1] };
-            
-            // This is the critical fix: create a new copy of the ohlc array
-            currentCandle.ohlc = [...currentCandle.ohlc];
+            currentCandle.ohlc = [...currentCandle.ohlc]; // Crucial for re-render
 
             const [open, high, low, close] = currentCandle.ohlc;
             
             const volumeSpurt = Math.random() * 1000;
             const change = (Math.random() - 0.5) * (volumeSpurt / 100); 
-            let newClose = close + change;
+            newClosePrice = close + change;
             
-            const newHigh = Math.max(high, newClose);
-            const newLow = Math.min(low, newClose);
+            const newHigh = Math.max(high, newClosePrice);
+            const newLow = Math.min(low, newClosePrice);
 
-            currentCandle.ohlc = [open, newHigh, newLow, newClose];
+            currentCandle.ohlc = [open, newHigh, newLow, newClosePrice];
             currentCandle.volume += volumeSpurt;
             
-            // Replace the last element in the copied array
             newChartData[newChartData.length - 1] = currentCandle;
-            
-            // Set the new array in the store
             setChartData(newChartData);
         }
 
-        // 2. Update Positions
+        // 2. Update Positions based on new close price (LTP)
         const newPositions = positions.map(pos => {
-            const ltpChange = (Math.random() - 0.5) * 2;
-            const newLtp = pos.ltp + ltpChange;
-            const newPnl = (newLtp - pos.avgPrice) * pos.qty;
-            return { ...pos, ltp: newLtp, pnl: newPnl };
+            // For simplicity, we'll assume the chart instrument affects all positions
+            const ltp = newClosePrice; 
+            const newPnl = (ltp - pos.avgPrice) * pos.qty;
+            return { ...pos, ltp: ltp, pnl: newPnl };
         });
         updatePositions(newPositions);
 
-        // 3. Update Overview Cards
+        // 3. Update Overview Cards from new positions
         const totalPnl = newPositions.reduce((acc, pos) => acc + pos.pnl, 0);
-        const drawdownChange = (Math.random() - 0.5) * 100;
+        // Make drawdown slightly dynamic
+        const drawdownChange = (Math.random() - 0.5) * (totalPnl > 0 ? 10 : -50); 
         updateOverview({
             pnl: totalPnl,
             drawdown: useStore.getState().overview.drawdown + drawdownChange,
         });
 
-        // 4. Update Option Chain
-        const newOptionChain = optionChain.map(opt => ({
+        // 4. Update Option Chain based on new price
+        const atmStrike = Math.round(newClosePrice / 50) * 50;
+        const newOptionChain = optionChain.map(opt => {
+            const isATM = opt.strike === atmStrike;
+            // Simulate some activity around the current price
+            const priceInfluence = (newClosePrice - opt.strike) / 100;
+            return {
             ...opt,
-            callLTP: Math.max(0, opt.callLTP + getRandom(-5, 5)),
-            putLTP: Math.max(0, opt.putLTP + getRandom(-5, 5)),
-            callOI: Math.max(0, opt.callOI + getRandom(-1000, 1000, 0)),
-            putOI: Math.max(0, opt.putOI + getRandom(-1000, 1000, 0)),
-        }));
+            callLTP: Math.max(0, opt.callLTP + getRandom(-0.5, 0.5) - priceInfluence),
+            putLTP: Math.max(0, opt.putLTP + getRandom(-0.5, 0.5) + priceInfluence),
+            callOI: Math.max(0, opt.callOI + getRandom(isATM ? -500 : -100, isATM ? 500 : 100, 0)),
+            putOI: Math.max(0, opt.putOI + getRandom(isATM ? -500 : -100, isATM ? 500 : 100, 0)),
+            };
+        });
         updateOptionChain(newOptionChain);
 
-        // 5. Update Indicators
+        // 5. Update Indicators based on new price
+        const priceMovement = newClosePrice - lastCandleInStore.ohlc[3];
         const newIndicators = indicators.map(ind => {
-            let newValue = ind.value + getRandom(-2, 2);
+            let newValue = ind.value;
             if (ind.name.includes('RSI')) {
-                newValue = Math.max(0, Math.min(100, newValue));
+                // Simplified RSI logic
+                newValue = Math.max(0, Math.min(100, ind.value + priceMovement * 2));
+            } else if (ind.name.includes('MACD')) {
+                newValue = ind.value + priceMovement / 10;
+            } else if (ind.name.includes('ADX')) {
+                newValue = Math.max(10, ind.value + (Math.abs(priceMovement) > 1 ? 0.5 : -0.2));
             }
             return {...ind, value: newValue};
         });
         updateIndicators(newIndicators);
 
-        // 6. Add a new signal occasionally
-        if (Math.random() < 0.1) { // 10% chance to add a signal
+        // 6. Add a new signal occasionally (10% chance)
+        if (Math.random() < 0.1) { 
             const actions = ['ENTER LONG', 'EXIT LONG', 'MONITOR', 'CONFIRM'];
             const instruments = ['NIFTYBEES', 'BANKBEES'];
             addSignal({
@@ -131,8 +141,8 @@ export function DataSimulator() {
             });
         }
 
-        // 7. Update an order status occasionally
-        if (Math.random() < 0.05) { // 5% chance
+        // 7. Update an order status occasionally (5% chance)
+        if (Math.random() < 0.05) { 
             const pendingOrderIndex = orders.findIndex(o => o.status === 'PENDING');
             if (pendingOrderIndex !== -1) {
                 updateOrderStatus(pendingOrderIndex, 'EXECUTED');
@@ -143,9 +153,7 @@ export function DataSimulator() {
     return () => {
         clearInterval(interval);
     };
-  }, [timeframe, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, optionChain, orders, positions, signals, indicators, setChartData]);
+  }, [timeframe, positions, orders, optionChain, indicators, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, setChartData]);
 
   return null;
 }
-
-    

@@ -36,7 +36,7 @@ import { useStore } from "@/store/use-store"
 
 const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
-const CANDLE_WIDTH = 12;
+const CANDLE_WIDTH = 16;
 
 // Helper to calculate SMA
 const calculateSMA = (data: any[], period: number) => {
@@ -90,33 +90,31 @@ const Candlestick = (props: any) => {
     const isGain = close >= open;
     const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     const stroke = fill;
-  
-    const wickHeight = height;
-    const wickY = y;
 
     const priceRange = high - low;
-    
-    // Prevent division by zero
+
+    // Handle the case where high equals low to prevent division by zero
     if (priceRange === 0) {
-        return (
-            <g stroke={stroke} fill="none" strokeWidth={1}>
-                {/* Wick */}
-                <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
-                {/* Body (flat line) */}
-                <path d={`M ${x} ${y + height / 2} L ${x + width} ${y + height / 2}`} />
-            </g>
-        );
+      const bodyY = y + height / 2;
+      return (
+        <g stroke={stroke} fill="none" strokeWidth={1}>
+          {/* Wick (a single vertical line) */}
+          <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
+          {/* Body (a single horizontal line) */}
+          <path d={`M ${x} ${bodyY} L ${x + width} ${bodyY}`} />
+        </g>
+      );
     }
   
-    const bodyHeight = Math.abs(wickHeight * (open - close) / priceRange);
+    const bodyHeight = Math.abs(height * (open - close) / priceRange) || 1; // Ensure minimum 1px height
     const bodyY = isGain 
-      ? wickY + (wickHeight * (high - close) / priceRange)
-      : wickY + (wickHeight * (high - open) / priceRange);
+      ? y + (height * (high - close) / priceRange)
+      : y + (height * (high - open) / priceRange);
 
     return (
       <g stroke={stroke} fill="none" strokeWidth={1}>
         {/* Wick */}
-        <path d={`M ${x + width / 2} ${wickY} L ${x + width / 2} ${wickY + wickHeight}`} />
+        <path d={`M ${x + width / 2} ${y} L ${x + width / 2} ${y + height}`} />
         {/* Body */}
         <rect x={x} y={bodyY} width={width} height={bodyHeight} fill={fill} />
       </g>
@@ -267,82 +265,89 @@ export function TradingTerminal() {
 
       </CardHeader>
       <CardContent className="p-0 flex-1">
-        <ScrollArea className="w-full h-full whitespace-nowrap">
-            <div style={{ width: chartData.length * CANDLE_WIDTH, minWidth: '100%', height: '100%' }}>
-                <ChartContainer config={chartConfig} className="h-full w-full">
-                    {/* Main Price Chart */}
-                    <ResponsiveContainer width="100%" height="70%">
-                        <ComposedChart
-                            data={chartData}
-                            margin={{ top: 10, right: 15, bottom: 0, left: -25 }}
+        <ScrollArea className="w-full h-full">
+            <ChartContainer 
+                config={chartConfig} 
+                className="h-full"
+                style={{
+                    width: '100%',
+                    minWidth: `${chartData.length * CANDLE_WIDTH}px`,
+                }}
+            >
+                {/* Main Price Chart */}
+                <ResponsiveContainer width="100%" height="70%">
+                    <ComposedChart
+                        data={chartData}
+                        margin={{ top: 10, right: 15, bottom: 0, left: -25 }}
+                    >
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
+                        <YAxis
+                            yAxisId="left"
+                            domain={['dataMin - 50', 'dataMax + 50']}
+                            orientation="right"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            fontSize={9}
+                        />
+                        <Tooltip
+                            content={<CustomTooltip />}
+                            cursor={{ strokeDasharray: '3 3' }}
+                        />
+                        <Bar
+                            dataKey="ohlc"
+                            shape={<Candlestick />}
+                            yAxisId="left"
+                            barSize={CANDLE_WIDTH * 0.7}
                         >
-                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
-                            <YAxis
-                                yAxisId="left"
-                                domain={['dataMin - 50', 'dataMax + 50']}
-                                orientation="right"
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                                fontSize={9}
-                            />
-                            <Tooltip
-                                content={<CustomTooltip />}
-                                cursor={{ strokeDasharray: '3 3' }}
-                            />
-                            <Bar
-                                dataKey="ohlc"
-                                shape={<Candlestick />}
-                                yAxisId="left"
-                            >
-                               {chartData.map((entry, index) => {
-                                    const [open, , , close] = entry.ohlc;
-                                    const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-                                    return <Cell key={`cell-${index}`} fill={fill} />;
-                                })}
-                            </Bar>
-                             {indicator === 'sma' && (
-                                <>
-                                    <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 50"/>
-                                    <Line type="monotone" dataKey="sma100" stroke="var(--color-sma100)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 100"/>
-                                </>
-                            )}
-                            {indicator === 'bb' && (
-                                <>
-                                    <Line type="monotone" dataKey="bb_middle" stroke="var(--color-bb)" strokeWidth={1.5} dot={false} yAxisId="left" name="BB Middle" />
-                                    <Area type="monotone" dataKey="bb_upper" fill="var(--color-bb)" fillOpacity={0.1} stroke="var(--color-bb)" strokeWidth={1.5} dot={false} yAxisId="left" name="BB Upper"/>
-                                    <Area type="monotone" dataKey="bb_lower" fill="var(--color-bb)" fillOpacity={0.1} stroke="var(--color-bb)" strokeWidth={1.5} dot={false} yAxisId="left" name="BB Lower"/>
-                                </>
-                            )}
-                        </ComposedChart>
-                    </ResponsiveContainer>
-                    
-                    {/* Volume Chart */}
-                    <ResponsiveContainer width="100%" height="30%">
-                        <BarChart
-                            data={chartData}
-                            margin={{ top: 5, right: 15, bottom: 15, left: -25 }}
-                        >
-                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                            <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
-                            <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
-                            <Tooltip
-                                cursor={{ strokeDasharray: '3 3' }}
-                                position={{ y: 5 }}
-                                contentStyle={{ display: 'none' }}
-                            />
-                            <Bar dataKey="volume" yAxisId="right">
-                                {chartData.map((entry, index) => {
-                                    const [open, , , close] = entry.ohlc;
-                                    const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-                                    return <Cell key={`cell-${index}`} fill={fill} />;
-                                })}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </ChartContainer>
-            </div>
+                           {chartData.map((entry, index) => {
+                                const [open, , , close] = entry.ohlc;
+                                const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+                                return <Cell key={`cell-${index}`} fill={fill} />;
+                            })}
+                        </Bar>
+                         {indicator === 'sma' && (
+                            <>
+                                <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 50"/>
+                                <Line type="monotone" dataKey="sma100" stroke="var(--color-sma100)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 100"/>
+                            </>
+                        )}
+                        {indicator === 'bb' && (
+                            <>
+                                <Line type="monotone" dataKey="bb_middle" stroke="var(--color-bb)" strokeWidth={1.5} dot={false} yAxisId="left" name="BB Middle" />
+                                <Area type="monotone" dataKey="bb_upper" fill="var(--color-bb)" fillOpacity={0.1} stroke="var(--color-bb)" strokeWidth={1.5} dot={false} yAxisId="left" name="BB Upper" connectNulls/>
+                                <Area type="monotone" dataKey="bb_lower" fill="var(--color-bb)" fillOpacity={0.1} stroke="var(--color-bb)" strokeWidth={1.5} dot={false} yAxisId="left" name="BB Lower" connectNulls/>
+                            </>
+                        )}
+                    </ComposedChart>
+                </ResponsiveContainer>
+                
+                {/* Volume Chart */}
+                <ResponsiveContainer width="100%" height="30%">
+                    <BarChart
+                        data={chartData}
+                        margin={{ top: 5, right: 15, bottom: 15, left: -25 }}
+                        barGap={1}
+                    >
+                        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} interval="preserveStartEnd" />
+                        <YAxis yAxisId="right" orientation="right" tickLine={false} axisLine={false} tickMargin={8} fontSize={9} tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`} />
+                        <Tooltip
+                            cursor={{ strokeDasharray: '3 3' }}
+                            position={{ y: 5 }}
+                            contentStyle={{ display: 'none' }}
+                        />
+                        <Bar dataKey="volume" yAxisId="right" barSize={CANDLE_WIDTH * 0.7}>
+                            {chartData.map((entry, index) => {
+                                const [open, , , close] = entry.ohlc;
+                                const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+                                return <Cell key={`cell-${index}`} fill={fill} />;
+                            })}
+                        </Bar>
+                    </BarChart>
+                </ResponsiveContainer>
+            </ChartContainer>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </CardContent>

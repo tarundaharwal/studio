@@ -90,7 +90,6 @@ const Candlestick = (props: any) => {
     const fill = isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     const stroke = fill;
   
-    // Ensure bodyHeight is at least 1 pixel
     const bodyHeight = Math.max(1, Math.abs(y - (isGain ? y + (open-close) : y + (close-open))  ));
     const bodyY = isGain ? y + (close - high) : y + (open - high);
 
@@ -169,11 +168,11 @@ export function TradingTerminal() {
   const maxCandles = fullChartData.length;
 
   React.useEffect(() => {
-    if (fullChartData.length > 1) {
+    if (fullChartData && fullChartData.length > 1) {
         const latestPrice = fullChartData[fullChartData.length - 1].ohlc[3];
-        const previousPrice = fullChartData[fullChartData.length - 2].ohlc[3];
-        const priceChange = latestPrice - previousPrice;
-        const priceChangePercent = previousPrice !== 0 ? (priceChange / previousPrice) * 100 : 0;
+        const previousDayClose = fullChartData[fullChartData.length - 2].ohlc[3]; // Or a proper daily close
+        const priceChange = latestPrice - previousDayClose;
+        const priceChangePercent = previousDayClose !== 0 ? (priceChange / previousDayClose) * 100 : 0;
         const isGain = priceChange >= 0;
 
         setLivePrice({
@@ -281,7 +280,13 @@ export function TradingTerminal() {
                                 shape={<Candlestick />}
                                 yAxisId="left"
                                 barSize={8}
-                            />
+                            >
+                               {chartData.map((entry, index) => {
+                                    const [open, , , close] = entry.ohlc;
+                                    const fill = close >= open ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+                                    return <Cell key={`cell-${index}`} fill={fill} />;
+                                })}
+                            </Bar>
                              {indicator === 'sma' && (
                                 <>
                                     <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={2} dot={false} yAxisId="left" name="SMA 50"/>

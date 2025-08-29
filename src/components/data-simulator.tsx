@@ -41,11 +41,12 @@ export function DataSimulator() {
     const interval = setInterval(() => {
         const now = Date.now();
         const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
+        const currentChartData = useStore.getState().chartData;
 
         // Check if it's time to create a new candle
         if (now - lastCandleTime.current >= timeframeDuration) {
             lastCandleTime.current = now;
-            const lastCandle = chartData[chartData.length - 1];
+            const lastCandle = currentChartData[currentChartData.length - 1];
             const newCandle = {
                 time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
                 ohlc: [lastCandle.ohlc[3], lastCandle.ohlc[3], lastCandle.ohlc[3], lastCandle.ohlc[3]], // O, H, L, C
@@ -54,10 +55,10 @@ export function DataSimulator() {
             addCandle(newCandle);
         } else {
             // 1. Update Current Candle
-            const currentCandle = { ...chartData[chartData.length - 1] };
+            const currentCandle = { ...currentChartData[currentChartData.length - 1] };
             const [open, high, low, close] = currentCandle.ohlc;
             
-            const volumeSpurt = Math.random() * 100;
+            const volumeSpurt = Math.random() * 1000;
             const change = (Math.random() - 0.5) * (volumeSpurt / 500); 
             let newClose = close + change;
             
@@ -132,7 +133,7 @@ export function DataSimulator() {
     return () => {
         clearInterval(interval);
     };
-  }, [timeframe, addCandle, addSignal, chartData, indicators, optionChain, orders, positions, updateChart, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions]);
+  }, [timeframe, addCandle, addSignal, updateChart, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, optionChain, orders, positions, signals, indicators]);
 
   return null;
 }

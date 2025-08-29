@@ -22,13 +22,13 @@ import {
     XAxis,
     YAxis,
     Cell,
-    Line,
     CartesianGrid,
+    Line,
 } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
 import { Button } from "./ui/button"
-import { Minus, Plus, Waves, Tally5, CandlestickChart, LineChart as LineChartIcon, BarChart3 } from "lucide-react"
+import { Minus, Plus, CandlestickChart, LineChart as LineChartIcon, BarChart3 } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
 import { useStore, ChartData } from "@/store/use-store"
 
@@ -64,27 +64,6 @@ const calculateHeikinAshi = (data: ChartData[]) => {
     return haData;
 };
 
-
-const calculateSMA = (data: any[], period: number) => {
-    return data.map((d, i, arr) => {
-        if (i < period - 1) return null;
-        const slice = arr.slice(i - period + 1, i + 1);
-        const sum = slice.reduce((acc, val) => acc + val.ohlc[3], 0);
-        return sum / period;
-    });
-};
-
-const calculateStdDev = (data: number[], period: number) => {
-    return data.map((d, i, arr) => {
-        if (i < period - 1) return null;
-        const slice = arr.slice(i - period + 1, i + 1);
-        const mean = slice.reduce((acc, val) => acc + val, 0) / period;
-        const sqDiff = slice.map(val => Math.pow(val - mean, 2));
-        const avgSqDiff = sqDiff.reduce((acc, val) => acc + val, 0) / period;
-        return Math.sqrt(avgSqDiff);
-    });
-};
-
 const chartConfig = {
   price: {
     label: "Price",
@@ -92,18 +71,6 @@ const chartConfig = {
   volume: {
     label: "Volume",
   },
-  sma50: {
-      label: "SMA 50",
-      color: "hsl(var(--chart-4))",
-  },
-  sma100: {
-      label: "SMA 100",
-      color: "hsl(var(--chart-5))",
-  },
-  bb: {
-      label: "Bollinger",
-      color: "hsl(var(--chart-2))",
-  }
 }
   
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -134,7 +101,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function TradingTerminal() {
   const { chartData: fullChartData, timeframe, setTimeframe, candleType, setCandleType } = useStore();
   const [visibleCandles, setVisibleCandles] = React.useState(50);
-  const [indicator, setIndicator] = React.useState('sma');
   
   const [isClient, setIsClient] = React.useState(false);
   const [livePrice, setLivePrice] = React.useState({
@@ -153,11 +119,6 @@ export function TradingTerminal() {
     
     const baseData = candleType === 'heikin-ashi' ? calculateHeikinAshi(fullChartData) : fullChartData;
     
-    const sma20 = calculateSMA(baseData, 20);
-    const stdDev20 = calculateStdDev(baseData.map(d => d.ohlc[3]), 20);
-    const sma50 = calculateSMA(baseData, 50);
-    const sma100 = calculateSMA(baseData, 100);
-
     return baseData.map((d, i) => {
         const [open, high, low, close] = d.ohlc;
         const isGain = close >= open;
@@ -175,12 +136,6 @@ export function TradingTerminal() {
             candleWick: [low, high],
 
             closePrice: d.ohlc[3], // For line chart
-            // For indicators
-            sma50: sma50[i],
-            sma100: sma100[i],
-            bb_middle: sma20[i],
-            bb_upper: sma20[i] && stdDev20[i] ? sma20[i]! + (stdDev20[i]! * 2) : null,
-            bb_lower: sma20[i] && stdDev20[i] ? sma20[i]! - (stdDev20[i]! * 2) : null,
         }
     });
   }, [fullChartData, candleType]);
@@ -271,11 +226,6 @@ export function TradingTerminal() {
                     <ToggleGroupItem value="heikin-ashi" className="text-xs px-1 h-full"><BarChart3 className="h-4 w-4" /></ToggleGroupItem>
                     <ToggleGroupItem value="line" className="text-xs px-1 h-full"><LineChartIcon className="h-4 w-4" /></ToggleGroupItem>
                 </ToggleGroup>
-
-                 <ToggleGroup type="single" defaultValue={indicator} size="sm" className="h-7" onValueChange={(value) => value && setIndicator(value)}>
-                    <ToggleGroupItem value="sma" className="text-xs px-1 h-full"><Tally5 className="h-4 w-4" /></ToggleGroupItem>
-                    <ToggleGroupItem value="bb" className="text-xs px-1 h-full"><Waves className="h-4 w-4" /></ToggleGroupItem>
-                </ToggleGroup>
             </div>
             <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleZoomIn} disabled={visibleCandles <= MIN_CANDLES}>
@@ -360,21 +310,6 @@ export function TradingTerminal() {
                             <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
                         ))}
                     </Bar>
-
-                    {/* Indicators */}
-                    {indicator === 'sma' && (
-                        <>
-                            <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={1.5} yAxisId="right" dot={false} />
-                            <Line type="monotone" dataKey="sma100" stroke="var(--color-sma100)" strokeWidth={1.5} yAxisId="right" dot={false} />
-                        </>
-                    )}
-                    {indicator === 'bb' && (
-                        <>
-                             <Line type="monotone" dataKey="bb_middle" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="right" dot={false} strokeOpacity={0.5} />
-                             <Line type="monotone" dataKey="bb_upper" fill="var(--color-bb)" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="right" dot={false} fillOpacity={0.1} name="Bollinger Band" />
-                             <Line type="monotone" dataKey="bb_lower" fill="var(--color-bb)" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="right" dot={false} fillOpacity={0.1} name="Bollinger Band" />
-                        </>
-                    )}
                 </ComposedChart>
             </ChartContainer>
           <ScrollBar orientation="horizontal" />

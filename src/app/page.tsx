@@ -21,10 +21,10 @@ export default function DashboardPage() {
 
         {/* Column 2 */}
         <div className="flex flex-col gap-4">
-          <div className="flex-1">
+          <div>
             <IndicatorCards />
           </div>
-          <div className="flex-1 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <PositionsTable />
             <OrdersTable />
           </div>

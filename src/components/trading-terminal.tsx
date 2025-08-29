@@ -130,8 +130,10 @@ export function TradingTerminal() {
         return { 
             ...d, 
             isGain,
-            wick: [low, high],
+            // For candlestick
             body: [open, close],
+            wick: [low, high],
+            // For indicators
             sma50: sma50[i],
             sma100: sma100[i],
             bb_middle: sma20[i],
@@ -263,7 +265,8 @@ export function TradingTerminal() {
                     <YAxis
                         yAxisId="left"
                         orientation="left"
-                        domain={['auto', 'dataMax * 4']}
+                        domain={[0, (dataMax) => dataMax * 1.5]}
+                        tickCount={4}
                         tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`}
                         tickLine={false}
                         axisLine={false}
@@ -274,12 +277,14 @@ export function TradingTerminal() {
                     
                     <Tooltip content={<CustomTooltip />} />
 
-                    {/* Candlestick - rendered as two bars */}
-                    <Bar dataKey="wick" yAxisId="right" barSize={1} >
+                     {/* Wick */}
+                     <Bar dataKey="wick" yAxisId="right" barSize={1} >
                         {chartData.map((d, i) => (
                             <Cell key={`wick-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
                         ))}
                     </Bar>
+
+                    {/* Body */}
                     <Bar dataKey="body" yAxisId="right" barSize={CANDLE_WIDTH} >
                         {chartData.map((d, i) => (
                             <Cell key={`body-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />

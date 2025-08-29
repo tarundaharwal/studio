@@ -28,10 +28,28 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useStore } from '@/store/use-store';
+import React from 'react';
 
 
 export function OverviewCards() {
   const { overview } = useStore();
+  const [isClient, setIsClient] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+
+  if (!isClient) {
+    return (
+        <>
+            <Card className="h-24 animate-pulse bg-muted"></Card>
+            <Card className="h-24 animate-pulse bg-muted"></Card>
+            <Card className="h-36 animate-pulse bg-muted"></Card>
+            <Card className="h-36 animate-pulse bg-muted"></Card>
+        </>
+    )
+  }
 
   return (
     <>

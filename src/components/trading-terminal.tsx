@@ -137,6 +137,18 @@ export function TradingTerminal() {
   const [visibleCandles, setVisibleCandles] = React.useState(50);
   const [timeframe, setTimeframe] = React.useState('5m');
   const [indicator, setIndicator] = React.useState('sma');
+  
+  const [isClient, setIsClient] = React.useState(false);
+  const [livePrice, setLivePrice] = React.useState({
+    latestPrice: 0,
+    priceChange: 0,
+    priceChangePercent: 0,
+    isGain: true,
+  });
+
+  React.useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const chartDataWithIndicators = React.useMemo(() => {
     const sma20 = calculateSMA(fullChartData, 20);
@@ -157,6 +169,24 @@ export function TradingTerminal() {
   const chartData = chartDataWithIndicators.slice(-visibleCandles);
   const maxCandles = fullChartData.length;
 
+  React.useEffect(() => {
+    if (chartData.length > 1) {
+        const latestPrice = chartData[chartData.length - 1].ohlc[3];
+        const previousPrice = chartData[chartData.length - 2].ohlc[3];
+        const priceChange = latestPrice - previousPrice;
+        const priceChangePercent = previousPrice !== 0 ? (priceChange / previousPrice) * 100 : 0;
+        const isGain = priceChange >= 0;
+
+        setLivePrice({
+            latestPrice,
+            priceChange,
+            priceChangePercent,
+            isGain,
+        });
+    }
+  }, [chartData]);
+
+
   const handleZoomIn = () => {
     setVisibleCandles(prev => Math.max(MIN_CANDLES, prev - ZOOM_STEP));
   };
@@ -164,13 +194,19 @@ export function TradingTerminal() {
   const handleZoomOut = () => {
     setVisibleCandles(prev => Math.min(maxCandles, prev + ZOOM_STEP));
   };
-
-  const latestPrice = chartData.length > 0 ? chartData[chartData.length - 1].ohlc[3] : 0;
-  const previousPrice = chartData.length > 1 ? chartData[chartData.length - 2].ohlc[3] : latestPrice;
-  const priceChange = latestPrice - previousPrice;
-  const priceChangePercent = (priceChange / previousPrice) * 100;
-  const isGain = priceChange >= 0;
   
+  if (!isClient) {
+      return (
+        <Card className="overflow-hidden h-full flex flex-col">
+             <CardHeader className="flex flex-col items-start justify-between border-b p-2 gap-2">
+                <div className="h-8 w-40 bg-muted rounded-md animate-pulse" />
+                <div className="h-7 w-full bg-muted rounded-md animate-pulse" />
+             </CardHeader>
+             <CardContent className="p-0 flex-1 bg-muted animate-pulse" />
+        </Card>
+      )
+  }
+
   return (
     <Card className="overflow-hidden h-full flex flex-col">
       <CardHeader className="flex flex-col items-start justify-between border-b p-2 gap-2">
@@ -187,9 +223,9 @@ export function TradingTerminal() {
                     </SelectContent>
                 </Select>
             </div>
-            <div className={`flex items-center gap-2 text-sm text-muted-foreground transition-colors ${isGain ? 'text-green-600' : 'text-red-600'}`}>
-                <span className="font-medium">{latestPrice.toFixed(2)}</span>
-                <span className="text-xs">({isGain ? '+' : ''}{priceChangePercent.toFixed(2)}%)</span>
+            <div className={`flex items-center gap-2 text-sm text-muted-foreground transition-colors ${livePrice.isGain ? 'text-green-600' : 'text-red-600'}`}>
+                <span className="font-medium">{livePrice.latestPrice.toFixed(2)}</span>
+                <span className="text-xs">({livePrice.isGain ? '+' : ''}{livePrice.priceChangePercent.toFixed(2)}%)</span>
             </div>
        </div>
        <div className="flex items-center justify-between w-full gap-2">

@@ -119,7 +119,7 @@ export default function RootLayout({
             </SidebarFooter>
           </Sidebar>
 
-          <div className="flex flex-col flex-1 h-screen overflow-hidden">
+          <div className="flex flex-col flex-1">
             <DashboardHeader />
             <SidebarInset>
               {children}

@@ -23,7 +23,6 @@ import {
     YAxis,
     Rectangle,
     CartesianGrid,
-    Area
 } from "recharts"
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
@@ -65,18 +64,21 @@ const calculateHeikinAshi = (data: ChartData[]) => {
 
 const CustomWick = (props: any) => {
     const { x, y, width, height, payload } = props;
+    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
   
 const CustomBody = (props: any) => {
     const { x, y, width, height, payload } = props;
+    if (!payload) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
 
 const CustomVolumeBar = (props: any) => {
     const { x, y, width, height, payload } = props;
+    if (!payload) return null;
     const color = payload.originalIsGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)';
     return <Rectangle {...props} fill={color} />;
 };
@@ -146,8 +148,8 @@ export function TradingTerminal() {
             candleBody: [open, close].sort((a,b) => a-b),
             candleWick: [low, high], 
             isGain,
-            originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0], // For volume color and tooltip
-            original_ohlc: originalCandle.ohlc, // For tooltip
+            originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0],
+            original_ohlc: originalCandle.ohlc,
         }
     });
   }, [fullChartData, candleType]);
@@ -200,7 +202,7 @@ export function TradingTerminal() {
 
   const yDomainVolume = [
       0,
-      (dataMax: number) => dataMax * 2 // Adjusted for better visualization
+      (dataMax: number) => dataMax * 2
   ];
 
   return (
@@ -251,15 +253,15 @@ export function TradingTerminal() {
       <CardContent className="p-0 flex-1">
         <ScrollArea className="w-full h-full">
             <div className="h-full" style={{ width: '100%', minWidth: `${chartData.length * CANDLE_WIDTH}px` }}>
-                <ChartContainer config={chartConfig} className="h-[75%] w-full">
+                <ChartContainer config={chartConfig} className="h-full w-full">
                     <ComposedChart
                         data={chartData}
                         barGap={0}
                         barCategoryGap={0}
-                        margin={{ top: 20, right: 45, bottom: 0, left: 5 }}
+                        margin={{ top: 20, right: 45, bottom: 20, left: 5 }}
                     >
                         <CartesianGrid vertical={false} />
-                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" hide={true}/>
+                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
                         
                         <YAxis 
                             yAxisId="right"
@@ -271,25 +273,8 @@ export function TradingTerminal() {
                             tickMargin={8}
                             fontSize={10}
                             width={60}
+                            height={0} // Hide price axis for main chart view
                         />
-
-                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
-                        
-                        <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" shape={<CustomWick />} />
-                        <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="price" shape={<CustomBody />} />
-
-                    </ComposedChart>
-                </ChartContainer>
-
-                <ChartContainer config={chartConfig} className="h-[25%] w-full">
-                    <ComposedChart
-                        data={chartData}
-                        barGap={0}
-                        barCategoryGap={0}
-                        margin={{ top: 10, right: 45, bottom: 20, left: 5 }}
-                    >
-                        <CartesianGrid vertical={false} />
-                         <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
                         <YAxis
                             yAxisId="left"
                             orientation="right"
@@ -301,9 +286,15 @@ export function TradingTerminal() {
                             tickMargin={8}
                             fontSize={10}
                             width={60}
+                            height={0} // Hide volume axis for main chart view
                         />
+
                         <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}/>
+                        
+                        <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" shape={<CustomWick />} />
+                        <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH / 1.5} stackId="price" shape={<CustomBody />} />
                         <Bar dataKey="volume" yAxisId="left" barSize={CANDLE_WIDTH / 1.5} shape={<CustomVolumeBar />} />
+
                     </ComposedChart>
                 </ChartContainer>
             </div>

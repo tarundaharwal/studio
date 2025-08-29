@@ -28,7 +28,7 @@ import {
 import { ChartContainer } from "@/components/ui/chart"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
 import { Button } from "./ui/button"
-import { Minus, Plus, CandlestickChart, LineChart as LineChartIcon, BarChart3 } from "lucide-react"
+import { Minus, Plus, CandlestickChart, LineChart as LineChartIcon, BarChart3, Waves, Tally5 } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
 import { useStore, ChartData } from "@/store/use-store"
 
@@ -99,6 +99,31 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
   };
 
+  const Candle = (props: any) => {
+    const { x, y, width, height, isGain, low, high, open, close } = props;
+  
+    const bodyHeight = Math.abs(y - (y + height));
+    const bodyY = isGain ? y + height : y;
+  
+    return (
+      <g>
+        <path
+          d={`M${x + width / 2},${high} L${x + width / 2},${low}`}
+          stroke={isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}
+          strokeWidth={1}
+        />
+        <rect
+          x={x}
+          y={bodyY}
+          width={width}
+          height={bodyHeight}
+          fill={isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}
+        />
+      </g>
+    );
+  };
+
+
 export function TradingTerminal() {
   const { chartData: fullChartData, timeframe, setTimeframe, candleType, setCandleType } = useStore();
   const [visibleCandles, setVisibleCandles] = React.useState(50);
@@ -130,8 +155,9 @@ export function TradingTerminal() {
             isGain,
             originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0], // For volume color
             original_ohlc: originalCandle.ohlc, // For tooltip
-            candleBody: [open, close],
-            candleWick: [low, high],
+            // For custom shape component
+            ohlc_shape: [open, close],
+            // For line chart
             closePrice: close,
         }
     });
@@ -281,20 +307,21 @@ export function TradingTerminal() {
                     {candleType === 'line' ? (
                          <Line type="monotone" dataKey="closePrice" strokeWidth={2} yAxisId="right" dot={false} name="Price" stroke="hsl(var(--primary))"/>
                     ) : (
-                        <>
-                            {/* Candle Wicks */}
-                            <Bar dataKey="candleWick" yAxisId="right" barSize={1} stackId="price" zIndex={1}>
-                                {chartData.map((entry, index) => (
-                                    <Cell key={`wick-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}/>
-                                ))}
-                            </Bar>
-                             {/* Candle Bodies */}
-                            <Bar dataKey="candleBody" yAxisId="right" barSize={CANDLE_WIDTH} stackId="price" zIndex={2}>
-                                {chartData.map((entry, index) => (
-                                    <Cell key={`body-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}/>
-                                ))}
-                            </Bar>
-                        </>
+                        <Bar dataKey="ohlc_shape" yAxisId="right" barSize={CANDLE_WIDTH} shape={<Candle/>}>
+                             {chartData.map((entry, index) => {
+                                const [open, high, low, close] = entry.ohlc;
+                                return (
+                                <Cell
+                                    key={`cell-${index}`}
+                                    isGain={entry.isGain}
+                                    low={low}
+                                    high={high}
+                                    open={open}
+                                    close={close}
+                                />
+                                );
+                            })}
+                        </Bar>
                     )}
 
 
@@ -312,3 +339,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

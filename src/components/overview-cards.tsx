@@ -31,7 +31,7 @@ import {
 import { useStore } from '@/store/use-store';
 import React from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 export function OverviewCards() {

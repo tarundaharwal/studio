@@ -36,6 +36,7 @@ import { useStore } from "@/store/use-store"
 const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
 const CANDLE_WIDTH = 10;
+const SYNC_ID = "indmon_chart_sync";
 
 const calculateSMA = (data: any[], period: number) => {
     return data.map((d, i, arr) => {
@@ -130,12 +131,9 @@ export function TradingTerminal() {
         return { 
             ...d, 
             isGain,
-            // For candlestick
             price: [open, high, low, close],
-            // For recharts <Bar>
             body: [open, close],
             wick: [high, low],
-            // Indicators
             sma50: sma50[i],
             sma100: sma100[i],
             bb_middle: sma20[i],
@@ -190,11 +188,7 @@ export function TradingTerminal() {
     'auto',
     'auto',
   ];
-  const volumeDomain = [
-    0,
-    Math.max(...chartData.map(d => d.volume)) * 2.5, // give some headroom
-  ];
-
+  
   return (
     <Card className="overflow-hidden h-full flex flex-col">
       <CardHeader className="flex flex-col items-start justify-between border-b p-2 gap-2">
@@ -239,7 +233,6 @@ export function TradingTerminal() {
                 </Button>
             </div>
        </div>
-
       </CardHeader>
       <CardContent className="p-0 flex-1">
         <ScrollArea className="w-full h-full">
@@ -251,71 +244,78 @@ export function TradingTerminal() {
                     minWidth: `${chartData.length * (CANDLE_WIDTH + 4)}px`,
                 }}
             >
-              <ComposedChart 
-                data={chartData}
-                margin={{ top: 20, right: 20, bottom: 20, left: -20 }}
-              >
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
-                <YAxis 
-                    yAxisId="price" 
-                    orientation="right"
-                    domain={priceDomain}
-                    tickFormatter={(value) => value.toLocaleString()}
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    fontSize={10}
-                />
-                 <YAxis 
-                    yAxisId="volume" 
-                    orientation="left"
-                    domain={volumeDomain}
-                    tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`}
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    fontSize={10}
-                    width={80}
-                    height="25%"
-                 />
-                <Tooltip content={<CustomTooltip />} />
+              <div>
+                {/* Price Chart */}
+                <ComposedChart
+                    syncId={SYNC_ID}
+                    data={chartData}
+                    height={300}
+                    margin={{ top: 20, right: 45, bottom: 0, left: 0 }}
+                >
+                    <CartesianGrid vertical={false} />
+                    <YAxis 
+                        orientation="right"
+                        domain={priceDomain}
+                        tickFormatter={(value) => value.toLocaleString()}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        fontSize={10}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    
+                    <Bar dataKey="wick" yAxisId={0} barSize={1} >
+                        {chartData.map((d, i) => (
+                            <Cell key={`wick-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
+                        ))}
+                    </Bar>
+                    <Bar dataKey="body" yAxisId={0} barSize={CANDLE_WIDTH} >
+                        {chartData.map((d, i) => (
+                            <Cell key={`body-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
+                        ))}
+                    </Bar>
 
-                {/* Candlestick Wicks */}
-                <Bar dataKey="wick" yAxisId="price" barSize={1} >
-                    {chartData.map((d, i) => (
-                        <Cell key={`wick-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
-                    ))}
-                </Bar>
-                {/* Candlestick Body */}
-                <Bar dataKey="body" yAxisId="price" barSize={CANDLE_WIDTH} >
-                    {chartData.map((d, i) => (
-                        <Cell key={`body-cell-${i}`} fill={d.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'} />
-                    ))}
-                </Bar>
-
-                {/* Volume Bars */}
-                <Bar dataKey="volume" yAxisId="volume" barSize={CANDLE_WIDTH}>
-                    {chartData.map((entry, index) => (
-                        <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
-                    ))}
-                </Bar>
-
-                {indicator === 'sma' && (
-                    <>
-                        <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={1.5} yAxisId="price" dot={false} />
-                        <Line type="monotone" dataKey="sma100" stroke="var(--color-sma100)" strokeWidth={1.5} yAxisId="price" dot={false} />
-                    </>
-                )}
-                 {indicator === 'bb' && (
-                    <>
-                        <Line type="monotone" dataKey="bb_middle" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="price" dot={false} />
-                        <Area type="monotone" dataKey="bb_upper" fill="var(--color-bb)" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="price" dot={false} />
-                        <Area type="monotone" dataKey="bb_lower" fill="var(--color-bb)" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId="price" dot={false} />
-                     </>
-                )}
-
-              </ComposedChart>
+                    {indicator === 'sma' && (
+                        <>
+                            <Line type="monotone" dataKey="sma50" stroke="var(--color-sma50)" strokeWidth={1.5} yAxisId={0} dot={false} />
+                            <Line type="monotone" dataKey="sma100" stroke="var(--color-sma100)" strokeWidth={1.5} yAxisId={0} dot={false} />
+                        </>
+                    )}
+                    {indicator === 'bb' && (
+                        <>
+                            <Line type="monotone" dataKey="bb_middle" stroke="var(--color-bb)" strokeWidth={1.5} yAxisId={0} dot={false} />
+                            <Area type="monotone" dataKey="bb_upper" fill="var(--color-bb)" stroke="transparent" strokeWidth={1.5} yAxisId={0} dot={false} fillOpacity={0.2} />
+                            <Area type="monotone" dataKey="bb_lower" fill="var(--color-bb)" stroke="transparent" strokeWidth={1.5} yAxisId={0} dot={false} fillOpacity={0.2} />
+                        </>
+                    )}
+                </ComposedChart>
+                
+                {/* Volume Chart */}
+                <ComposedChart
+                    syncId={SYNC_ID}
+                    data={chartData}
+                    height={100}
+                    margin={{ top: 10, right: 45, bottom: 20, left: 0 }}
+                >
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
+                    <YAxis 
+                        orientation="right"
+                        tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`}
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        fontSize={10}
+                        domain={['auto', 'dataMax * 2']}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="volume" yAxisId={0} barSize={CANDLE_WIDTH}>
+                        {chartData.map((entry, index) => (
+                            <Cell key={`volume-cell-${entry.time}-${index}`} fill={entry.isGain ? 'hsla(var(--chart-2), 0.5)' : 'hsla(var(--chart-1), 0.5)'} />
+                        ))}
+                    </Bar>
+                </ComposedChart>
+              </div>
             </ChartContainer>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>

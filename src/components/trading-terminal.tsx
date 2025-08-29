@@ -1,4 +1,5 @@
 
+
 "use client"
 
 import * as React from "react"
@@ -34,7 +35,7 @@ import { useStore, ChartData } from "@/store/use-store"
 
 const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
-const CANDLE_WIDTH = 12;
+const CANDLE_WIDTH = 10;
 
 
 const calculateHeikinAshi = (data: ChartData[]) => {
@@ -100,7 +101,12 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   };
 
 const Candle = (props: any) => {
-    const { x, y, width, height, isGain, ohlc } = props;
+    const { x, width, isGain, ohlc } = props;
+
+    // Safety check for yAxis and scale
+    if (!props.yAxis || typeof props.yAxis.scale !== 'function') {
+        return null;
+    }
 
     if (!ohlc) return null;
 
@@ -156,8 +162,6 @@ export function TradingTerminal() {
             isGain,
             originalIsGain: originalCandle.ohlc[3] >= originalCandle.ohlc[0], // For volume color
             original_ohlc: originalCandle.ohlc, // For tooltip
-            // For custom shape component
-            ohlc_shape: [open, close],
             // For line chart
             closePrice: close,
         }
@@ -268,7 +272,7 @@ export function TradingTerminal() {
                 className="h-full"
                 style={{
                     width: '100%',
-                    minWidth: `${chartData.length * CANDLE_WIDTH}px`,
+                    minWidth: `${chartData.length * (CANDLE_WIDTH)}px`,
                 }}
             >
                 <ComposedChart
@@ -310,7 +314,7 @@ export function TradingTerminal() {
                     {candleType === 'line' ? (
                          <Line type="monotone" dataKey="closePrice" strokeWidth={2} yAxisId="right" dot={false} name="Price" stroke="hsl(var(--primary))"/>
                     ) : (
-                        <Bar dataKey="ohlc" yAxisId="right" barSize={CANDLE_WIDTH} shape={<Candle/>}>
+                        <Bar dataKey="ohlc" yAxisId="right" barSize={CANDLE_WIDTH} shape={Candle}>
                              {chartData.map((entry, index) => {
                                 return (
                                 <Cell

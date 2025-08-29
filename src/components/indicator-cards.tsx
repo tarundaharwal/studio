@@ -9,7 +9,6 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { ChartContainer, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
-import { TrendingUp } from 'lucide-react';
 import { Line, LineChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
 const generateIndicatorData = (min: number, max: number, count: number) => {
@@ -45,43 +44,45 @@ const chartConfig = {
 
 export function IndicatorCards() {
   return (
-    <Card className="h-full flex flex-col">
+    <Card className="h-[250px] flex flex-col">
         <CardHeader className="py-4">
           <CardTitle>Market Indicators</CardTitle>
           <CardDescription className="text-xs">RSI, MACD, ADX, and ATR</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 p-0">
-          <ChartContainer config={chartConfig} className="h-full w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -10 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                    dataKey="x"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => ''} // Hide X-axis labels to keep it clean
-                />
-                 <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    width={30}
-                    fontSize={9}
-                />
-                <Tooltip
-                    cursor={false}
-                    content={<ChartTooltipContent indicator="dot" />}
-                />
-                <ChartLegend content={<ChartLegendContent />} />
-                <Line dataKey="rsi" type="monotone" stroke="var(--color-rsi)" strokeWidth={2} dot={false} />
-                <Line dataKey="macd" type="monotone" stroke="var(--color-macd)" strokeWidth={2} dot={false} />
-                <Line dataKey="adx" type="monotone" stroke="var(--color-adx)" strokeWidth={2} dot={false} />
-                <Line dataKey="atr" type="monotone" stroke="var(--color-atr)" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </CardContent>
+        <div className="flex-1 relative">
+          <div className="absolute inset-0">
+            <ChartContainer config={chartConfig} className="h-full w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -10 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                      dataKey="x"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => ''} // Hide X-axis labels to keep it clean
+                  />
+                   <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      width={30}
+                      fontSize={9}
+                  />
+                  <Tooltip
+                      cursor={false}
+                      content={<ChartTooltipContent indicator="dot" />}
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line dataKey="rsi" type="monotone" stroke="var(--color-rsi)" strokeWidth={2} dot={false} />
+                  <Line dataKey="macd" type="monotone" stroke="var(--color-macd)" strokeWidth={2} dot={false} />
+                  <Line dataKey="adx" type="monotone" stroke="var(--color-adx)" strokeWidth={2} dot={false} />
+                  <Line dataKey="atr" type="monotone" stroke="var(--color-atr)" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </div>
+        </div>
       </Card>
   );
 }

@@ -30,7 +30,7 @@ export function DataSimulator() {
     updateIndicators,
     addSignal,
     updateOrderStatus,
-    setChartData, // Use the new action
+    setChartData,
     addCandle
   } = useStore();
 
@@ -58,7 +58,7 @@ export function DataSimulator() {
             const newChartData = currentChartData.slice(); // Create a copy
             const currentCandle = { ...newChartData[newChartData.length - 1] };
             
-            // Mutate the copy, not the original state object
+            // This is the critical fix: create a new copy of the ohlc array
             currentCandle.ohlc = [...currentCandle.ohlc];
 
             const [open, high, low, close] = currentCandle.ohlc;

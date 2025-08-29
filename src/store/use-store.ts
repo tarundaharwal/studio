@@ -13,7 +13,13 @@ const generateCandlestickData = (count: number, timeframeMinutes: number) => {
     const data = [];
     const now = Date.now();
     
+    // Align start time to the beginning of the current timeframe interval
+    const interval = timeframeMinutes * 60 * 1000;
+    const startTime = now - (now % interval);
+
+
     for (let i = 0; i < count; i++) {
+      const candleTime = new Date(startTime - (count - 1 - i) * interval);
       const open = lastClose;
       const high = open + getRandom(0, 25);
       const low = open - getRandom(0, 25);
@@ -21,7 +27,7 @@ const generateCandlestickData = (count: number, timeframeMinutes: number) => {
       const volume = getRandom(50000, 200000);
       lastClose = close;
       data.push({
-        time: new Date(now - (count - i) * timeframeMinutes * 60000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        time: candleTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
         ohlc: [open, high, low, close] as [number, number, number, number],
         volume: volume,
       })
@@ -102,8 +108,8 @@ export type StoreState = {
     optionChain: Option[];
     signals: Signal[];
     tradingStatus: TradingStatus;
+    lastTickTime: number; // Added to track when the last tick was processed
     setChartData: (newData: ChartData[]) => void;
-    addCandle: (newCandle: ChartData) => void;
     setTimeframe: (newTimeframe: string) => void;
     updatePositions: (newPositions: Position[]) => void;
     addOrder: (newOrder: Order) => void;
@@ -112,6 +118,7 @@ export type StoreState = {
     updateOptionChain: (newOptionChain: Option[]) => void;
     addSignal: (newSignal: Signal) => void;
     toggleTradingStatus: () => void;
+    setLastTickTime: (time: number) => void; // Added action to update time
 };
 
 const INITIAL_EQUITY = 500000;
@@ -147,16 +154,18 @@ export const useStore = create<StoreState>((set, get) => ({
         { strike: 23000, callOI: 400000, callIV: 12.0, callLTP: 45.5, putLTP: 180.2, putIV: 13.9, putOI: 75000 },
     ],
     signals: [],
+    lastTickTime: Date.now(),
 
     // Actions
     setChartData: (newData) => set({ chartData: newData }),
-    setTimeframe: (newTimeframe) => set({
-        timeframe: newTimeframe,
-        chartData: generateCandlestickData(78, timeframes[newTimeframe] || 5)
+    setTimeframe: (newTimeframe) => set((state) => {
+        const newChartData = generateCandlestickData(78, timeframes[newTimeframe] || 5);
+        return {
+            timeframe: newTimeframe,
+            chartData: newChartData,
+            lastTickTime: Date.now(), // Reset tick time on timeframe change
+        }
     }),
-    addCandle: (newCandle) => set(state => ({
-        chartData: [...state.chartData.slice(1), newCandle]
-    })),
     updatePositions: (newPositions) => set({ positions: newPositions }),
     addOrder: (newOrder) => set(state => ({ orders: [newOrder, ...state.orders].slice(0, 100) })),
     updateOverview: (newOverview) => set(state => ({ overview: { ...state.overview, ...newOverview } })),
@@ -166,4 +175,5 @@ export const useStore = create<StoreState>((set, get) => ({
     toggleTradingStatus: () => set(state => ({
         tradingStatus: state.tradingStatus === 'ACTIVE' ? 'STOPPED' : 'ACTIVE'
     })),
+    setLastTickTime: (time) => set({ lastTickTime: time }),
 }));

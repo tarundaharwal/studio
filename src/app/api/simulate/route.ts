@@ -9,7 +9,9 @@ export async function POST(req: NextRequest) {
     // The 'run' function from Genkit executes the flow
     const newState = await runSimulation(body);
 
-    return NextResponse.json(newState);
+    // Pass the current time back to the client so it knows when the tick was processed
+    return NextResponse.json({ ...newState, lastTickTime: Date.now() });
+
   } catch (error: any) {
     console.error("API Route Error:", error);
     return NextResponse.json({ message: "Error running simulation", error: error.message }, { status: 500 });

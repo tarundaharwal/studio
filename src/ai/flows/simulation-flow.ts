@@ -81,6 +81,7 @@ const SimulationInputSchema = z.object({
   indicators: z.array(IndicatorSchema),
   optionChain: z.array(OptionSchema),
   tradingStatus: z.enum(['ACTIVE', 'STOPPED']),
+  lastTickTime: z.number(), // Added to track time between ticks
 });
 export type SimulationInput = z.infer<typeof SimulationInputSchema>;
 
@@ -112,11 +113,14 @@ const timeframes: { [key: string]: number } = {
 };
 
 const getNextTime = (time: string, timeframeMinutes: number): string => {
-    const [hours, minutes] = time.split(':').map(Number);
     const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    date.setMinutes(date.getMinutes() + timeframeMinutes);
-    return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const [hours, minutes] = time.split(':').map(Number);
+    // Find the last candle's time in today's context
+    const lastCandleDate = new Date();
+    lastCandleDate.setHours(hours, minutes, 0, 0);
+
+    const newCandleDate = new Date(lastCandleDate.getTime() + timeframeMinutes * 60 * 1000);
+    return newCandleDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 };
 
 
@@ -129,79 +133,81 @@ export const simulationFlow = ai.defineFlow(
   },
   async (input) => {
     // Destructure the input to get the current state
-    let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus } = input;
+    let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, lastTickTime } = input;
     
-    // These arrays will hold any new events generated during this tick
     const newOrders: z.infer<typeof OrderSchema>[] = [];
     const newSignals: z.infer<typeof SignalSchema>[] = [];
 
     // --- MARKET DATA SIMULATION ---
-    let newClosePrice: number;
-    const now = Date.now();
-    const nowLocale = new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    
-    // We need to mutate the data, so we create deep copies
     let newChartData = JSON.parse(JSON.stringify(chartData));
-    let lastCandleInStore = newChartData[newChartData.length - 1];
-
-    // Simulate a new candle if timeframe has passed
-    // NOTE: This logic is simplified and assumes regular tick intervals.
-    const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
-    const tickInterval = 2000; // 2 seconds, matches frontend
-    const ticksPerCandle = timeframeDuration / tickInterval;
-
-    // A simple counter stored on the overview object to track progress towards a new candle
-    // In a real app, this might be handled differently.
-    const tickCount = (overview.pnl / 1_000_000_000) || 0; // misuse pnl as a tick counter for now
+    let currentCandle = newChartData[newChartData.length - 1];
     
-    // Check if it's time for a new candle
-    if (Math.random() < 1/ticksPerCandle) { 
-        const lastClose = lastCandleInStore.ohlc[3];
-        const timeframeMinutes = timeframeDuration / (60 * 1000);
-        const newTime = getNextTime(lastCandleInStore.time, timeframeMinutes);
+    // Simulate price change for this tick
+    const lastKnownPrice = currentCandle.ohlc[3];
+    const change = (Math.random() - 0.5) * 5;
+    const newPrice = lastKnownPrice + change;
 
-        const newCandle = {
-            time: newTime,
-            ohlc: [lastClose, lastClose, lastClose, lastClose] as [number, number, number, number],
-            volume: 0,
-        };
-        newChartData = [...newChartData.slice(1), newCandle];
-        newClosePrice = newCandle.ohlc[3];
+    // Determine if the timeframe for the current candle has elapsed
+    const now = Date.now();
+    const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
+    const timeSinceLastTick = now - lastTickTime;
+
+    // This is a simplified way to check if a candle period has passed.
+    // In a real scenario, you'd align with actual market time.
+    const timeframeMinutes = timeframeDuration / (60 * 1000);
+    const lastCandleDate = new Date();
+    const [hours, minutes] = currentCandle.time.split(':').map(Number);
+    lastCandleDate.setHours(hours, minutes, 0, 0);
+    
+    const isNewCandleTime = (now - lastCandleDate.getTime()) >= timeframeDuration;
+
+    if (isNewCandleTime) {
+        // Finalize the current candle (it's already been updated in previous ticks)
+        // and create a new one.
+        const newTime = getNextTime(currentCandle.time, timeframeMinutes);
 
         // --- TRADING LOGIC (Only on new candle & if trading is active) ---
         if (tradingStatus === 'ACTIVE') {
-            const priceAction = newCandle.ohlc[3] - (newChartData[newChartData.length - 2]?.ohlc[3] || newCandle.ohlc[3]);
+            const priceAction = currentCandle.ohlc[3] - (newChartData[newChartData.length - 2]?.ohlc[3] || currentCandle.ohlc[3]);
             const hasOpenPosition = positions.length > 0;
             
             if (Math.random() < 0.1) { // 10% chance to trade
+                const nowLocale = new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                 if (priceAction > 10 && !hasOpenPosition) {
-                    const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newCandle.ohlc[3], ltp: newCandle.ohlc[3], pnl: 0 };
+                    const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
                     positions = [...positions, newPosition];
-                    newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newCandle.ohlc[3], status: 'EXECUTED' });
+                    newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
                     newSignals.push({ time: nowLocale, strategy: 'SIM-TREND', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: 'Simulated bullish momentum.'});
                 } else if (priceAction < -10 && hasOpenPosition) {
                     const positionToClose = positions[0];
-                    newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newCandle.ohlc[3], status: 'EXECUTED' });
+                    newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
                     
-                    const pnlFromTrade = (newCandle.ohlc[3] - positionToClose.avgPrice) * positionToClose.qty;
+                    const pnlFromTrade = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
                     overview.equity += pnlFromTrade;
-                    overview.pnl += pnlFromTrade;
-                    overview.peakEquity = Math.max(overview.peakEquity, overview.equity);
-                    overview.maxDrawdown = Math.max(overview.maxDrawdown, overview.peakEquity - overview.equity);
-
+                    overview.pnl += pnlFromTrade; // This PNL is now fully realized
+                    
                     positions = positions.filter(p => p.symbol !== positionToClose.symbol);
                     newSignals.push({ time: nowLocale, strategy: 'SIM-TREND', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: 'Simulated bearish momentum.'});
                 }
             }
         }
-    } else { // Update current candle
-        let currentCandle = newChartData[newChartData.length - 1];
+        
+        // Create the new candle for the next period
+        const newCandle = {
+            time: newTime,
+            ohlc: [newPrice, newPrice, newPrice, newPrice] as [number, number, number, number],
+            volume: 0,
+        };
+        newChartData = [...newChartData.slice(1), newCandle];
+
+    } else {
+        // We are still in the same timeframe, so update the current (last) candle
         const [open, high, low, close] = currentCandle.ohlc;
-        const change = (Math.random() - 0.5) * 5;
-        newClosePrice = close + change;
-        currentCandle.ohlc = [open, Math.max(high, newClosePrice), Math.min(low, newClosePrice), newClosePrice];
+        currentCandle.ohlc = [open, Math.max(high, newPrice), Math.min(low, newPrice), newPrice];
         currentCandle.volume += Math.random() * 1000;
     }
+
+    const newClosePrice = newChartData[newChartData.length-1].ohlc[3];
 
     // --- UPDATE OTHER MARKET DATA ---
     const newOptionChain = optionChain.map(opt => ({
@@ -210,7 +216,7 @@ export const simulationFlow = ai.defineFlow(
         putLTP: Math.max(0, opt.putLTP + getRandom(-0.5, 0.5) + (newClosePrice - opt.strike) / 100),
     }));
 
-    const priceMovement = newClosePrice - (chartData[chartData.length - 2]?.ohlc[3] || newClosePrice);
+    const priceMovement = newClosePrice - (chartData[chartData.length - 1]?.ohlc[3] || newClosePrice);
     const newIndicators = indicators.map(ind => {
         let newValue = ind.value;
         if (ind.name.includes('RSI')) newValue = Math.max(0, Math.min(100, ind.value + priceMovement * 2));
@@ -222,24 +228,21 @@ export const simulationFlow = ai.defineFlow(
     // --- UPDATE PORTFOLIO DATA (if trading active) ---
     if (tradingStatus === 'ACTIVE') {
         let totalUnrealizedPnl = 0;
-        const newPositions = positions.map(pos => {
+        positions = positions.map(pos => {
             const newLtp = newClosePrice; // Simplified: all positions track main instrument
             const pnl = (newLtp - pos.avgPrice) * pos.qty;
             totalUnrealizedPnl += pnl;
             return { ...pos, ltp: newLtp, pnl: pnl };
         });
         
-        // In a real system, you'd calculate unrealized PNL separately.
-        // Here, we just update the main PNL for simplicity of display.
         const realizedPnl = overview.equity - overview.initialEquity;
         overview.pnl = realizedPnl + totalUnrealizedPnl;
         const currentTotalEquity = overview.equity + totalUnrealizedPnl;
+        
         overview.peakEquity = Math.max(overview.peakEquity, currentTotalEquity);
         overview.maxDrawdown = Math.max(overview.maxDrawdown, overview.peakEquity - currentTotalEquity);
-
-        positions = newPositions;
     }
-
+    
     // Return the new state
     return {
       chartData: newChartData,

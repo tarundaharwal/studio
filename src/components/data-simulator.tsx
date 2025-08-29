@@ -16,6 +16,7 @@ const pickStateForAPI = (state: StoreState) => ({
   indicators: state.indicators,
   optionChain: state.optionChain,
   tradingStatus: state.tradingStatus,
+  lastTickTime: state.lastTickTime, // Pass the last tick time
 });
 
 
@@ -44,6 +45,8 @@ export function DataSimulator() {
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API Error Response:", errorData);
         throw new Error(`API call failed with status: ${response.status}`);
       }
 
@@ -55,6 +58,7 @@ export function DataSimulator() {
       store.updateOverview(newState.overview);
       store.updateIndicators(newState.indicators);
       store.updateOptionChain(newState.optionChain);
+      store.setLastTickTime(newState.lastTickTime); // Update the last tick time from the server response
       
       // We don't directly set orders and signals, as they are append-only.
       // The simulation flow returns the *new* orders/signals for this tick.
@@ -94,6 +98,7 @@ export function DataSimulator() {
         clearTimeout(timeoutRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array ensures this runs only once on mount
 
   return null; // This component does not render anything

@@ -20,12 +20,20 @@ const chartConfig = {
 };
 
 export function PerformanceChart() {
-  const { chartData } = useStore();
+  const { chartData, overview } = useStore();
   
-  const performanceData = chartData.map((d, i) => ({
-    date: d.time, // Using time as date for simplicity in simulation
-    equity: 100000 + d.ohlc[3] - chartData[0].ohlc[3] // Simplified equity curve
-  }));
+  const performanceData = chartData.map((d, i) => {
+    // Simplified equity curve logic for visual representation
+    // In a real scenario, you'd store historical equity values
+    const startingEquity = overview.initialEquity;
+    const priceMovement = d.ohlc[3] - chartData[0].ohlc[3];
+    // This is a rough estimation for visualization
+    const estimatedEquity = startingEquity + overview.pnl + priceMovement * 50; 
+    return {
+      date: d.time,
+      equity: i === chartData.length -1 ? overview.equity : estimatedEquity,
+    }
+  });
 
   return (
     <Card>
@@ -61,12 +69,12 @@ export function PerformanceChart() {
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value) => `₹${Number(value) / 1000}k`}
-                    domain={['dataMin - 1000', 'dataMax + 1000']}
+                    domain={['dataMin - 50000', 'dataMax + 50000']}
                 />
                 <Tooltip
                     cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '3 3' }}
                     content={<ChartTooltipContent
-                        formatter={(value, name, props) => `₹${Number(props.payload.equity).toLocaleString()}`}
+                        formatter={(value) => `₹${Number(value).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`}
                         labelClassName="font-bold"
                         indicator="dot"
                     />}

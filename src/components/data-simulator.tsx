@@ -20,34 +20,36 @@ const getRandom = (min: number, max: number, precision: number = 2) => {
 export function DataSimulator() {
   const {
     timeframe,
-    tradingStatus,
-    updatePositions,
-    updateOverview,
+    addCandle,
     updateOptionChain,
     updateIndicators,
-    addSignal,
-    updateOrderStatus,
     setChartData,
-    addCandle,
     addOrder,
     addPosition,
     closePosition,
-    positions,
+    updatePositions,
+    tradingStatus,
+    overview,
+    updateOverview,
+    addSignal
   } = useStore();
 
   const lastCandleTime = useRef(Date.now());
+  const maxDrawdownRef = useRef(overview.maxDrawdown);
+  const peakEquityRef = useRef(overview.equity);
+
 
   useEffect(() => {
     const interval = setInterval(() => {
         const now = Date.now();
         const nowLocale = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const currentStore = useStore.getState();
+        const { chartData, tradingStatus } = currentStore;
         
         // --- MARKET DATA SIMULATION (Always runs) ---
         const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
-        const currentChartData = useStore.getState().chartData;
-        const newChartData = currentChartData.slice(); // Create a shallow copy for mutation
-        const lastCandleInStore = newChartData[newChartData.length - 1];
         let newClosePrice: number;
+        let lastCandleInStore = chartData[chartData.length - 1];
 
         // 1. Update or Create Candle
         if (now - lastCandleTime.current >= timeframeDuration) {
@@ -60,12 +62,12 @@ export function DataSimulator() {
             };
             addCandle(newCandle);
             newClosePrice = newCandle.ohlc[3];
+            lastCandleInStore = newCandle; // For trading logic below
 
             // --- TRADING LOGIC (Only runs on new candle and if trading is active) ---
-            if (useStore.getState().tradingStatus === 'ACTIVE') {
-                const priceAction = newCandle.ohlc[3] - lastCandleInStore.ohlc[3];
-                const currentPositions = useStore.getState().positions;
-                const hasOpenPosition = currentPositions.length > 0;
+            if (tradingStatus === 'ACTIVE') {
+                const priceAction = newCandle.ohlc[3] - chartData[chartData.length - 2].ohlc[3];
+                const hasOpenPosition = currentStore.positions.length > 0;
                 
                 // Simple logic: 10% chance to trade on a new candle
                 if (Math.random() < 0.1) {
@@ -78,9 +80,9 @@ export function DataSimulator() {
 
                     } else if (priceAction < -10 && hasOpenPosition) { // If price moved down and has open position
                         // EXIT LONG
-                        const positionToClose = currentPositions[0]; // Assuming one position for simplicity
+                        const positionToClose = currentStore.positions[0]; // Assuming one position for simplicity
                         addOrder({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newCandle.ohlc[3], status: 'EXECUTED' });
-                        closePosition(positionToClose.symbol);
+                        closePosition(positionToClose.symbol, newCandle.ohlc[3]);
                         addSignal({ time: nowLocale, strategy: 'SIM-TREND', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: 'Simulated bearish momentum.'});
                     }
                 }
@@ -88,8 +90,9 @@ export function DataSimulator() {
              // --- END TRADING LOGIC ---
 
         } else {
+            const newChartData = chartData.slice();
             const currentCandle = { ...newChartData[newChartData.length - 1] };
-            currentCandle.ohlc = [...currentCandle.ohlc]; // IMPORTANT: Create a copy of ohlc array
+            currentCandle.ohlc = [...currentCandle.ohlc]; 
 
             const [open, high, low, close] = currentCandle.ohlc;
             const volumeSpurt = Math.random() * 1000;
@@ -108,22 +111,21 @@ export function DataSimulator() {
 
         // 2. Update Option Chain based on new market price
         const atmStrike = Math.round(newClosePrice / 50) * 50;
-        const newOptionChain = useStore.getState().optionChain.map(opt => {
-            const isATM = opt.strike === atmStrike;
+        const newOptionChain = currentStore.optionChain.map(opt => {
             const priceInfluence = (newClosePrice - opt.strike) / 100;
             return {
             ...opt,
             callLTP: Math.max(0, opt.callLTP + getRandom(-0.5, 0.5) - priceInfluence),
             putLTP: Math.max(0, opt.putLTP + getRandom(-0.5, 0.5) + priceInfluence),
-            callOI: Math.max(0, opt.callOI + getRandom(isATM ? -500 : -100, isATM ? 500 : 100, 0)),
-            putOI: Math.max(0, opt.putOI + getRandom(isATM ? -500 : -100, isATM ? 500 : 100, 0)),
+            callOI: Math.max(0, opt.callOI + getRandom(-100, 100, 0)),
+            putOI: Math.max(0, opt.putOI + getRandom(-100, 100, 0)),
             };
         });
         updateOptionChain(newOptionChain);
 
         // 3. Update Indicators based on new market price
-        const priceMovement = newClosePrice - (newChartData[newChartData.length - 2]?.ohlc[3] || newClosePrice);
-        const newIndicators = useStore.getState().indicators.map(ind => {
+        const priceMovement = newClosePrice - (chartData[chartData.length - 2]?.ohlc[3] || newClosePrice);
+        const newIndicators = currentStore.indicators.map(ind => {
             let newValue = ind.value;
             if (ind.name.includes('RSI')) {
                 newValue = Math.max(0, Math.min(100, ind.value + priceMovement * 2));
@@ -137,29 +139,44 @@ export function DataSimulator() {
         updateIndicators(newIndicators);
 
         // --- TRADING DATA SIMULATION (Only runs if trading is active) ---
-        if (useStore.getState().tradingStatus === 'ACTIVE') {
+        if (tradingStatus === 'ACTIVE') {
+            let totalUnrealizedPnl = 0;
+            
             // 4. Update Positions based on new close price (LTP)
-            const newPositions = useStore.getState().positions.map(pos => {
+            const newPositions = currentStore.positions.map(pos => {
                 let newLtp;
                 if (pos.symbol.includes('FUT')) {
-                    // Futures LTP tracks the main chart price
                     newLtp = newClosePrice;
                 } else {
-                    // Options have their own random volatility
                     const optionChange = getRandom(-2.5, 2.5);
                     newLtp = Math.max(0.05, pos.ltp + optionChange);
                 }
-                const newPnl = (newLtp - pos.avgPrice) * pos.qty;
-                return { ...pos, ltp: newLtp, pnl: newPnl };
+                const pnl = (newLtp - pos.avgPrice) * pos.qty;
+                totalUnrealizedPnl += pnl;
+                return { ...pos, ltp: newLtp, pnl: pnl };
             });
             updatePositions(newPositions);
 
-            // 5. Update Overview Cards from new positions
-            const totalPnl = newPositions.reduce((acc, pos) => acc + pos.pnl, 0);
-            const drawdownChange = (Math.random() - 0.5) * (totalPnl > 0 ? 10 : -50); 
+            // 5. Update Overview Cards based on new positions
+            const realizedEquity = currentStore.overview.equity;
+            const currentTotalValue = newPositions.reduce((acc, pos) => acc + (pos.ltp * pos.qty), 0);
+            const floatingEquity = realizedEquity + currentTotalValue;
+
+            const newPeakEquity = Math.max(peakEquityRef.current, floatingEquity);
+            peakEquityRef.current = newPeakEquity;
+            
+            const drawdown = newPeakEquity - floatingEquity;
+            if(drawdown > maxDrawdownRef.current) {
+                maxDrawdownRef.current = drawdown;
+            }
+
+            const pnl = floatingEquity - currentStore.overview.initialEquity;
+            
             updateOverview({
-                pnl: totalPnl,
-                drawdown: useStore.getState().overview.drawdown + drawdownChange,
+                pnl: pnl,
+                equity: floatingEquity,
+                peakEquity: newPeakEquity,
+                maxDrawdown: maxDrawdownRef.current,
             });
         }
     }, TICK_INTERVAL);
@@ -167,7 +184,7 @@ export function DataSimulator() {
     return () => {
         clearInterval(interval);
     };
-  }, [timeframe, addCandle, addSignal, updateIndicators, updateOptionChain, updateOrderStatus, updateOverview, updatePositions, setChartData, addOrder, addPosition, closePosition]);
+  }, [timeframe, addCandle, addSignal, updateIndicators, updateOptionChain, updateOverview, updatePositions, setChartData, addOrder, addPosition, closePosition]);
 
   return null;
 }

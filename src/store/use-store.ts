@@ -60,8 +60,11 @@ type Order = {
 }
 
 type Overview = {
+    equity: number;
+    initialEquity: number;
     pnl: number;
-    drawdown: number;
+    maxDrawdown: number;
+    peakEquity: number;
 }
 
 type Indicator = {
@@ -105,7 +108,7 @@ type StoreState = {
     updatePositions: (newPositions: Position[]) => void;
     addOrder: (newOrder: Order) => void;
     addPosition: (newPosition: Position) => void;
-    closePosition: (symbol: string) => void;
+    closePosition: (symbol: string, closePrice: number) => void;
     updateOverview: (newOverview: Partial<Overview>) => void;
     updateIndicators: (newIndicators: Indicator[]) => void;
     updateOptionChain: (newOptionChain: Option[]) => void;
@@ -113,6 +116,8 @@ type StoreState = {
     updateOrderStatus: (orderIndex: number, newStatus: Order['status']) => void;
     emergencyStop: () => void;
 };
+
+const INITIAL_EQUITY = 5000000; // 50 Lakhs
 
 export const useStore = create<StoreState>((set, get) => ({
     // Initial State
@@ -122,8 +127,11 @@ export const useStore = create<StoreState>((set, get) => ({
     positions: [],
     orders: [],
     overview: {
+        equity: INITIAL_EQUITY,
+        initialEquity: INITIAL_EQUITY,
         pnl: 0,
-        drawdown: 0,
+        maxDrawdown: 0,
+        peakEquity: INITIAL_EQUITY,
     },
     indicators: [
         { name: 'RSI (14)', value: 28.7 },
@@ -154,8 +162,36 @@ export const useStore = create<StoreState>((set, get) => ({
     })),
     updatePositions: (newPositions) => set({ positions: newPositions }),
     addOrder: (newOrder) => set(state => ({ orders: [newOrder, ...state.orders].slice(0, 100) })),
-    addPosition: (newPosition) => set(state => ({ positions: [...state.positions, newPosition] })),
-    closePosition: (symbol) => set(state => ({ positions: state.positions.filter(p => p.symbol !== symbol) })),
+    addPosition: (newPosition) => set(state => {
+        const cost = newPosition.avgPrice * newPosition.qty;
+        const newEquity = state.overview.equity - cost;
+        const newPnl = newEquity - state.overview.initialEquity;
+        return { 
+            positions: [...state.positions, newPosition],
+            overview: { ...state.overview, equity: newEquity, pnl: newPnl }
+        };
+    }),
+    closePosition: (symbol, closePrice) => set(state => {
+        const positionToClose = state.positions.find(p => p.symbol === symbol);
+        if (!positionToClose) return {};
+
+        const proceeds = closePrice * positionToClose.qty;
+        const newEquity = state.overview.equity + proceeds;
+        const newPeakEquity = Math.max(state.overview.peakEquity, newEquity);
+        const newPnl = newEquity - state.overview.initialEquity;
+        const newDrawdown = newPeakEquity - newEquity;
+
+        return { 
+            positions: state.positions.filter(p => p.symbol !== symbol),
+            overview: { 
+                ...state.overview, 
+                equity: newEquity,
+                pnl: newPnl,
+                peakEquity: newPeakEquity,
+                maxDrawdown: Math.max(state.overview.maxDrawdown, newDrawdown)
+            }
+        };
+    }),
     updateOverview: (newOverview) => set(state => ({ overview: { ...state.overview, ...newOverview } })),
     updateIndicators: (newIndicators) => set({ indicators: newIndicators }),
     updateOptionChain: (newOptionChain) => set({ optionChain: newOptionChain }),
@@ -170,28 +206,32 @@ export const useStore = create<StoreState>((set, get) => ({
     emergencyStop: () => set(state => {
         const now = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
-        // Don't do anything if already stopped
         if (state.tradingStatus === 'STOPPED') return {};
 
-        // Create liquidation orders from open positions
-        const liquidationOrders: Order[] = state.positions.map(pos => ({
-            time: now,
-            symbol: pos.symbol,
-            type: 'SELL', // Assuming all positions are long for simplicity
-            qty: pos.qty,
-            price: pos.ltp, // Liquidate at current market price
-            status: 'EXECUTED'
-        }));
+        let currentEquity = state.overview.equity;
+
+        const liquidationOrders: Order[] = state.positions.map(pos => {
+            currentEquity += pos.ltp * pos.qty; // Add back liquidated value to equity
+            return {
+                time: now,
+                symbol: pos.symbol,
+                type: 'SELL', 
+                qty: pos.qty,
+                price: pos.ltp, 
+                status: 'EXECUTED'
+            }
+        });
+        
+        const finalPnl = currentEquity - state.overview.initialEquity;
+        const finalPeakEquity = Math.max(state.overview.peakEquity, currentEquity);
+        const finalDrawdown = finalPeakEquity - currentEquity;
     
-        // Cancel all pending orders by marking them as CANCELLED
         const updatedOrders = state.orders.map(order => 
             order.status === 'PENDING' ? { ...order, status: 'CANCELLED' } : order
         );
     
-        // Add new liquidation orders to the list
         const newOrders = [...liquidationOrders, ...updatedOrders];
     
-        // Add a signal for emergency stop
         const newSignal: Signal = {
             time: now,
             strategy: 'SYSTEM',
@@ -201,12 +241,17 @@ export const useStore = create<StoreState>((set, get) => ({
         };
     
         return {
-            positions: [], // All positions are liquidated
+            positions: [], 
             orders: newOrders,
             signals: [newSignal, ...state.signals].slice(0, 20),
-            tradingStatus: 'STOPPED' // Stop all TRADING activity
+            tradingStatus: 'STOPPED',
+            overview: {
+                ...state.overview,
+                equity: currentEquity,
+                pnl: finalPnl,
+                peakEquity: finalPeakEquity,
+                maxDrawdown: Math.max(state.overview.maxDrawdown, finalDrawdown)
+            }
         };
     }),
 }));
-
-    

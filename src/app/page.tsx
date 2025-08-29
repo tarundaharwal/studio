@@ -10,7 +10,7 @@ export default function DashboardPage() {
     <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="flex flex-col gap-4">
-            <div className="flex-1">
+            <div className="h-[350px]">
                 <TradingTerminal />
             </div>
             <div className="flex-1">
@@ -18,7 +18,7 @@ export default function DashboardPage() {
             </div>
         </div>
         <div className="flex flex-col gap-4">
-            <div className="flex-1">
+            <div className="h-[350px]">
                 <IndicatorCards />
             </div>
             <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-2">

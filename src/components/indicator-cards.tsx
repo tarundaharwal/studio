@@ -50,10 +50,10 @@ export function IndicatorCards() {
           <CardTitle>Market Indicators</CardTitle>
           <CardDescription className="text-xs">RSI, MACD, ADX, and ATR</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 pb-0">
+        <CardContent className="flex-1 p-0">
           <ChartContainer config={chartConfig} className="h-full w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 10, left: -10 }}>
+              <LineChart data={chartData} margin={{ top: 5, right: 10, bottom: 0, left: -10 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                     dataKey="x"

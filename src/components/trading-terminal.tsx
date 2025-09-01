@@ -24,6 +24,7 @@ import {
     Rectangle,
     CartesianGrid,
     ReferenceLine,
+    Cell,
 } from "recharts"
 import { ScrollArea, ScrollBar } from "./ui/scroll-area"
 import { Button } from "./ui/button"
@@ -31,60 +32,40 @@ import { Minus, Plus, CandlestickChart, BarChart3 } from "lucide-react"
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group"
 import { useStore } from "@/store/use-store"
 
+
 // Custom shape for the candlestick wick
-const renderWick = (props: any) => {
+const CustomWick = (props: any) => {
     const { x, y, width, height, payload } = props;
-    const [low, high] = payload.candleWick;
-    const isGain = payload.isGain;
-  
-    return (
-      <line
-        x1={x + width / 2}
-        y1={props.yAxis.scale(low)}
-        x2={x + width / 2}
-        y2={props.yAxis.scale(high)}
-        stroke={isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}
-        strokeWidth={1}
-      />
-    );
-  };
-  
-// Custom shape for the candlestick body
-const renderCandle = (props: any) => {
-    const { x, width, payload } = props;
-    const { ohlc, isGain } = payload;
-    const [open, , , close] = ohlc;
-    const candleHeight = Math.abs(props.yAxis.scale(close) - props.yAxis.scale(open));
-    const candleY = isGain ? props.yAxis.scale(close) : props.yAxis.scale(open);
-    
-    return (
-      <rect
-        x={x}
-        y={candleY}
-        width={width}
-        height={candleHeight}
-        fill={isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))'}
-      />
-    );
+    if (!payload) return null;
+    const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+    return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
 };
+
+// Custom shape for the candlestick body
+const CustomBody = (props: any) => {
+    const { x, y, width, height, payload } = props;
+    if (!payload) return null;
+    const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
+    return <Rectangle x={x} y={y} width={width} height={height} fill={color} stroke={color} />;
+};
+
 
 // Custom tooltip component
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      const ohlc = data.original_ohlc || data.ohlc;
       return (
         <div className="custom-tooltip bg-background/90 text-foreground border-border backdrop-blur-sm">
           <p className="label font-bold">{`Time: ${label}`}</p>
           <p className="font-mono" style={{ color: data.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))' }}>
-            {`O: ${ohlc[0].toFixed(2)} H: ${ohlc[1].toFixed(2)} L: ${ohlc[2].toFixed(2)} C: ${ohlc[3].toFixed(2)}`}
+            {`O: ${data.ohlc[0].toFixed(2)} H: ${data.ohlc[1].toFixed(2)} L: ${data.ohlc[2].toFixed(2)} C: ${data.ohlc[3].toFixed(2)}`}
           </p>
           <p className="font-mono text-muted-foreground">{`Volume: ${data.volume.toLocaleString()}`}</p>
         </div>
       );
     }
     return null;
-  };
+};
 
 const MIN_CANDLES = 15;
 const ZOOM_STEP = 5;
@@ -95,12 +76,6 @@ export function TradingTerminal() {
   const [visibleCandles, setVisibleCandles] = React.useState(50);
   
   const [isClient, setIsClient] = React.useState(false);
-  const [livePrice, setLivePrice] = React.useState({
-    latestPrice: 0,
-    priceChange: 0,
-    priceChangePercent: 0,
-    isGain: true,
-  });
 
   React.useEffect(() => {
     setIsClient(true);
@@ -116,35 +91,27 @@ export function TradingTerminal() {
         return { 
             ...d,
             candleWick: [low, high],
-            // For recharts, the body array must always be [min, max]
             candleBody: [Math.min(open, close), Math.max(open, close)], 
             isGain,
-            original_ohlc: d.ohlc,
         }
     });
   }, [fullChartData]);
 
-
   const chartData = chartDataWithIndicators.slice(-visibleCandles);
   const maxCandles = fullChartData.length;
 
-  React.useEffect(() => {
-    if (fullChartData && fullChartData.length > 1) {
-        const latestPrice = fullChartData[fullChartData.length - 1].ohlc[3];
-        const previousDayClose = fullChartData[fullChartData.length - 2].ohlc[3];
-        const priceChange = latestPrice - previousDayClose;
-        const priceChangePercent = previousDayClose !== 0 ? (priceChange / previousDayClose) * 100 : 0;
-        const isGain = priceChange >= 0;
-
-        setLivePrice({
-            latestPrice,
-            priceChange,
-            priceChangePercent,
-            isGain,
-        });
+  const livePrice = React.useMemo(() => {
+    if (!fullChartData || fullChartData.length < 2) {
+        return { latestPrice: 0, priceChange: 0, priceChangePercent: 0, isGain: true };
     }
-  }, [fullChartData]);
+    const latestPrice = fullChartData[fullChartData.length - 1].ohlc[3];
+    const previousDayClose = fullChartData[fullChartData.length - 2].ohlc[3];
+    const priceChange = latestPrice - previousDayClose;
+    const priceChangePercent = previousDayClose !== 0 ? (priceChange / previousDayClose) * 100 : 0;
+    const isGain = priceChange >= 0;
 
+    return { latestPrice, priceChange, priceChangePercent, isGain };
+  }, [fullChartData]);
 
   const handleZoomIn = () => {
     setVisibleCandles(prev => Math.max(MIN_CANDLES, prev - ZOOM_STEP));
@@ -166,17 +133,11 @@ export function TradingTerminal() {
       )
   }
 
-  const getDomain = () => {
-    const highs = chartData.map(item => item.original_ohlc[1]);
-    const lows = chartData.map(item => item.original_ohlc[2]);
+  const getPriceDomain = () => {
+    const highs = chartData.map(item => item.ohlc[1]);
+    const lows = chartData.map(item => item.ohlc[2]);
     return [Math.min(...lows) * 0.995, Math.max(...highs) * 1.005];
   };
-
-  const getVolumeDomain = () => {
-    const volumes = chartData.map(item => item.volume);
-    return [0, Math.max(...volumes) * 4]; // Multiply to push volume bars to the bottom
-  };
-
 
   return (
     <Card className="overflow-hidden h-full flex flex-col">
@@ -227,75 +188,72 @@ export function TradingTerminal() {
         <ScrollArea className="w-full h-full">
             <div className="h-full" style={{ width: '100%', minWidth: `${chartData.length * (CANDLE_WIDTH + 4)}px` }}>
                 
-            <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart
-                data={chartData}
-                margin={{ top: 20, right: 45, left: 5, bottom: 20 }}
-                barGap={-CANDLE_WIDTH/2}
-                >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
-                <YAxis 
-                    yAxisId="price" 
-                    orientation="right" 
-                    domain={getDomain}
-                    tickFormatter={(value) => value.toLocaleString()} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60}
-                />
-                <YAxis 
-                    yAxisId="volume" 
-                    orientation="left" 
-                    domain={getVolumeDomain}
-                    hide
-                />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
-                
-                <Bar
-                    yAxisId="price"
-                    dataKey="candleWick"
-                    shape={renderWick}
-                    isAnimationActive={false}
-                    barSize={1}
-                />
-                
-                <Bar
-                    yAxisId="price"
-                    dataKey="candleBody"
-                    shape={renderCandle}
-                    isAnimationActive={false}
-                    barSize={CANDLE_WIDTH}
-                />
-                
-                <Bar
-                    yAxisId="volume"
-                    dataKey="volume"
-                    isAnimationActive={false}
-                    barSize={CANDLE_WIDTH}
-                    shape={(props: any) => {
-                        const { x, y, width, height, payload } = props;
-                        return (
-                        <rect
-                            x={x}
-                            y={y}
-                            width={width}
-                            height={height}
-                            fill={payload.isGain ? 'hsl(var(--chart-2-light))' : 'hsl(var(--chart-1-light))'}
+                <ResponsiveContainer width="100%" height="75%">
+                    <ComposedChart
+                        data={chartData}
+                        syncId="stockChart"
+                        margin={{ top: 20, right: 45, left: 5, bottom: 0 }}
+                        barGap={-CANDLE_WIDTH / 2}
+                    >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="time" hide />
+                        <YAxis
+                            yAxisId="price"
+                            orientation="right"
+                            domain={getPriceDomain}
+                            tickFormatter={(value) => value.toLocaleString()}
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            fontSize={10}
+                            width={60}
                         />
-                        );
-                    }}
-                />
-                
-                {chartData.length > 0 && (
-                    <ReferenceLine
-                    yAxisId="price"
-                    y={chartData[chartData.length - 1].original_ohlc[3]}
-                    stroke="hsl(var(--primary))"
-                    strokeDasharray="3 3"
-                    strokeWidth={1}
-                    label={{ value: ` ${chartData[chartData.length - 1].original_ohlc[3].toFixed(2)}`, position: 'right', fill: 'hsl(var(--primary))', fontSize: 10 }}
-                    />
-                )}
-                </ComposedChart>
-            </ResponsiveContainer>
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
+
+                        <Bar yAxisId="price" dataKey="candleWick" shape={<CustomWick />} barSize={1} isAnimationActive={false} />
+                        <Bar yAxisId="price" dataKey="candleBody" shape={<CustomBody />} barSize={CANDLE_WIDTH} isAnimationActive={false} />
+
+                        {chartData.length > 0 && (
+                            <ReferenceLine
+                                yAxisId="price"
+                                y={chartData[chartData.length - 1].ohlc[3]}
+                                stroke="hsl(var(--primary))"
+                                strokeDasharray="3 3"
+                                strokeWidth={1}
+                                label={{ value: ` ${chartData[chartData.length - 1].ohlc[3].toFixed(2)}`, position: 'right', fill: 'hsl(var(--primary))', fontSize: 10 }}
+                            />
+                        )}
+                    </ComposedChart>
+                </ResponsiveContainer>
+
+                <ResponsiveContainer width="100%" height="25%">
+                    <ComposedChart
+                        data={chartData}
+                        syncId="stockChart"
+                        margin={{ top: 0, right: 45, left: 5, bottom: 20 }}
+                        barGap={-CANDLE_WIDTH / 2}
+                    >
+                        <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
+                        <YAxis
+                            yAxisId="volume"
+                            orientation="right"
+                            domain={['auto', 'dataMax * 2']}
+                            tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`}
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            fontSize={10}
+                            width={60}
+                        />
+                        <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
+
+                        <Bar yAxisId="volume" dataKey="volume" barSize={CANDLE_WIDTH} isAnimationActive={false}>
+                            {chartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.isGain ? 'hsl(var(--chart-2-light))' : 'hsl(var(--chart-1-light))'} />
+                            ))}
+                        </Bar>
+                    </ComposedChart>
+                </ResponsiveContainer>
 
             </div>
           <ScrollBar orientation="horizontal" />

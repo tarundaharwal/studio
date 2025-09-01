@@ -302,7 +302,7 @@ export const simulationFlow = ai.defineFlow(
         const isBuySignal = currentRSI < 55 && currentMACD > -10;
         
         // TEMPORARY DEMO Confluence SELL Condition
-        const isSellSignal = currentRSI > 60;
+        const isSellSignal = currentRSI > 45;
 
         if (isBuySignal && !hasOpenPosition) {
             const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
@@ -318,7 +318,7 @@ export const simulationFlow = ai.defineFlow(
             overview.equity += pnlFromTrade;
             
             positions = positions.filter(p => p.symbol !== positionToClose.symbol);
-            newSignals.push({ time: nowLocale, strategy: 'Demo-Confluence', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>60. Value: ${currentRSI.toFixed(2)}`});
+            newSignals.push({ time: nowLocale, strategy: 'Demo-Confluence', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>45. Value: ${currentRSI.toFixed(2)}`});
         }
     }
 

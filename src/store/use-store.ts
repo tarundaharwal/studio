@@ -7,33 +7,49 @@ const getRandom = (min: number, max: number, precision: number = 2) => {
 };
 
 
-// Generate more realistic OHLCV data
+// Generate a consistent, non-random set of candlestick data
 const generateCandlestickData = (count: number, timeframeMinutes: number) => {
-    let lastClose = 22750;
     const data = [];
-    const now = Date.now();
-    
-    // Align start time to the beginning of the current timeframe interval
+    let lastClose = 22750;
+    const now = new Date();
+    now.setHours(15, 30, 0, 0); // Set a fixed end time for consistency
     const interval = timeframeMinutes * 60 * 1000;
-    const startTime = now - (now % interval);
-
-
+    const startTime = now.getTime() - (count * interval);
+    
+    // Pre-defined "random-like" values to ensure consistency on every load
+    const pseudoRandomFactors = [0.5, -0.2, 0.8, -0.5, 0.3, -0.1, 0.6, -0.4, 0.7, -0.3, 0.9, -0.6, 0.2, -0.8, 1.0, -0.7, 0.1, -0.9, 0.4, -0.0];
+    
     for (let i = 0; i < count; i++) {
-      const candleTime = new Date(startTime - (count - 1 - i) * interval);
-      const open = lastClose;
-      const high = open + getRandom(0, 25);
-      const low = open - getRandom(0, 25);
-      const close = getRandom(low, high);
-      const volume = getRandom(50000, 200000);
-      lastClose = close;
-      data.push({
-        time: candleTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-        ohlc: [open, high, low, close] as [number, number, number, number],
-        volume: volume,
-      })
+        const candleTime = new Date(startTime + i * interval);
+        const open = lastClose;
+        
+        // Use pseudo-random factors to get a consistent pattern
+        const factor = pseudoRandomFactors[i % pseudoRandomFactors.length];
+        const movement = 25 * factor;
+        
+        let high, low;
+        if (movement > 0) {
+            high = open + movement * 1.2;
+            low = open - (movement * 0.3);
+        } else {
+            high = open + (Math.abs(movement) * 0.3);
+            low = open + movement * 1.2;
+        }
+
+        const close = open + movement;
+        const volume = 100000 + (Math.abs(factor) * 150000);
+        
+        lastClose = close;
+        
+        data.push({
+            time: candleTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+            ohlc: [open, high, low, close] as [number, number, number, number],
+            volume: Math.round(volume),
+        });
     }
     return data;
-}
+};
+
 
 const timeframes: { [key: string]: number } = {
     '1m': 1,
@@ -145,9 +161,9 @@ export const useStore = create<StoreState>((set, get) => ({
         peakEquity: INITIAL_EQUITY,
     },
     indicators: [
-        { name: 'RSI (14)', value: 28.7 },
-        { name: 'MACD', value: -12.5 },
-        { name: 'ADX (14)', value: 45.2 },
+        { name: 'RSI (14)', value: 50 },
+        { name: 'MACD', value: 0 },
+        { name: 'ADX (14)', value: 20 },
     ],
     optionChain: [
         { strike: 22600, callOI: 150000, callIV: 14.5, callLTP: 250.5, putLTP: 25.1, putIV: 18.2, putOI: 180000 },
@@ -186,5 +202,10 @@ export const useStore = create<StoreState>((set, get) => ({
         return { tradingStatus: state.tradingStatus === 'ACTIVE' ? 'STOPPED' : 'ACTIVE' };
     }),
     setLastTickTime: (time) => set({ lastTickTime: time }),
-    emergencyStop: () => set({ tradingStatus: 'EMERGENCY_STOP' }),
+    emergencyStop: () => set(state => {
+      // Don't do anything if already stopping
+      if (state.tradingStatus === 'EMERGENCY_STOP') return {};
+      // Just set the status. The backend will handle the logic.
+      return { tradingStatus: 'EMERGENCY_STOP' };
+    }),
 }));

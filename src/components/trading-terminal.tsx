@@ -264,7 +264,7 @@ export function TradingTerminal() {
 
             {/* Volume Bar Chart (Bottom 15%) */}
             <ResponsiveContainer width="100%" height="15%">
-                <ComposedChart data={visibleData} syncId="stockChart" margin={{ top: 0, right: 45, bottom: 0, left: 5 }}>
+                <ComposedChart data={visibleData} syncId="stockChart" margin={{ top: 0, right: 45, bottom: 10, left: 5 }}>
                     <XAxis dataKey="time" hide />
                     <YAxis yAxisId="volume" orientation="right" domain={getVolumeDomain(visibleData)} tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
                     <Tooltip content={<VolumeTooltip />} position={{y: 0}} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
@@ -281,7 +281,7 @@ export function TradingTerminal() {
             <ResponsiveContainer width="100%" height="15%">
                  <AreaChart 
                     data={chartData} 
-                    margin={{ top: 10, right: 45, bottom: 20, left: 5 }}
+                    margin={{ top: 0, right: 45, bottom: 20, left: 5 }}
                  >
                     <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
                     <YAxis domain={getPriceDomain(chartData)} hide />
@@ -291,7 +291,7 @@ export function TradingTerminal() {
                         startIndex={startIndex} 
                         endIndex={endIndex} 
                         onChange={handleBrushChange} 
-                        height={25} 
+                        height={20} 
                         stroke="hsl(var(--muted-foreground))"
                         tickFormatter={(index) => chartData[index]?.time}
                     />
@@ -302,3 +302,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

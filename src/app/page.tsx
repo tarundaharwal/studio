@@ -30,7 +30,9 @@ export default function DashboardPage() {
 
           {/* Middle Column */}
           <div className="col-span-1 flex flex-col gap-6">
-            <OptionChain />
+            <div className="h-[350px]">
+              <OptionChain />
+            </div>
             <IndicatorGauge />
             <SignalsFeed />
           </div>

@@ -4,7 +4,6 @@
 import { IndicatorGauge } from '@/components/indicator-gauge';
 import { OptionChain } from '@/components/option-chain';
 import { OrdersTable } from '@/components/orders-table';
-import { OverviewCards } from '@/components/overview-cards';
 import { PerformanceChart } from '@/components/performance-chart';
 import { PositionsTable } from '@/components/positions-table';
 import { SignalsFeed } from '@/components/signals-feed';
@@ -41,10 +40,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
                 <div>
-                    <OverviewCards />
-                    <div className="mt-6">
-                        <PerformanceChart />
-                    </div>
+                    <PerformanceChart />
                 </div>
             </div>
           </div>

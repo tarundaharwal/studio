@@ -31,7 +31,7 @@ import {
 import { useStore } from '@/store/use-store';
 import React from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 export function OverviewCards() {
@@ -44,14 +44,11 @@ export function OverviewCards() {
   }, []);
 
   const handleEmergencyStop = () => {
-    // This action will now be handled by the backend logic.
-    // The frontend can show a toast, but the core logic is server-side.
     toast({
       title: "Emergency Stop Activated!",
       description: "A signal has been sent to liquidate all positions.",
       variant: "destructive",
     })
-    // In a real app, you might call a specific '/api/emergency-stop' route
   }
 
   const handleToggleTrading = (checked: boolean) => {
@@ -65,12 +62,12 @@ export function OverviewCards() {
 
   if (!isClient) {
     return (
-        <>
-            <Card className="h-24 animate-pulse bg-muted"></Card>
-            <Card className="h-36 animate-pulse bg-muted"></Card>
-            <Card className="h-36 animate-pulse bg-muted"></Card>
-            <Card className="h-36 animate-pulse bg-muted"></Card>
-        </>
+        <div className="flex h-12 w-full gap-2">
+            <div className="h-full w-40 animate-pulse bg-muted rounded-md"></div>
+            <div className="h-full w-40 animate-pulse bg-muted rounded-md"></div>
+            <div className="h-full w-40 animate-pulse bg-muted rounded-md"></div>
+            <div className="h-full w-40 animate-pulse bg-muted rounded-md"></div>
+        </div>
     )
   }
 
@@ -79,33 +76,25 @@ export function OverviewCards() {
 
   return (
     <>
-      <Card>
+      <Card className="min-w-fit flex-1">
         <CardHeader className="p-2">
-          <CardTitle className="text-base">Global Controls</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-2 p-2 pt-0">
-        <div className="flex items-center justify-between space-x-2 rounded-md bg-muted/50 p-2">
-            <Label htmlFor="trading-enabled" className="flex flex-col space-y-0.5">
-              <span className="text-xs font-medium">Trading Status</span>
-              <Badge variant={tradingStatus === 'ACTIVE' ? 'outline' : 'secondary'} className={`w-min text-xs ${tradingStatus === 'ACTIVE' ? 'border-green-600 text-green-600' : 'border-red-600 text-red-600'}`}>{tradingStatus}</Badge>
-            </Label>
-            <Switch id="trading-enabled" checked={tradingStatus === 'ACTIVE'} onCheckedChange={handleToggleTrading} className="h-5 w-9 [&>span]:h-4 [&>span]:w-4 [&>span]:data-[state=checked]:translate-x-4"/>
-          </div>
-
-          <div className="flex items-center justify-center">
+          <CardTitle className="text-xs font-medium flex items-center justify-between">
+            Global Controls
             <AlertDialog>
-              <Tooltip>
-                  <TooltipTrigger asChild>
-                      <AlertDialogTrigger asChild>
-                          <Button variant="destructive" className="h-10 w-12">
-                              <Power className="h-5 w-5" />
-                          </Button>
-                      </AlertDialogTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                      <p>Emergency Stop</p>
-                  </TooltipContent>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" size="icon" className="h-5 w-5">
+                                <Power className="h-3 w-3" />
+                            </Button>
+                        </AlertDialogTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Emergency Stop</p>
+                    </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
                 <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -120,55 +109,60 @@ export function OverviewCards() {
                 </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-2 pt-0">
+        <div className="flex items-center justify-between space-x-2">
+            <Label htmlFor="trading-enabled" className="flex flex-col space-y-0.5">
+              <Badge variant={tradingStatus === 'ACTIVE' ? 'outline' : 'secondary'} className={`w-min text-[10px] px-1 ${tradingStatus === 'ACTIVE' ? 'border-green-600 text-green-600' : 'border-red-600 text-red-600'}`}>{tradingStatus}</Badge>
+            </Label>
+            <Switch id="trading-enabled" checked={tradingStatus === 'ACTIVE'} onCheckedChange={handleToggleTrading} className="h-4 w-8 [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-4"/>
           </div>
         </CardContent>
       </Card>
       
-       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Account Balance
+       <Card className="min-w-fit flex-1">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-1">
+          <CardTitle className="text-xs font-medium">
+            Balance
           </CardTitle>
-          <Wallet className="h-4 w-4 text-muted-foreground" />
+          <Wallet className="h-3 w-3 text-muted-foreground" />
         </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="text-2xl font-bold">
-            ₹{overview.equity.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <CardContent className="p-2 pt-0">
+          <div className="text-base font-bold">
+            ₹{overview.equity.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Initial capital of ₹{overview.initialEquity.toLocaleString('en-IN')}
-          </p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Today's P&L
+      <Card className="min-w-fit flex-1">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-1">
+          <CardTitle className="text-xs font-medium">
+            P&L
           </CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <TrendingUp className="h-3 w-3 text-muted-foreground" />
         </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className={`text-2xl font-bold ${overview.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {overview.pnl >= 0 ? '+' : ''}₹{overview.pnl.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <CardContent className="p-2 pt-0">
+          <div className={`text-base font-bold ${overview.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {overview.pnl >= 0 ? '+' : ''}₹{overview.pnl.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
-          <p className={`text-xs ${overview.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+          <p className={`text-[10px] leading-tight ${overview.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
             {overview.pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
           </p>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 pb-2">
-          <CardTitle className="text-sm font-medium">Max Drawdown</CardTitle>
-          <Activity className="h-4 w-4 text-muted-foreground" />
+      <Card className="min-w-fit flex-1">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-1">
+          <CardTitle className="text-xs font-medium">Drawdown</CardTitle>
+          <Activity className="h-3 w-3 text-muted-foreground" />
         </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="text-2xl font-bold text-red-600">
-            -₹{overview.maxDrawdown.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        <CardContent className="p-2 pt-0">
+          <div className="text-base font-bold text-red-600">
+            -₹{overview.maxDrawdown.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </div>
-          <p className="text-xs text-red-500">
-            -{drawdownPercent.toFixed(2)}% of peak equity
+          <p className="text-[10px] leading-tight text-red-500">
+            -{drawdownPercent.toFixed(2)}%
           </p>
         </CardContent>
       </Card>

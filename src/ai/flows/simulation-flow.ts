@@ -252,26 +252,44 @@ export const simulationFlow = ai.defineFlow(
         // AI-POWERED NEW CANDLE GENERATION
         const recentHistory = newChartData.slice(-5);
         const { output } = await marketSentimentPrompt({ history: recentHistory });
+        
+        let newCandleForIndicators: ChartData;
 
-        if (!output) {
-            throw new Error("AI failed to generate new candle data.");
+        // Fallback logic if AI fails to generate a candle
+        if (!output || !output.nextCandle) {
+             console.warn("AI failed to generate candle. Using random fallback.");
+             const newOpen = currentCandle.ohlc[3];
+             const change = (Math.random() - 0.5) * 50; // A wider fluctuation for the new candle
+             const newClose = newOpen + change;
+             const high = Math.max(newOpen, newClose) + getRandom(0, 10);
+             const low = Math.min(newOpen, newClose) - getRandom(0, 10);
+             newPrice = newClose;
+             const timeframeMinutes = timeframeDuration / (60 * 1000);
+             const newTime = getNextTime(currentCandle.time, timeframeMinutes);
+
+             newCandleForIndicators = {
+                time: newTime,
+                ohlc: [newOpen, high, low, newClose],
+                volume: getRandom(50000, 250000),
+            };
+
+        } else {
+            const { nextCandle: predictedCandle } = output;
+            
+            const newOpen = currentCandle.ohlc[3]; // New candle opens at last close
+            newPrice = predictedCandle.close; // The final price for this new candle interval
+    
+            const timeframeMinutes = timeframeDuration / (60 * 1000);
+            const newTime = getNextTime(currentCandle.time, timeframeMinutes);
+    
+            newCandleForIndicators = {
+                time: newTime,
+                ohlc: [newOpen, predictedCandle.high, predictedCandle.low, predictedCandle.close],
+                volume: getRandom(50000, 250000),
+            };
         }
-
-        const { nextCandle: predictedCandle } = output;
         
-        const newOpen = currentCandle.ohlc[3]; // New candle opens at last close
-        newPrice = predictedCandle.close; // The final price for this new candle interval
-
-        const timeframeMinutes = timeframeDuration / (60 * 1000);
-        const newTime = getNextTime(currentCandle.time, timeframeMinutes);
-
-        const newCandleForIndicators: ChartData = {
-            time: newTime,
-            ohlc: [newOpen, predictedCandle.high, predictedCandle.low, predictedCandle.close],
-            volume: getRandom(50000, 250000),
-        };
-        
-        // Create the new candle for the next period, using AI-generated data
+        // Create the new candle for the next period, using AI-generated data or fallback
         newChartData = [...newChartData.slice(1), newCandleForIndicators];
 
     } else {
@@ -410,5 +428,3 @@ export const simulationFlow = ai.defineFlow(
 export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
     return simulationFlow(input);
 }
-
-    

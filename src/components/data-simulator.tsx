@@ -48,6 +48,7 @@ export function DataSimulator() {
         // Try to get text first, as error response might not be JSON
         const errorText = await response.text();
         try {
+          // Try parsing as JSON, but if it fails, log the raw text.
           const errorData = JSON.parse(errorText);
           console.error("API Error Response (JSON):", errorData);
         } catch (e) {

@@ -1,4 +1,4 @@
-# IndMonMachine
+# IndMon
 
 This is a NextJS starter in Firebase Studio.
 

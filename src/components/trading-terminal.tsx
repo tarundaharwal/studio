@@ -18,7 +18,6 @@ import {
     CartesianGrid,
     ReferenceLine,
     Cell,
-    Brush,
 } from "recharts"
 import { useStore } from "@/store/use-store"
 
@@ -186,7 +185,6 @@ export function TradingTerminal() {
                         <Cell key={`cell-volume-${index}`} fill={getVolumeColor(entry.isGain)} />
                         ))}
                     </Bar>
-                    <Brush dataKey="time" height={20} stroke="hsl(var(--primary))" travellerWidth={20} />
                 </ComposedChart>
             </ResponsiveContainer>
         </div>

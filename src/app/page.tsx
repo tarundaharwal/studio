@@ -16,9 +16,9 @@ export default function DashboardPage() {
     <>
       <DataSimulator />
       <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
           {/* Main Column */}
-          <div className="col-span-1 flex flex-col gap-6 lg:col-span-2">
+          <div className="col-span-1 flex flex-col gap-6 lg:col-span-3">
               <div className="h-[420px]">
                 <TradingTerminal />
               </div>
@@ -28,19 +28,25 @@ export default function DashboardPage() {
               </div>
           </div>
 
-          {/* Middle Column */}
-          <div className="col-span-1 flex flex-col gap-6">
+          {/* Right Column Group */}
+          <div className="col-span-1 flex flex-col gap-6 lg:col-span-2">
             <div className="h-[420px]">
               <OptionChain />
             </div>
-            <IndicatorGauge />
-            <SignalsFeed />
-          </div>
-
-          {/* Right Column */}
-          <div className="col-span-1 flex flex-col gap-6">
-            <OverviewCards />
-            <PerformanceChart />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div>
+                    <IndicatorGauge />
+                    <div className="mt-6">
+                        <SignalsFeed />
+                    </div>
+                </div>
+                <div>
+                    <OverviewCards />
+                    <div className="mt-6">
+                        <PerformanceChart />
+                    </div>
+                </div>
+            </div>
           </div>
         </div>
       </main>

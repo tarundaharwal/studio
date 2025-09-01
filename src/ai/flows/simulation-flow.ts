@@ -332,7 +332,10 @@ export const simulationFlow = ai.defineFlow(
         let newValue = ind.value;
         if (ind.name.includes('RSI')) newValue = calculatedRSI ?? ind.value;
         else if (ind.name.includes('MACD')) newValue = ind.value + (newClosePrice - chartData[chartData.length - 1].ohlc[3])/10;
-        else if (ind.name.includes('ADX')) newValue = Math.max(10, ind.value + (Math.abs(newClosePrice - chartData[chartData.length - 1].ohlc[3]) > 1 ? 0.5 : -0.2));
+        else if (ind.name.includes('ADX')) {
+            let adxChange = (Math.abs(newClosePrice - chartData[chartData.length - 1].ohlc[3]) > 1 ? 0.5 : -0.2);
+            newValue = Math.max(10, Math.min(100, ind.value + adxChange)); // Clamp between 10 and 100
+        }
         return {...ind, value: parseFloat(newValue.toFixed(2))};
     });
 

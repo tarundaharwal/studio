@@ -358,7 +358,7 @@ export const simulationFlow = ai.defineFlow(
             const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
             positions = [...positions, newPosition];
             newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
-            newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `Buy signal: RSI<40, MACD>0, ADX>25. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}, ${currentADX.toFixed(2)}`});
+            newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `RSI<40, MACD>0, ADX>25`});
         
         } else if (isSellSignal) {
             const positionToClose = positions[0]; // Assuming one position at a time
@@ -369,7 +369,7 @@ export const simulationFlow = ai.defineFlow(
                 overview.equity += pnlFromTrade;
                 
                 positions = positions.filter(p => p.symbol !== positionToClose.symbol);
-                newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>70 or MACD<0. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}`});
+                newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `RSI>70 or MACD<0`});
             }
         }
     }

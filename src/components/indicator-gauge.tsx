@@ -55,7 +55,9 @@ export function IndicatorGauge() {
             return (
               <div key={indicator.name} className="space-y-1">
                 <div className="flex justify-between text-xs font-medium">
-                  <span className="text-muted-foreground">{indicator.name}</span>
+                  <span className="text-muted-foreground">
+                    {indicator.name}: <span className="font-bold text-foreground">{indicator.value.toFixed(2)}</span>
+                  </span>
                   <span className={color}>{status}</span>
                 </div>
                 <Progress

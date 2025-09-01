@@ -18,6 +18,9 @@ import {
     CartesianGrid,
     ReferenceLine,
     Cell,
+    Brush,
+    AreaChart,
+    Area,
 } from "recharts"
 import { useStore } from "@/store/use-store"
 
@@ -79,12 +82,16 @@ const CANDLE_WIDTH = 12;
 
 export function TradingTerminal() {
   const { chartData: fullChartData, timeframe } = useStore();
+  const [startIndex, setStartIndex] = React.useState(0);
+  const [endIndex, setEndIndex] = React.useState(fullChartData.length - 1);
   
   const [isClient, setIsClient] = React.useState(false);
 
   React.useEffect(() => {
     setIsClient(true);
-  }, []);
+    setEndIndex(fullChartData.length > 0 ? fullChartData.length - 1 : 0);
+    setStartIndex(fullChartData.length > 50 ? fullChartData.length - 50 : 0);
+  }, [fullChartData.length]);
   
   const chartDataWithIndicators = React.useMemo(() => {
     if (!fullChartData || fullChartData.length === 0) return [];
@@ -97,6 +104,7 @@ export function TradingTerminal() {
             ...d,
             candleWick: [low, high],
             candleBody: [Math.min(open, close), Math.max(open, close)], 
+            closePrice: close,
             isGain,
         }
     });
@@ -129,18 +137,27 @@ export function TradingTerminal() {
       )
   }
 
-  const getPriceDomain = () => {
-    if (chartData.length === 0) return [0,0];
-    const highs = chartData.map(item => item.ohlc[1]);
-    const lows = chartData.map(item => item.ohlc[2]);
+  const getPriceDomain = (data: any[]) => {
+    if (data.length === 0) return [0,0];
+    const highs = data.map(item => item.ohlc[1]);
+    const lows = data.map(item => item.ohlc[2]);
     return [Math.min(...lows) * 0.995, Math.max(...highs) * 1.005];
   };
 
-  const getVolumeDomain = () => {
-    if (chartData.length === 0) return [0,0];
-    const volumes = chartData.map(item => item.volume);
+  const getVolumeDomain = (data: any[]) => {
+    if (data.length === 0) return [0,0];
+    const volumes = data.map(item => item.volume);
     return [0, Math.max(...volumes) * 2]; // Give volume bars some room
   }
+
+  const handleBrushChange = (range: any) => {
+    if (range) {
+        setStartIndex(range.startIndex);
+        setEndIndex(range.endIndex);
+    }
+  };
+
+  const visibleData = chartData.slice(startIndex, endIndex + 1);
 
   return (
     <Card className="overflow-hidden h-full flex flex-col">
@@ -156,39 +173,63 @@ export function TradingTerminal() {
       </CardHeader>
       <CardContent className="p-0 flex-1">
         <div className="h-full w-full">
-            {/* Price Candlestick Chart (Top 75%) */}
-            <ResponsiveContainer width="100%" height="75%">
-                <ComposedChart data={chartData} syncId="stockChart" margin={{ top: 10, right: 45, bottom: 0, left: 5 }}>
+            {/* Price Candlestick Chart (Top 70%) */}
+            <ResponsiveContainer width="100%" height="70%">
+                <ComposedChart data={visibleData} syncId="stockChart" margin={{ top: 10, right: 45, bottom: 0, left: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="time" hide />
-                    <YAxis yAxisId="price" orientation="right" domain={getPriceDomain()} tickFormatter={(value) => value.toLocaleString()} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
+                    <YAxis yAxisId="price" orientation="right" domain={getPriceDomain(visibleData)} tickFormatter={(value) => value.toLocaleString()} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
                     <Tooltip content={<PriceTooltip />} position={{ y: 0 }} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
                     
                     <Bar dataKey="candleWick" yAxisId="price" barSize={1} shape={<CustomWick />} isAnimationActive={false} />
                     <Bar dataKey="candleBody" yAxisId="price" barSize={CANDLE_WIDTH} shape={<CustomBody />} isAnimationActive={false} />
 
-                    {chartData.length > 0 && (
-                        <ReferenceLine yAxisId="price" y={chartData[chartData.length - 1].ohlc[3]} stroke="hsl(var(--primary))" strokeDasharray="3 3" strokeWidth={1} label={{ value: ` ${chartData[chartData.length - 1].ohlc[3].toFixed(2)}`, position: 'right', fill: 'hsl(var(--primary))', fontSize: 10 }} />
+                    {visibleData.length > 0 && (
+                        <ReferenceLine yAxisId="price" y={visibleData[visibleData.length - 1].ohlc[3]} stroke="hsl(var(--primary))" strokeDasharray="3 3" strokeWidth={1} label={{ value: ` ${visibleData[visibleData.length - 1].ohlc[3].toFixed(2)}`, position: 'right', fill: 'hsl(var(--primary))', fontSize: 10 }} />
                     )}
                 </ComposedChart>
             </ResponsiveContainer>
 
-            {/* Volume Bar Chart (Bottom 25%) */}
-            <ResponsiveContainer width="100%" height="25%">
-                <ComposedChart data={chartData} syncId="stockChart" margin={{ top: 10, right: 45, bottom: 20, left: 5 }}>
-                    <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
-                    <YAxis yAxisId="volume" orientation="right" domain={getVolumeDomain()} tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
+            {/* Volume Bar Chart (Bottom 15%) */}
+            <ResponsiveContainer width="100%" height="15%">
+                <ComposedChart data={visibleData} syncId="stockChart" margin={{ top: 10, right: 45, bottom: 0, left: 5 }}>
+                    <XAxis dataKey="time" hide />
+                    <YAxis yAxisId="volume" orientation="right" domain={getVolumeDomain(visibleData)} tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
                     <Tooltip content={<VolumeTooltip />} position={{y: 0}} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
 
                     <Bar yAxisId="volume" dataKey="volume" barSize={CANDLE_WIDTH} isAnimationActive={false}>
-                        {chartData.map((entry, index) => (
+                        {visibleData.map((entry, index) => (
                         <Cell key={`cell-volume-${index}`} fill={getVolumeColor(entry.isGain)} />
                         ))}
                     </Bar>
                 </ComposedChart>
+            </ResponsiveContainer>
+
+            {/* Brush for scrolling (Bottom 15%) */}
+            <ResponsiveContainer width="100%" height="15%">
+                 <AreaChart 
+                    data={chartData} 
+                    margin={{ top: 10, right: 45, bottom: 20, left: 5 }}
+                    onMouseDown={(e:any) => e.stopPropagation()} // Prevent chart click from resetting brush
+                 >
+                    <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
+                    <YAxis domain={getPriceDomain(chartData)} hide />
+                    <Tooltip content={<div/>}/>
+                    <Area dataKey="closePrice" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} isAnimationActive={false}/>
+                    <Brush 
+                        startIndex={startIndex} 
+                        endIndex={endIndex} 
+                        onChange={handleBrushChange} 
+                        height={25} 
+                        stroke="hsl(var(--muted-foreground))"
+                        tickFormatter={(index) => chartData[index]?.time}
+                    />
+                </AreaChart>
             </ResponsiveContainer>
         </div>
       </CardContent>
     </Card>
   )
 }
+
+    

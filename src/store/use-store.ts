@@ -7,66 +7,91 @@ const getRandom = (min: number, max: number, precision: number = 2) => {
 };
 
 
-// Generate a consistent, non-random set of candlestick data
+// A more sophisticated, realistic chart data generator
 const generateCandlestickData = (count: number, timeframeMinutes: number) => {
     const data = [];
-    let lastClose = 22950; // Start at a higher price to create a dip
+    let lastClose = 22800; // A realistic starting point
     const now = new Date();
-    now.setHours(15, 30, 0, 0); // Set a fixed end time for consistency
+    now.setHours(15, 30, 0, 0); // Fix end time for consistency
     const interval = timeframeMinutes * 60 * 1000;
-    const startTime = now.getTime() - (count * interval);
+    const startTime = now.getTime() - count * interval;
 
-    // A more complex, pseudo-random but deterministic pattern for realistic charts
-    const pseudoRandomFactors = [
-        -0.2, -0.3, -0.5, -0.8, -1.1, -1.5, -1.2, -0.9, -0.6, -0.4, // Initial gentle dip
-        -1.8, -2.5, -1.9, -1.0, -0.5, 0.1, -0.2, -0.8, -1.4, -2.0, // Steeper dip (trade opportunity here)
-        -1.5, -0.8, 0.2, 0.6, 0.9, 1.2, 1.5, 1.8, 2.2, 2.0, 1.7, // Sharp recovery
-        1.4, 1.1, 0.8, 0.5, 0.2, -0.1, 0.3, -0.3, 0.5, -0.5,      // Consolidation
-        0.7, 0.4, 0.1, -0.2, -0.4, -0.1, 0.2, 0.5, 0.8, 0.6,       // Gentle uptrend
-        0.9, 1.1, 1.4, 1.2, 1.0, 0.7, 0.3, 0.0, -0.3, 0.1,
-        0.4, 0.7, 1.0, 0.8, 0.5, 0.2, -0.1, 0.1, 0.3, 0.5,
-        0.7, 0.9, 1.2, 1.0, 0.8, 0.6, 0.4, 0.2, 0.0
-    ];
-
+    // Parameters for a more realistic random walk
+    const drift = 0.05; // A very slight upward trend bias
+    let volatility = 0.6; // Start with some base volatility
 
     for (let i = 0; i < count; i++) {
         const candleTime = new Date(startTime + i * interval);
         const open = lastClose;
 
-        // Use pseudo-random factors to get a consistent pattern
-        const factor = pseudoRandomFactors[i % pseudoRandomFactors.length];
-        const noise = (Math.sin(i * 0.5) * 5) + (Math.cos(i * 0.2) * 3); // Add some wave-like noise
-        const movement = (10 * factor) + noise;
+        // Make volatility dynamic - it can increase or decrease over time
+        volatility += (Math.random() - 0.5) * 0.1;
+        volatility = Math.max(0.3, Math.min(volatility, 1.2)); // Clamp volatility to realistic range
+
+        // The core random movement - a random value between -1 and 1
+        const randomShock = (Math.random() - 0.5) * 2;
+        // The movement is influenced by drift, the random shock, and the current volatility
+        const movement = drift + randomShock * volatility * 15;
 
         const close = open + movement;
-        
-        let high, low;
-        const volatility = Math.abs(movement) * 1.5 + 10; // Base volatility
-        if (movement > 0) {
-            high = close + (volatility * 0.4);
-            low = open - (volatility * 0.6);
-        } else {
-            high = open + (volatility * 0.6);
-            low = close - (volatility * 0.4);
-        }
-        
-        // Ensure OHLC integrity
-        const finalHigh = Math.max(open, close, high);
-        const finalLow = Math.min(open, close, low);
 
-
-        const volume = 150000 + (Math.abs(factor) * 200000) + (Math.sin(i) * 50000);
+        // Determine high and low based on volatility
+        const highLowSpread = Math.abs(movement) + Math.random() * 25 * volatility;
+        const high = Math.max(open, close) + Math.random() * highLowSpread * 0.6; // 60% of spread above
+        const low = Math.min(open, close) - Math.random() * highLowSpread * 0.4; // 40% of spread below
 
         lastClose = close;
 
+        // Volume should be somewhat correlated with the size of the price change
+        const volume = 100000 + (Math.abs(movement) * 8000) + (Math.random() * 75000);
+
         data.push({
             time: candleTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-            ohlc: [open, finalHigh, finalLow, close] as [number, number, number, number],
+            ohlc: [open, high, low, close] as [number, number, number, number],
             volume: Math.round(volume),
         });
     }
+
+    // This is the crucial part:
+    // After generating a realistic but random chart, we will now override a small section
+    // of it to guarantee that our specific trading condition is met.
+    // This gives us the best of both worlds: a realistic-looking chart AND a guaranteed trade.
+
+    if (data.length > 40) {
+        // Let's create a "dip" opportunity around the 30th candle
+        const dipIndex = 30;
+        let dipPrice = data[dipIndex - 1].ohlc[3]; // Start from the price before the dip
+
+        const dipData = [
+            { movement: -15, vol: 1.2 }, // Sharp drop
+            { movement: -10, vol: 1.0 },
+            { movement: -5,  vol: 0.8 }, // Bottoming out
+            { movement: 2,   vol: 0.7 },
+            { movement: 8,   vol: 0.9 }, // Recovery starts
+            { movement: 12,  vol: 1.1 },
+        ];
+
+        for (let i = 0; i < dipData.length; i++) {
+            const index = dipIndex + i;
+            if (data[index]) {
+                const open = dipPrice;
+                const close = open + dipData[i].movement;
+                const high = Math.max(open, close) + getRandom(2, 8) * dipData[i].vol;
+                const low = Math.min(open, close) - getRandom(2, 8) * dipData[i].vol;
+                const volume = 250000 + Math.random() * 150000;
+
+                data[index].ohlc = [open, high, low, close];
+                data[index].volume = volume;
+
+                dipPrice = close;
+            }
+        }
+    }
+
+
     return data;
 };
+
 
 
 const timeframes: { [key: string]: number } = {
@@ -227,5 +252,3 @@ export const useStore = create<StoreState>((set, get) => ({
       return { tradingStatus: 'EMERGENCY_STOP' };
     }),
 }));
-
-    

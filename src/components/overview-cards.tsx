@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -34,7 +35,7 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 
 
 export function OverviewCards() {
-  const { overview, tradingStatus, toggleTradingStatus } = useStore();
+  const { overview, tradingStatus, toggleTradingStatus, emergencyStop } = useStore();
   const { toast } = useToast();
   const [isClient, setIsClient] = React.useState(false);
 
@@ -43,6 +44,7 @@ export function OverviewCards() {
   }, []);
 
   const handleEmergencyStop = () => {
+    emergencyStop();
     toast({
       title: "Emergency Stop Activated!",
       description: "A signal has been sent to liquidate all positions.",
@@ -58,7 +60,6 @@ export function OverviewCards() {
     })
   }
 
-
   if (!isClient) {
     return (
         <div className="flex h-12 w-full gap-2">
@@ -72,6 +73,17 @@ export function OverviewCards() {
 
   const pnlPercent = overview.initialEquity > 0 ? (overview.pnl / overview.initialEquity) * 100 : 0;
   const drawdownPercent = overview.peakEquity > 0 ? (overview.maxDrawdown / overview.peakEquity) * 100 : 0;
+
+  const getStatusText = () => {
+    if (tradingStatus === 'EMERGENCY_STOP') return 'STOPPING';
+    return tradingStatus;
+  }
+
+  const getStatusClass = () => {
+    if (tradingStatus === 'ACTIVE') return 'border-green-600 text-green-600';
+    if (tradingStatus === 'STOPPED') return 'border-red-600 text-red-600';
+    return 'border-amber-500 text-amber-500 animate-pulse';
+  }
 
   return (
     <>
@@ -113,9 +125,9 @@ export function OverviewCards() {
         <CardContent className="p-2 pt-0">
         <div className="flex items-center justify-between space-x-2">
             <Label htmlFor="trading-enabled" className="flex flex-col space-y-0.5">
-              <Badge variant={tradingStatus === 'ACTIVE' ? 'outline' : 'secondary'} className={`w-min text-[10px] px-1 ${tradingStatus === 'ACTIVE' ? 'border-green-600 text-green-600' : 'border-red-600 text-red-600'}`}>{tradingStatus}</Badge>
+              <Badge variant={tradingStatus === 'ACTIVE' ? 'outline' : 'secondary'} className={`w-min text-[10px] px-1 ${getStatusClass()}`}>{getStatusText()}</Badge>
             </Label>
-            <Switch id="trading-enabled" checked={tradingStatus === 'ACTIVE'} onCheckedChange={handleToggleTrading} className="h-4 w-8 [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-4"/>
+            <Switch id="trading-enabled" disabled={tradingStatus === 'EMERGENCY_STOP'} checked={tradingStatus === 'ACTIVE'} onCheckedChange={handleToggleTrading} className="h-4 w-8 [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-4"/>
           </div>
         </CardContent>
       </Card>

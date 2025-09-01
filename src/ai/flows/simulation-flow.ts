@@ -306,19 +306,20 @@ export const simulationFlow = ai.defineFlow(
     const newClosePrice = newChartData[newChartData.length-1].ohlc[3];
 
     // --- UPDATE POSITIONS PNL ---
-    // Calculate P&L for all open positions first
+    // This is run every tick for all open positions.
     positions = positions.map(pos => {
         const newLtp = newClosePrice; // Simplified: all positions track main instrument
         const pnl = (newLtp - pos.avgPrice) * pos.qty;
         return { ...pos, ltp: newLtp, pnl: parseFloat(pnl.toFixed(2)) };
     });
     
-    // --- STOP-LOSS LOGIC ---
+    // --- TRADING LOGIC (Only run if ACTIVE) ---
     if (tradingStatus === 'ACTIVE') {
-        const positionsToKeep: Position[] = [];
+        const nextPositions: Position[] = [];
+
+        // STOP-LOSS LOGIC: First, check if any existing positions should be closed
         for (const pos of positions) {
-            if (pos.pnl < -5000) {
-                // This position hits the stop-loss
+            if (pos.pnl < -5000) { // Stop-loss condition
                 newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: newClosePrice, status: 'EXECUTED' });
                 overview.equity += pos.pnl; // Realize the loss
                 newSignals.push({
@@ -328,16 +329,16 @@ export const simulationFlow = ai.defineFlow(
                     instrument: pos.symbol,
                     reason: `Stop-loss triggered at P&L ${pos.pnl.toFixed(2)}.`
                 });
+                // Do not add the closed position to nextPositions
             } else {
-                // This position is safe, keep it
-                positionsToKeep.push(pos);
+                nextPositions.push(pos); // Keep the position
             }
         }
-        positions = positionsToKeep;
-    }
-    
-    // --- TRADING LOGIC (runs every tick if trading is active) ---
-    if (tradingStatus === 'ACTIVE') {
+        
+        // Update positions after stop-loss check
+        positions = nextPositions;
+        
+        // ENTRY/EXIT LOGIC
         const hasOpenPosition = positions.length > 0;
         const calculatedRSI = calculateRSI(newChartData);
 
@@ -359,14 +360,16 @@ export const simulationFlow = ai.defineFlow(
             newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `Buy signal: RSI<40, MACD>0, ADX>25. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}, ${currentADX.toFixed(2)}`});
         
         } else if (isSellSignal) {
-            const positionToClose = positions[0];
-            newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
-            
-            const pnlFromTrade = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
-            overview.equity += pnlFromTrade;
-            
-            positions = positions.filter(p => p.symbol !== positionToClose.symbol);
-            newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>70 or MACD<0. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}`});
+            const positionToClose = positions[0]; // Assuming one position at a time
+            if (positionToClose) {
+                newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
+                
+                const pnlFromTrade = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
+                overview.equity += pnlFromTrade;
+                
+                positions = positions.filter(p => p.symbol !== positionToClose.symbol);
+                newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>70 or MACD<0. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}`});
+            }
         }
     }
 

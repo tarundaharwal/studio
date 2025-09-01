@@ -18,6 +18,7 @@ import {
     CartesianGrid,
     ReferenceLine,
     Cell,
+    Brush,
 } from "recharts"
 import { useStore } from "@/store/use-store"
 
@@ -78,7 +79,7 @@ const VolumeTooltip = ({ active, payload, label }: any) => {
 const CANDLE_WIDTH = 12;
 
 export function TradingTerminal() {
-  const { chartData: fullChartData } = useStore();
+  const { chartData: fullChartData, timeframe } = useStore();
   
   const [isClient, setIsClient] = React.useState(false);
 
@@ -144,12 +145,12 @@ export function TradingTerminal() {
 
   return (
     <Card className="overflow-hidden h-full flex flex-col">
-      <CardHeader className="flex flex-row items-center justify-between border-b p-2">
+       <CardHeader className="flex flex-row items-center justify-between border-b p-2">
        <div className="flex items-center gap-2">
             <h3 className="text-base font-bold">NIFTY 50</h3>
-            <span className="text-sm text-muted-foreground">5m</span>
+            <span className="text-sm text-muted-foreground">{timeframe}</span>
         </div>
-        <div className={`flex items-center gap-2 text-sm text-muted-foreground transition-colors ${livePrice.isGain ? 'text-green-600' : 'text-red-600'}`}>
+        <div className={`flex items-center gap-2 text-sm transition-colors ${livePrice.isGain ? 'text-green-600' : 'text-red-600'}`}>
             <span className="font-medium">{livePrice.latestPrice.toFixed(2)}</span>
             <span className="text-xs">({livePrice.isGain ? '+' : ''}{livePrice.priceChangePercent.toFixed(2)}%)</span>
         </div>
@@ -162,7 +163,7 @@ export function TradingTerminal() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="time" hide />
                     <YAxis yAxisId="price" orientation="right" domain={getPriceDomain()} tickFormatter={(value) => value.toLocaleString()} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
-                    <Tooltip content={<PriceTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                    <Tooltip content={<PriceTooltip />} position={{ y: 0 }} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
                     
                     <Bar dataKey="candleWick" yAxisId="price" barSize={1} shape={<CustomWick />} isAnimationActive={false} />
                     <Bar dataKey="candleBody" yAxisId="price" barSize={CANDLE_WIDTH} shape={<CustomBody />} isAnimationActive={false} />
@@ -178,13 +179,14 @@ export function TradingTerminal() {
                 <ComposedChart data={chartData} syncId="stockChart" margin={{ top: 10, right: 45, bottom: 20, left: 5 }}>
                     <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
                     <YAxis yAxisId="volume" orientation="right" domain={getVolumeDomain()} tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
-                    <Tooltip content={<VolumeTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                    <Tooltip content={<VolumeTooltip />} position={{y: 0}} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
 
                     <Bar yAxisId="volume" dataKey="volume" barSize={CANDLE_WIDTH} isAnimationActive={false}>
                         {chartData.map((entry, index) => (
                         <Cell key={`cell-volume-${index}`} fill={getVolumeColor(entry.isGain)} />
                         ))}
                     </Bar>
+                    <Brush dataKey="time" height={20} stroke="hsl(var(--primary))" travellerWidth={20} />
                 </ComposedChart>
             </ResponsiveContainer>
         </div>

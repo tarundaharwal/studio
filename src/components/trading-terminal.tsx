@@ -16,9 +16,14 @@ import {
   Brush,
   AreaChart,
   Area,
+  Line,
 } from "recharts"
 import { useStore } from "@/store/use-store"
 import { Card, CardContent, CardHeader } from "./ui/card"
+import { Button } from "./ui/button"
+import { Waves } from "lucide-react"
+import { Toggle } from "./ui/toggle"
+import { Tooltip as UiTooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip"
 
 
 // Custom shape for the candlestick wick (thin line-like bar)
@@ -52,6 +57,8 @@ const PriceTooltip = ({ active, payload, label }: any) => {
           <p className="font-mono" style={{ color: data.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))' }}>
                 {`O: ${data.ohlc[0].toFixed(2)} H: ${data.ohlc[1].toFixed(2)} L: ${data.ohlc[2].toFixed(2)} C: ${data.ohlc[3].toFixed(2)}`}
             </p>
+            {data.ema9 && <p className="font-mono" style={{color: 'hsl(var(--chart-4))'}}>{`EMA(9): ${data.ema9.toFixed(2)}`}</p>}
+            {data.ema21 && <p className="font-mono" style={{color: 'hsl(var(--chart-5))'}}>{`EMA(21): ${data.ema21.toFixed(2)}`}</p>}
         </div>
       );
     }
@@ -84,10 +91,37 @@ const BrushTooltipContent = (props: any) => {
 const CANDLE_WIDTH = 12;
 const VISIBLE_CANDLES = 50;
 
+const calculateEMA = (data: number[], period: number): (number | null)[] => {
+    if (data.length < period) return Array(data.length).fill(null);
+    
+    const ema: (number | null)[] = Array(period - 1).fill(null);
+    let firstSma = data.slice(0, period).reduce((sum, val) => sum + val, 0) / period;
+    ema.push(firstSma);
+    
+    const multiplier = 2 / (period + 1);
+    
+    for (let i = period; i < data.length; i++) {
+      const prevEma = ema[i - 1];
+      if (prevEma === null) {
+          ema.push(null);
+          continue;
+      }
+      const newEma = (data[i] - prevEma) * multiplier + prevEma;
+      ema.push(newEma);
+    }
+    
+    return ema;
+};
+
+
 export function TradingTerminal() {
   const { chartData: fullChartData } = useStore();
   const [startIndex, setStartIndex] = React.useState(0);
   const [endIndex, setEndIndex] = React.useState(fullChartData.length - 1);
+  const [visibleIndicators, setVisibleIndicators] = React.useState({
+      ema9: false,
+      ema21: false,
+  });
   
   const [isClient, setIsClient] = React.useState(false);
 
@@ -103,8 +137,12 @@ export function TradingTerminal() {
   
   const chartDataWithIndicators = React.useMemo(() => {
     if (!fullChartData || fullChartData.length === 0) return [];
+
+    const closePrices = fullChartData.map(d => d.ohlc[3]);
+    const ema9Data = calculateEMA(closePrices, 9);
+    const ema21Data = calculateEMA(closePrices, 21);
     
-    return fullChartData.map((d) => {
+    return fullChartData.map((d, i) => {
         const [open, high, low, close] = d.ohlc;
         const isGain = close >= open;
 
@@ -114,6 +152,8 @@ export function TradingTerminal() {
             candleBody: [Math.min(open, close), Math.max(open, close)], 
             closePrice: close,
             isGain,
+            ema9: ema9Data[i],
+            ema21: ema21Data[i],
         }
     });
   }, [fullChartData]);
@@ -161,15 +201,43 @@ export function TradingTerminal() {
     }
   }
 
+  const toggleIndicator = (name: 'ema9' | 'ema21') => {
+      setVisibleIndicators(prev => ({ ...prev, [name]: !prev[name] }));
+  }
+
   const visibleData = chartData.slice(startIndex, endIndex + 1);
 
   return (
     <Card className="overflow-hidden h-[420px] flex flex-col">
        <CardHeader className="flex flex-row items-center justify-between border-b p-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
             <h3 className="text-base font-bold">NIFTY 50</h3>
-            <span className="text-sm text-muted-foreground">5min</span>
+            <div className="flex items-center gap-1">
+                <TooltipProvider>
+                    <UiTooltip>
+                        <TooltipTrigger asChild>
+                            <Toggle size="sm" pressed={visibleIndicators.ema9} onPressedChange={() => toggleIndicator('ema9')} className="h-7 w-7 p-1.5 data-[state=on]:bg-chart-4/20 data-[state=on]:text-chart-4">
+                                <Waves />
+                            </Toggle>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>EMA (9)</p>
+                        </TooltipContent>
+                    </UiTooltip>
+                    <UiTooltip>
+                        <TooltipTrigger asChild>
+                            <Toggle size="sm" pressed={visibleIndicators.ema21} onPressedChange={() => toggleIndicator('ema21')} className="h-7 w-7 p-1.5 data-[state=on]:bg-chart-5/20 data-[state=on]:text-chart-5">
+                                <Waves />
+                            </Toggle>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>EMA (21)</p>
+                        </TooltipContent>
+                    </UiTooltip>
+                </TooltipProvider>
+            </div>
         </div>
+        <span className="text-sm text-muted-foreground">5min</span>
         </CardHeader>
       <CardContent className="p-0 flex-1" onDoubleClick={handleDoubleClick}>
         <div className="h-full w-full">
@@ -183,6 +251,10 @@ export function TradingTerminal() {
                     
                     <Bar dataKey="candleWick" yAxisId="price" barSize={1} shape={<CustomWick />} isAnimationActive={false} />
                     <Bar dataKey="candleBody" yAxisId="price" barSize={CANDLE_WIDTH} shape={<CustomBody />} isAnimationActive={false} />
+
+                    {visibleIndicators.ema9 && <Line yAxisId="price" type="monotone" dataKey="ema9" stroke="hsl(var(--chart-4))" strokeWidth={2} dot={false} isAnimationActive={false} />}
+                    {visibleIndicators.ema21 && <Line yAxisId="price" type="monotone" dataKey="ema21" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={false} isAnimationActive={false} />}
+
 
                     {visibleData.length > 0 && (
                         <ReferenceLine yAxisId="price" y={visibleData[visibleData.length - 1].ohlc[3]} stroke="hsl(var(--primary))" strokeDasharray="3 3" strokeWidth={1} label={{ value: ` ${visibleData[visibleData.length - 1].ohlc[3].toFixed(2)}`, position: 'right', fill: 'hsl(var(--primary))', fontSize: 10 }} />
@@ -230,3 +302,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

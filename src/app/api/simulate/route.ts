@@ -1,7 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { runSimulation, SimulationOutput } from '@/ai/flows/simulation-flow';
-import { useStore } from '@/store/use-store';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,12 +8,6 @@ export async function POST(req: NextRequest) {
 
     // The 'run' function from Genkit executes the flow
     const newState: SimulationOutput = await runSimulation(body);
-
-    // If the backend has just processed an emergency stop, update the frontend's status
-    if (body.tradingStatus === 'EMERGENCY_STOP' && newState.tradingStatus === 'STOPPED') {
-        useStore.getState().toggleTradingStatus(); // This will correctly set it to STOPPED on the client.
-    }
-
 
     // Pass the current time back to the client so it knows when the tick was processed
     return NextResponse.json({ ...newState, lastTickTime: Date.now() });

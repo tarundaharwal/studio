@@ -59,6 +59,7 @@ export function DataSimulator() {
       store.updateIndicators(newState.indicators);
       store.updateOptionChain(newState.optionChain);
       store.setLastTickTime(newState.lastTickTime); // Update the last tick time from the server response
+      store.setTradingStatus(newState.tradingStatus);
       
       // We don't directly set orders and signals, as they are append-only.
       // The simulation flow returns the *new* orders/signals for this tick.

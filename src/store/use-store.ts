@@ -124,6 +124,7 @@ export type StoreState = {
     setLastTickTime: (time: number) => void; 
     setCandleType: (type: CandleType) => void;
     emergencyStop: () => void;
+    setTradingStatus: (status: TradingStatus) => void;
 };
 
 const INITIAL_EQUITY = 500000;
@@ -163,6 +164,7 @@ export const useStore = create<StoreState>((set, get) => ({
     lastTickTime: Date.now(),
 
     // Actions
+    setTradingStatus: (status) => set({ tradingStatus: status }),
     setCandleType: (type) => set({ candleType: type }),
     setChartData: (newData) => set({ chartData: newData }),
     setTimeframe: (newTimeframe) => set((state) => {

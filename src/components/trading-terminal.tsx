@@ -82,6 +82,7 @@ const BrushTooltipContent = (props: any) => {
 
 
 const CANDLE_WIDTH = 12;
+const VISIBLE_CANDLES = 50;
 
 export function TradingTerminal() {
   const { chartData: fullChartData } = useStore();
@@ -92,8 +93,12 @@ export function TradingTerminal() {
 
   React.useEffect(() => {
     setIsClient(true);
-    setEndIndex(fullChartData.length > 0 ? fullChartData.length - 1 : 0);
-    setStartIndex(fullChartData.length > 50 ? fullChartData.length - 50 : 0);
+    if (fullChartData.length > 0) {
+      const newEndIndex = fullChartData.length - 1;
+      const newStartIndex = Math.max(0, newEndIndex - VISIBLE_CANDLES + 1);
+      setEndIndex(newEndIndex);
+      setStartIndex(newStartIndex);
+    }
   }, [fullChartData.length]);
   
   const chartDataWithIndicators = React.useMemo(() => {
@@ -147,6 +152,15 @@ export function TradingTerminal() {
     }
   };
 
+  const handleDoubleClick = () => {
+    if (fullChartData.length > 0) {
+      const newEndIndex = fullChartData.length - 1;
+      const newStartIndex = Math.max(0, newEndIndex - VISIBLE_CANDLES + 1);
+      setEndIndex(newEndIndex);
+      setStartIndex(newStartIndex);
+    }
+  }
+
   const visibleData = chartData.slice(startIndex, endIndex + 1);
 
   return (
@@ -157,7 +171,7 @@ export function TradingTerminal() {
             <span className="text-sm text-muted-foreground">5min</span>
         </div>
         </CardHeader>
-      <CardContent className="p-0 flex-1">
+      <CardContent className="p-0 flex-1" onDoubleClick={handleDoubleClick}>
         <div className="h-full w-full">
             {/* Price Candlestick Chart (Top 70%) */}
             <ResponsiveContainer width="100%" height="70%">
@@ -216,3 +230,5 @@ export function TradingTerminal() {
     </Card>
   )
 }
+
+    

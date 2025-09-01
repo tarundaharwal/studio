@@ -8,13 +8,6 @@ import {
   CardHeader,
 } from "@/components/ui/card"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
     ComposedChart,
     Bar,
     XAxis,
@@ -29,15 +22,15 @@ import {
 import { useStore } from "@/store/use-store"
 
 
-// Custom shape for the candlestick wick
+// Custom shape for the candlestick wick (thin line-like bar)
 const CustomWick = (props: any) => {
     const { x, y, width, height, payload } = props;
-    if (!payload) return null;
+    if (!payload || height <= 0) return null;
     const color = payload.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))';
-    return <Rectangle x={x + width / 2} y={y} width={1} height={height} fill={color} />;
+    return <Rectangle x={x + width / 2 - 0.5} y={y} width={1} height={height} fill={color} />;
 };
 
-// Custom shape for the candlestick body
+// Custom shape for the candlestick body (thicker bar)
 const CustomBody = (props: any) => {
     const { x, y, width, height, payload } = props;
     if (!payload || height <= 0) return null;
@@ -45,9 +38,11 @@ const CustomBody = (props: any) => {
     return <Rectangle x={x} y={y} width={width} height={height} fill={color} />;
 };
 
+const getVolumeColor = (isGain: boolean) => isGain ? 'hsl(var(--chart-2-light))' : 'hsl(var(--chart-1-light))';
 
-// Custom tooltip component
-const CustomTooltip = ({ active, payload, label }: any) => {
+
+// Custom tooltip for the Price Chart
+const PriceTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       if (!data) return null;
@@ -58,19 +53,26 @@ const CustomTooltip = ({ active, payload, label }: any) => {
           <p className="font-mono" style={{ color: data.isGain ? 'hsl(var(--chart-2))' : 'hsl(var(--chart-1))' }}>
                 {`O: ${data.ohlc[0].toFixed(2)} H: ${data.ohlc[1].toFixed(2)} L: ${data.ohlc[2].toFixed(2)} C: ${data.ohlc[3].toFixed(2)}`}
             </p>
-          {payload.map(pld => {
-            if (pld.dataKey === 'volume') {
-                return <p key="volume" className="font-mono text-muted-foreground">{`Volume: ${pld.value.toLocaleString()}`}</p>
-            }
-            return null;
-          })}
         </div>
       );
     }
     return null;
 };
 
-const getVolumeColor = (isGain: boolean) => isGain ? 'hsl(var(--chart-2-light))' : 'hsl(var(--chart-1-light))';
+// Custom tooltip for the Volume Chart
+const VolumeTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      if (!data || !data.volume) return null;
+
+      return (
+        <div className="custom-tooltip bg-background/90 text-foreground border-border backdrop-blur-sm p-2 rounded-md shadow-lg text-xs">
+          <p className="font-mono text-muted-foreground">{`Volume: ${data.volume.toLocaleString()}`}</p>
+        </div>
+      );
+    }
+    return null;
+};
 
 
 const CANDLE_WIDTH = 12;
@@ -144,16 +146,7 @@ export function TradingTerminal() {
     <Card className="overflow-hidden h-full flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between border-b p-2">
        <div className="flex items-center gap-2">
-            <Select defaultValue="NIFTY 50">
-                <SelectTrigger className="w-40 border-0 text-base font-bold shadow-none focus:ring-0 h-8">
-                <SelectValue placeholder="Select Instrument" />
-                </SelectTrigger>
-                <SelectContent>
-                <SelectItem value="NIFTY 50">NIFTY 50</SelectItem>
-                <SelectItem value="BANKNIFTY">BANKNIFTY</SelectItem>
-                <SelectItem value="NIFTYBEES">NIFTYBEES</SelectItem>
-                </SelectContent>
-            </Select>
+            <h3 className="text-base font-bold">NIFTY 50</h3>
             <span className="text-sm text-muted-foreground">5m</span>
         </div>
         <div className={`flex items-center gap-2 text-sm text-muted-foreground transition-colors ${livePrice.isGain ? 'text-green-600' : 'text-red-600'}`}>
@@ -163,29 +156,29 @@ export function TradingTerminal() {
       </CardHeader>
       <CardContent className="p-0 flex-1">
         <div className="h-full w-full">
-            {/* Price Candlestick Chart (Top 70%) */}
-            <ResponsiveContainer width="100%" height="70%">
+            {/* Price Candlestick Chart (Top 75%) */}
+            <ResponsiveContainer width="100%" height="75%">
                 <ComposedChart data={chartData} syncId="stockChart" margin={{ top: 10, right: 45, bottom: 0, left: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="time" hide />
-                <YAxis yAxisId="price" orientation="right" domain={getPriceDomain()} tickFormatter={(value) => value.toLocaleString()} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
-                
-                <Bar dataKey="candleWick" yAxisId="price" barSize={1} shape={<CustomWick />} isAnimationActive={false} />
-                <Bar dataKey="candleBody" yAxisId="price" barSize={CANDLE_WIDTH} shape={<CustomBody />} isAnimationActive={false} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="time" hide />
+                    <YAxis yAxisId="price" orientation="right" domain={getPriceDomain()} tickFormatter={(value) => value.toLocaleString()} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
+                    <Tooltip content={<PriceTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                    
+                    <Bar dataKey="candleWick" yAxisId="price" barSize={1} shape={<CustomWick />} isAnimationActive={false} />
+                    <Bar dataKey="candleBody" yAxisId="price" barSize={CANDLE_WIDTH} shape={<CustomBody />} isAnimationActive={false} />
 
-                {chartData.length > 0 && (
-                    <ReferenceLine yAxisId="price" y={chartData[chartData.length - 1].ohlc[3]} stroke="hsl(var(--primary))" strokeDasharray="3 3" strokeWidth={1} label={{ value: ` ${chartData[chartData.length - 1].ohlc[3].toFixed(2)}`, position: 'right', fill: 'hsl(var(--primary))', fontSize: 10 }} />
-                )}
+                    {chartData.length > 0 && (
+                        <ReferenceLine yAxisId="price" y={chartData[chartData.length - 1].ohlc[3]} stroke="hsl(var(--primary))" strokeDasharray="3 3" strokeWidth={1} label={{ value: ` ${chartData[chartData.length - 1].ohlc[3].toFixed(2)}`, position: 'right', fill: 'hsl(var(--primary))', fontSize: 10 }} />
+                    )}
                 </ComposedChart>
             </ResponsiveContainer>
 
-            {/* Volume Bar Chart (Bottom 30%) */}
-            <ResponsiveContainer width="100%" height="30%">
+            {/* Volume Bar Chart (Bottom 25%) */}
+            <ResponsiveContainer width="100%" height="25%">
                 <ComposedChart data={chartData} syncId="stockChart" margin={{ top: 10, right: 45, bottom: 20, left: 5 }}>
                     <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} interval="preserveStartEnd" />
                     <YAxis yAxisId="volume" orientation="right" domain={getVolumeDomain()} tickFormatter={(value) => `${(Number(value) / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} tickMargin={8} fontSize={10} width={60} />
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
+                    <Tooltip content={<VolumeTooltip />} cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }} />
 
                     <Bar yAxisId="volume" dataKey="volume" barSize={CANDLE_WIDTH} isAnimationActive={false}>
                         {chartData.map((entry, index) => (

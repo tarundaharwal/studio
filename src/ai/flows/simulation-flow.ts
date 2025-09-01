@@ -155,7 +155,7 @@ const getNextTime = (lastTime: string, timeframeMinutes: number): string => {
 
 // Function to calculate RSI
 const calculateRSI = (data: ChartData[], period: number = 14): number | null => {
-    if (data.length < period + 1) {
+    if (data.length < period) {
         return null; // Not enough data
     }
     

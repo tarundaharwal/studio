@@ -283,17 +283,17 @@ export const simulationFlow = ai.defineFlow(
             const currentMACD = indicators.find(i => i.name.includes('MACD'))?.value ?? 0;
             const currentADX = indicators.find(i => i.name.includes('ADX'))?.value ?? 0;
 
-            // Confluence BUY Condition
-            const isBuySignal = currentRSI < 40 && currentMACD > 0 && currentADX > 25;
+            // TEMPORARY DEMO Confluence BUY Condition
+            const isBuySignal = currentRSI < 55 && currentMACD > -10;
             
-            // Confluence SELL Condition
-            const isSellSignal = currentRSI > 70 || currentMACD < 0;
+            // TEMPORARY DEMO Confluence SELL Condition
+            const isSellSignal = currentRSI > 60;
 
             if (isBuySignal && !hasOpenPosition) {
                 const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
                 positions = [...positions, newPosition];
                 newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
-                newSignals.push({ time: nowLocale, strategy: 'Confluence-Reversion', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `Buy signal: RSI<40, MACD>0, ADX>25. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}, ${currentADX.toFixed(2)}`});
+                newSignals.push({ time: nowLocale, strategy: 'Demo-Confluence', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `Buy signal: RSI<55, MACD>-10. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}`});
             
             } else if (isSellSignal && hasOpenPosition) {
                 const positionToClose = positions[0];
@@ -303,7 +303,7 @@ export const simulationFlow = ai.defineFlow(
                 overview.equity += pnlFromTrade;
                 
                 positions = positions.filter(p => p.symbol !== positionToClose.symbol);
-                newSignals.push({ time: nowLocale, strategy: 'Confluence-Reversion', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>70 or MACD<0. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}`});
+                newSignals.push({ time: nowLocale, strategy: 'Demo-Confluence', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>60. Value: ${currentRSI.toFixed(2)}`});
             }
         }
     } else {
@@ -332,7 +332,7 @@ export const simulationFlow = ai.defineFlow(
         let newValue = ind.value;
         if (ind.name.includes('RSI')) newValue = calculatedRSI ?? ind.value;
         else if (ind.name.includes('MACD')) newValue = ind.value + (newClosePrice - chartData[chartData.length - 1].ohlc[3])/10;
-        else if (ind.name.includes('ADX')) {
+        else {
             let adxChange = (Math.abs(newClosePrice - chartData[chartData.length - 1].ohlc[3]) > 1 ? 0.5 : -0.2);
             newValue = Math.max(10, Math.min(100, ind.value + adxChange)); // Clamp between 10 and 100
         }

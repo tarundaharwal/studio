@@ -196,7 +196,6 @@ export function TradingTerminal() {
                  <AreaChart 
                     data={chartData} 
                     margin={{ top: 10, right: 45, bottom: 20, left: 5 }}
-                    onMouseDown={(e:any) => e.stopPropagation()} // Prevent chart click from resetting brush
                  >
                     <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
                     <YAxis domain={getPriceDomain(chartData)} hide />

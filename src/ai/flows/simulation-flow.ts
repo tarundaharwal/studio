@@ -100,6 +100,37 @@ const SimulationOutputSchema = z.object({
 export type SimulationOutput = z.infer<typeof SimulationOutputSchema>;
 
 
+// AI Prompt for generating the next candle based on recent data
+const MarketSentimentInputSchema = z.object({
+    history: z.array(ChartDataSchema),
+});
+
+const MarketSentimentOutputSchema = z.object({
+    sentiment: z.enum(["BULLISH", "BEARISH", "NEUTRAL"]).describe("The current market sentiment based on the data."),
+    nextCandle: z.object({
+        high: z.number().describe("The predicted high price for the next candle."),
+        low: z.number().describe("The predicted low price for the next candle."),
+        close: z.number().describe("The predicted close price for the next candle."),
+    }).describe("The predicted price range for the next candle."),
+});
+
+
+const marketSentimentPrompt = ai.definePrompt({
+    name: 'marketSentimentPrompt',
+    input: { schema: MarketSentimentInputSchema },
+    output: { schema: MarketSentimentOutputSchema },
+    prompt: `You are a quantitative financial analyst. Based on the last 5 OHLC candles for NIFTY 50, determine the market sentiment and predict a realistic High, Low, and Close for the *next* candle. The open price for the next candle will be the close price of the last candle provided.
+
+Recent Candle Data:
+{{#each history}}
+- Time: {{time}}, Open: {{ohlc.[0]}}, High: {{ohlc.[1]}}, Low: {{ohlc.[2]}}, Close: {{ohlc.[3]}}
+{{/each}}
+
+Analyze the trend, momentum, and volatility from this data to make your prediction. Provide your response in the requested JSON format.
+`,
+});
+
+
 // Helper to generate a random number within a range
 const getRandom = (min: number, max: number, precision: number = 2) => {
   return parseFloat((Math.random() * (max - min) + min).toFixed(precision));
@@ -140,11 +171,6 @@ export const simulationFlow = ai.defineFlow(
     let newChartData = JSON.parse(JSON.stringify(chartData));
     let currentCandle = newChartData[newChartData.length - 1];
     
-    // Simulate price change for this tick
-    const lastKnownPrice = currentCandle.ohlc[3];
-    const change = (Math.random() - 0.5) * 5;
-    const newPrice = lastKnownPrice + change;
-
     // Determine if the timeframe for the current candle has elapsed
     const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
     
@@ -155,50 +181,62 @@ export const simulationFlow = ai.defineFlow(
     // We need to check if the current time has crossed into the next timeframe interval
     const now = Date.now();
     const isNewCandleTime = (now - lastCandleDate.getTime()) >= timeframeDuration;
+    
+    let newPrice: number;
 
     if (isNewCandleTime) {
-        // Finalize the current candle (it's already been updated in previous ticks)
-        // and create a new one.
+        // AI-POWERED NEW CANDLE GENERATION
+        const recentHistory = newChartData.slice(-5);
+        const { output } = await marketSentimentPrompt({ history: recentHistory });
+
+        if (!output) {
+            throw new Error("AI failed to generate new candle data.");
+        }
+
+        const { sentiment, nextCandle: predictedCandle } = output;
+        
+        const newOpen = currentCandle.ohlc[3]; // New candle opens at last close
+        newPrice = predictedCandle.close; // The final price for this new candle interval
+
         const timeframeMinutes = timeframeDuration / (60 * 1000);
         const newTime = getNextTime(currentCandle.time, timeframeMinutes);
-        const prevCandleForLogic = newChartData.length > 1 ? newChartData[newChartData.length - 2] : currentCandle;
 
         // --- TRADING LOGIC (Only on new candle & if trading is active) ---
         if (tradingStatus === 'ACTIVE') {
-            const priceAction = currentCandle.ohlc[3] - prevCandleForLogic.ohlc[3];
             const hasOpenPosition = positions.length > 0;
-            
-            if (Math.random() < 0.1) { // 10% chance to trade
-                const nowLocale = new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                if (priceAction > 10 && !hasOpenPosition) {
-                    const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
-                    positions = [...positions, newPosition];
-                    newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
-                    newSignals.push({ time: nowLocale, strategy: 'SIM-TREND', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: 'Simulated bullish momentum.'});
-                } else if (priceAction < -10 && hasOpenPosition) {
-                    const positionToClose = positions[0];
-                    newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
-                    
-                    const pnlFromTrade = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
-                    overview.equity += pnlFromTrade;
-                    // overview.pnl is unrealized + realized, so we don't add here. It gets recalculated below.
-                    
-                    positions = positions.filter(p => p.symbol !== positionToClose.symbol);
-                    newSignals.push({ time: nowLocale, strategy: 'SIM-TREND', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: 'Simulated bearish momentum.'});
-                }
+            const nowLocale = new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            if (sentiment === "BULLISH" && !hasOpenPosition) {
+                const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
+                positions = [...positions, newPosition];
+                newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
+                newSignals.push({ time: nowLocale, strategy: 'AI-SENTIMENT', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: 'AI detected BULLISH sentiment.'});
+            } else if (sentiment === "BEARISH" && hasOpenPosition) {
+                const positionToClose = positions[0];
+                newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
+                
+                const pnlFromTrade = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
+                overview.equity += pnlFromTrade;
+                
+                positions = positions.filter(p => p.symbol !== positionToClose.symbol);
+                newSignals.push({ time: nowLocale, strategy: 'AI-SENTIMENT', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: 'AI detected BEARISH sentiment.'});
             }
         }
         
-        // Create the new candle for the next period, starting with the current price
-        const newCandle = {
+        // Create the new candle for the next period, using AI-generated data
+        const newCandle: ChartData = {
             time: newTime,
-            ohlc: [newPrice, newPrice, newPrice, newPrice] as [number, number, number, number],
-            volume: 0,
+            ohlc: [newOpen, predictedCandle.high, predictedCandle.low, predictedCandle.close],
+            volume: getRandom(50000, 250000), // Keep volume random for now
         };
         newChartData = [...newChartData.slice(1), newCandle];
 
     } else {
         // We are still in the same timeframe, so update the current (last) candle
+        const lastKnownPrice = currentCandle.ohlc[3];
+        const change = (Math.random() - 0.5) * 5; // Simple random fluctuation within the candle
+        newPrice = lastKnownPrice + change;
+        
         const [open, high, low, close] = currentCandle.ohlc;
         currentCandle.ohlc = [open, Math.max(high, newPrice), Math.min(low, newPrice), newPrice];
         currentCandle.volume += Math.random() * 1000;

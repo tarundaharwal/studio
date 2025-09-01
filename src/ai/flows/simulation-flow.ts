@@ -265,31 +265,37 @@ export const simulationFlow = ai.defineFlow(
         const timeframeMinutes = timeframeDuration / (60 * 1000);
         const newTime = getNextTime(currentCandle.time, timeframeMinutes);
 
-        const newCandleForRSI: ChartData = {
+        const newCandleForIndicators: ChartData = {
             time: newTime,
             ohlc: [newOpen, predictedCandle.high, predictedCandle.low, predictedCandle.close],
             volume: getRandom(50000, 250000),
         };
         
-        const rsiChartData = [...newChartData, newCandleForRSI];
-        const currentRSI = calculateRSI(rsiChartData);
-        
         // Create the new candle for the next period, using AI-generated data
-        newChartData = [...newChartData.slice(1), newCandleForRSI];
+        newChartData = [...newChartData.slice(1), newCandleForIndicators];
 
         // --- TRADING LOGIC (Only on new candle & if trading is active) ---
-        if (tradingStatus === 'ACTIVE' && currentRSI !== null) {
+        if (tradingStatus === 'ACTIVE') {
             const hasOpenPosition = positions.length > 0;
 
-            // RSI Buy Condition
-            if (currentRSI < 30 && !hasOpenPosition) {
+            // Get current indicator values
+            const currentRSI = calculateRSI(newChartData) ?? 50;
+            const currentMACD = indicators.find(i => i.name.includes('MACD'))?.value ?? 0;
+            const currentADX = indicators.find(i => i.name.includes('ADX'))?.value ?? 0;
+
+            // Confluence BUY Condition
+            const isBuySignal = currentRSI < 40 && currentMACD > 0 && currentADX > 25;
+            
+            // Confluence SELL Condition
+            const isSellSignal = currentRSI > 70 || currentMACD < 0;
+
+            if (isBuySignal && !hasOpenPosition) {
                 const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
                 positions = [...positions, newPosition];
                 newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
-                newSignals.push({ time: nowLocale, strategy: 'RSI-Reversion', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `RSI is oversold (< 30) at ${currentRSI.toFixed(2)}.`});
+                newSignals.push({ time: nowLocale, strategy: 'Confluence-Reversion', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `Buy signal: RSI<40, MACD>0, ADX>25. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}, ${currentADX.toFixed(2)}`});
             
-            // RSI Sell Condition
-            } else if (currentRSI > 70 && hasOpenPosition) {
+            } else if (isSellSignal && hasOpenPosition) {
                 const positionToClose = positions[0];
                 newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
                 
@@ -297,7 +303,7 @@ export const simulationFlow = ai.defineFlow(
                 overview.equity += pnlFromTrade;
                 
                 positions = positions.filter(p => p.symbol !== positionToClose.symbol);
-                newSignals.push({ time: nowLocale, strategy: 'RSI-Reversion', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `RSI is overbought (> 70) at ${currentRSI.toFixed(2)}.`});
+                newSignals.push({ time: nowLocale, strategy: 'Confluence-Reversion', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>70 or MACD<0. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}`});
             }
         }
     } else {

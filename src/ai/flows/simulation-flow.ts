@@ -274,38 +274,6 @@ export const simulationFlow = ai.defineFlow(
         // Create the new candle for the next period, using AI-generated data
         newChartData = [...newChartData.slice(1), newCandleForIndicators];
 
-        // --- TRADING LOGIC (Only on new candle & if trading is active) ---
-        if (tradingStatus === 'ACTIVE') {
-            const hasOpenPosition = positions.length > 0;
-
-            // Get current indicator values
-            const currentRSI = calculateRSI(newChartData) ?? 50;
-            const currentMACD = indicators.find(i => i.name.includes('MACD'))?.value ?? 0;
-            const currentADX = indicators.find(i => i.name.includes('ADX'))?.value ?? 0;
-
-            // TEMPORARY DEMO Confluence BUY Condition
-            const isBuySignal = currentRSI < 55 && currentMACD > -10;
-            
-            // TEMPORARY DEMO Confluence SELL Condition
-            const isSellSignal = currentRSI > 60;
-
-            if (isBuySignal && !hasOpenPosition) {
-                const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
-                positions = [...positions, newPosition];
-                newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
-                newSignals.push({ time: nowLocale, strategy: 'Demo-Confluence', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `Buy signal: RSI<55, MACD>-10. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}`});
-            
-            } else if (isSellSignal && hasOpenPosition) {
-                const positionToClose = positions[0];
-                newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
-                
-                const pnlFromTrade = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
-                overview.equity += pnlFromTrade;
-                
-                positions = positions.filter(p => p.symbol !== positionToClose.symbol);
-                newSignals.push({ time: nowLocale, strategy: 'Demo-Confluence', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>60. Value: ${currentRSI.toFixed(2)}`});
-            }
-        }
     } else {
         // We are still in the same timeframe, so update the current (last) candle
         const lastKnownPrice = currentCandle.ohlc[3];
@@ -316,8 +284,44 @@ export const simulationFlow = ai.defineFlow(
         currentCandle.ohlc = [open, Math.max(high, newPrice), Math.min(low, newPrice), newPrice];
         currentCandle.volume += Math.random() * 1000;
     }
-
+    
     const newClosePrice = newChartData[newChartData.length-1].ohlc[3];
+    
+    // --- TRADING LOGIC (runs every tick if trading is active) ---
+    if (tradingStatus === 'ACTIVE') {
+        const hasOpenPosition = positions.length > 0;
+        const calculatedRSI = calculateRSI(newChartData);
+
+        // Get current indicator values (RSI is calculated, others are simulated for now)
+        const currentRSI = calculatedRSI ?? 50;
+        let currentMACD = indicators.find(i => i.name.includes('MACD'))?.value ?? 0;
+        currentMACD = currentMACD + (newClosePrice - chartData[chartData.length - 1].ohlc[3])/10;
+        
+
+        // TEMPORARY DEMO Confluence BUY Condition
+        const isBuySignal = currentRSI < 55 && currentMACD > -10;
+        
+        // TEMPORARY DEMO Confluence SELL Condition
+        const isSellSignal = currentRSI > 60;
+
+        if (isBuySignal && !hasOpenPosition) {
+            const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
+            positions = [...positions, newPosition];
+            newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
+            newSignals.push({ time: nowLocale, strategy: 'Demo-Confluence', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `Buy signal: RSI<55, MACD>-10. Values: ${currentRSI.toFixed(2)}, ${currentMACD.toFixed(2)}`});
+        
+        } else if (isSellSignal && hasOpenPosition) {
+            const positionToClose = positions[0];
+            newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
+            
+            const pnlFromTrade = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
+            overview.equity += pnlFromTrade;
+            
+            positions = positions.filter(p => p.symbol !== positionToClose.symbol);
+            newSignals.push({ time: nowLocale, strategy: 'Demo-Confluence', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `Sell signal: RSI>60. Value: ${currentRSI.toFixed(2)}`});
+        }
+    }
+
 
     // --- UPDATE OTHER MARKET DATA ---
     const newOptionChain = optionChain.map(opt => ({
@@ -330,9 +334,13 @@ export const simulationFlow = ai.defineFlow(
 
     const newIndicators = indicators.map(ind => {
         let newValue = ind.value;
-        if (ind.name.includes('RSI')) newValue = calculatedRSI ?? ind.value;
-        else if (ind.name.includes('MACD')) newValue = ind.value + (newClosePrice - chartData[chartData.length - 1].ohlc[3])/10;
-        else {
+        if (ind.name.includes('RSI')) {
+            newValue = calculatedRSI ?? ind.value;
+        } else if (ind.name.includes('MACD')) {
+            // This is a simplified simulation of MACD value change
+            newValue = ind.value + (newClosePrice - chartData[chartData.length - 1].ohlc[3]) / 10;
+        } else {
+             // This is a simplified simulation of ADX value change
             let adxChange = (Math.abs(newClosePrice - chartData[chartData.length - 1].ohlc[3]) > 1 ? 0.5 : -0.2);
             newValue = Math.max(10, Math.min(100, ind.value + adxChange)); // Clamp between 10 and 100
         }
@@ -402,3 +410,5 @@ export const simulationFlow = ai.defineFlow(
 export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
     return simulationFlow(input);
 }
+
+    

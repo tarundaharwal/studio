@@ -273,6 +273,9 @@ export const simulationFlow = ai.defineFlow(
         
         const rsiChartData = [...newChartData, newCandleForRSI];
         const currentRSI = calculateRSI(rsiChartData);
+        
+        // Create the new candle for the next period, using AI-generated data
+        newChartData = [...newChartData.slice(1), newCandleForRSI];
 
         // --- TRADING LOGIC (Only on new candle & if trading is active) ---
         if (tradingStatus === 'ACTIVE' && currentRSI !== null) {
@@ -297,10 +300,6 @@ export const simulationFlow = ai.defineFlow(
                 newSignals.push({ time: nowLocale, strategy: 'RSI-Reversion', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `RSI is overbought (> 70) at ${currentRSI.toFixed(2)}.`});
             }
         }
-        
-        // Create the new candle for the next period, using AI-generated data
-        newChartData = [...newChartData.slice(1), newCandleForRSI];
-
     } else {
         // We are still in the same timeframe, so update the current (last) candle
         const lastKnownPrice = currentCandle.ohlc[3];
@@ -333,13 +332,41 @@ export const simulationFlow = ai.defineFlow(
 
     // --- UPDATE PORTFOLIO DATA ---
     let totalUnrealizedPnl = 0;
-    positions = positions.map(pos => {
+    let openPositions = [...positions];
+
+    // Calculate P&L for all open positions first
+    openPositions = openPositions.map(pos => {
         const newLtp = newClosePrice; // Simplified: all positions track main instrument
         const pnl = (newLtp - pos.avgPrice) * pos.qty;
-        totalUnrealizedPnl += pnl;
         return { ...pos, ltp: newLtp, pnl: parseFloat(pnl.toFixed(2)) };
     });
+
+    // --- STOP-LOSS LOGIC ---
+    if (tradingStatus === 'ACTIVE') {
+        const positionsToKeep: Position[] = [];
+        for (const pos of openPositions) {
+            if (pos.pnl < -5000) {
+                // This position hits the stop-loss
+                newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: newClosePrice, status: 'EXECUTED' });
+                overview.equity += pos.pnl; // Realize the loss
+                newSignals.push({
+                    time: nowLocale,
+                    strategy: 'Risk Mgmt',
+                    action: 'EXIT LONG',
+                    instrument: pos.symbol,
+                    reason: `Stop-loss triggered at P&L ${pos.pnl.toFixed(2)}.`
+                });
+            } else {
+                // This position is safe, keep it
+                positionsToKeep.push(pos);
+            }
+        }
+        openPositions = positionsToKeep;
+    }
     
+    // Recalculate total P&L after potential stop-loss closures
+    totalUnrealizedPnl = openPositions.reduce((acc, pos) => acc + pos.pnl, 0);
+
     const realizedPnl = overview.equity - overview.initialEquity;
     overview.pnl = parseFloat((realizedPnl + totalUnrealizedPnl).toFixed(2));
     const currentTotalEquity = overview.equity + totalUnrealizedPnl;
@@ -350,7 +377,7 @@ export const simulationFlow = ai.defineFlow(
     // Return the new state
     return {
       chartData: newChartData,
-      positions,
+      positions: openPositions,
       overview,
       indicators: newIndicators,
       optionChain: newOptionChain,

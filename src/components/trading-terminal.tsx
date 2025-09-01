@@ -3,26 +3,22 @@
 
 import * as React from "react"
 import {
-  Card,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card"
-import {
-    ComposedChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-    Rectangle,
-    CartesianGrid,
-    ReferenceLine,
-    Cell,
-    Brush,
-    AreaChart,
-    Area,
+  ComposedChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Rectangle,
+  CartesianGrid,
+  ReferenceLine,
+  Cell,
+  Brush,
+  AreaChart,
+  Area,
 } from "recharts"
 import { useStore } from "@/store/use-store"
+import { Card, CardContent, CardHeader } from "./ui/card"
 
 
 // Custom shape for the candlestick wick (thin line-like bar)
@@ -77,11 +73,18 @@ const VolumeTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
+// Custom Tooltip content for the Brush chart to avoid the React warning
+const BrushTooltipContent = (props: any) => {
+    // We don't need to render anything, this is just to catch the props
+    // that recharts passes down, preventing them from reaching a DOM element.
+    return null;
+};
+
 
 const CANDLE_WIDTH = 12;
 
 export function TradingTerminal() {
-  const { chartData: fullChartData, timeframe } = useStore();
+  const { chartData: fullChartData } = useStore();
   const [startIndex, setStartIndex] = React.useState(0);
   const [endIndex, setEndIndex] = React.useState(fullChartData.length - 1);
   
@@ -111,19 +114,6 @@ export function TradingTerminal() {
   }, [fullChartData]);
 
   const chartData = chartDataWithIndicators;
-
-  const livePrice = React.useMemo(() => {
-    if (!chartData || chartData.length < 2) {
-        return { latestPrice: 0, priceChange: 0, priceChangePercent: 0, isGain: true };
-    }
-    const latestPrice = chartData[chartData.length - 1].ohlc[3];
-    const previousDayClose = chartData[chartData.length - 2].ohlc[3];
-    const priceChange = latestPrice - previousDayClose;
-    const priceChangePercent = previousDayClose !== 0 ? (priceChange / previousDayClose) * 100 : 0;
-    const isGain = priceChange >= 0;
-
-    return { latestPrice, priceChange, priceChangePercent, isGain };
-  }, [chartData]);
   
   if (!isClient || !chartData.length) {
       return (
@@ -160,17 +150,13 @@ export function TradingTerminal() {
   const visibleData = chartData.slice(startIndex, endIndex + 1);
 
   return (
-    <Card className="overflow-hidden h-full flex flex-col">
+    <Card className="overflow-hidden h-[350px] flex flex-col">
        <CardHeader className="flex flex-row items-center justify-between border-b p-2">
        <div className="flex items-center gap-2">
             <h3 className="text-base font-bold">NIFTY 50</h3>
-            <span className="text-sm text-muted-foreground">{timeframe}</span>
+            <span className="text-sm text-muted-foreground">5min</span>
         </div>
-        <div className={`flex items-center gap-2 text-sm transition-colors ${livePrice.isGain ? 'text-green-600' : 'text-red-600'}`}>
-            <span className="font-medium">{livePrice.latestPrice.toFixed(2)}</span>
-            <span className="text-xs">({livePrice.isGain ? '+' : ''}{livePrice.priceChangePercent.toFixed(2)}%)</span>
-        </div>
-      </CardHeader>
+        </CardHeader>
       <CardContent className="p-0 flex-1">
         <div className="h-full w-full">
             {/* Price Candlestick Chart (Top 70%) */}
@@ -214,7 +200,7 @@ export function TradingTerminal() {
                  >
                     <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} fontSize={10} />
                     <YAxis domain={getPriceDomain(chartData)} hide />
-                    <Tooltip content={<div/>}/>
+                    <Tooltip content={<BrushTooltipContent />}/>
                     <Area dataKey="closePrice" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} isAnimationActive={false}/>
                     <Brush 
                         startIndex={startIndex} 
@@ -231,5 +217,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

@@ -155,7 +155,7 @@ const getNextTime = (lastTime: string, timeframeMinutes: number): string => {
 
 // Function to calculate RSI
 const calculateRSI = (data: ChartData[], period: number = 14): number | null => {
-    if (data.length < period) {
+    if (data.length <= period) {
         return null; // Not enough data
     }
     
@@ -304,6 +304,37 @@ export const simulationFlow = ai.defineFlow(
     }
     
     const newClosePrice = newChartData[newChartData.length-1].ohlc[3];
+
+    // --- UPDATE POSITIONS PNL ---
+    // Calculate P&L for all open positions first
+    positions = positions.map(pos => {
+        const newLtp = newClosePrice; // Simplified: all positions track main instrument
+        const pnl = (newLtp - pos.avgPrice) * pos.qty;
+        return { ...pos, ltp: newLtp, pnl: parseFloat(pnl.toFixed(2)) };
+    });
+    
+    // --- STOP-LOSS LOGIC ---
+    if (tradingStatus === 'ACTIVE') {
+        const positionsToKeep: Position[] = [];
+        for (const pos of positions) {
+            if (pos.pnl < -5000) {
+                // This position hits the stop-loss
+                newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: newClosePrice, status: 'EXECUTED' });
+                overview.equity += pos.pnl; // Realize the loss
+                newSignals.push({
+                    time: nowLocale,
+                    strategy: 'Risk Mgmt',
+                    action: 'EXIT LONG',
+                    instrument: pos.symbol,
+                    reason: `Stop-loss triggered at P&L ${pos.pnl.toFixed(2)}.`
+                });
+            } else {
+                // This position is safe, keep it
+                positionsToKeep.push(pos);
+            }
+        }
+        positions = positionsToKeep;
+    }
     
     // --- TRADING LOGIC (runs every tick if trading is active) ---
     if (tradingStatus === 'ACTIVE') {
@@ -366,41 +397,7 @@ export const simulationFlow = ai.defineFlow(
     });
 
     // --- UPDATE PORTFOLIO DATA ---
-    let totalUnrealizedPnl = 0;
-    let openPositions = [...positions];
-
-    // Calculate P&L for all open positions first
-    openPositions = openPositions.map(pos => {
-        const newLtp = newClosePrice; // Simplified: all positions track main instrument
-        const pnl = (newLtp - pos.avgPrice) * pos.qty;
-        return { ...pos, ltp: newLtp, pnl: parseFloat(pnl.toFixed(2)) };
-    });
-
-    // --- STOP-LOSS LOGIC ---
-    if (tradingStatus === 'ACTIVE') {
-        const positionsToKeep: Position[] = [];
-        for (const pos of openPositions) {
-            if (pos.pnl < -5000) {
-                // This position hits the stop-loss
-                newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: newClosePrice, status: 'EXECUTED' });
-                overview.equity += pos.pnl; // Realize the loss
-                newSignals.push({
-                    time: nowLocale,
-                    strategy: 'Risk Mgmt',
-                    action: 'EXIT LONG',
-                    instrument: pos.symbol,
-                    reason: `Stop-loss triggered at P&L ${pos.pnl.toFixed(2)}.`
-                });
-            } else {
-                // This position is safe, keep it
-                positionsToKeep.push(pos);
-            }
-        }
-        openPositions = positionsToKeep;
-    }
-    
-    // Recalculate total P&L after potential stop-loss closures
-    totalUnrealizedPnl = openPositions.reduce((acc, pos) => acc + pos.pnl, 0);
+    const totalUnrealizedPnl = positions.reduce((acc, pos) => acc + pos.pnl, 0);
 
     const realizedPnl = overview.equity - overview.initialEquity;
     overview.pnl = parseFloat((realizedPnl + totalUnrealizedPnl).toFixed(2));
@@ -412,7 +409,7 @@ export const simulationFlow = ai.defineFlow(
     // Return the new state
     return {
       chartData: newChartData,
-      positions: openPositions,
+      positions: positions,
       overview,
       indicators: newIndicators,
       optionChain: newOptionChain,

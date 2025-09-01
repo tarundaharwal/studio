@@ -164,9 +164,9 @@ export function TradingTerminal() {
   const visibleData = chartData.slice(startIndex, endIndex + 1);
 
   return (
-    <Card className="overflow-hidden h-[350px] flex flex-col">
+    <Card className="overflow-hidden h-[420px] flex flex-col">
        <CardHeader className="flex flex-row items-center justify-between border-b p-2">
-       <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
             <h3 className="text-base font-bold">NIFTY 50</h3>
             <span className="text-sm text-muted-foreground">5min</span>
         </div>
@@ -230,5 +230,3 @@ export function TradingTerminal() {
     </Card>
   )
 }
-
-    

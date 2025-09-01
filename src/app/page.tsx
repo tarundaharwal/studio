@@ -19,7 +19,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {/* Main Column */}
           <div className="col-span-1 flex flex-col gap-6 lg:col-span-2">
-              <div className="h-[350px]">
+              <div className="h-[420px]">
                 <TradingTerminal />
               </div>
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -30,7 +30,7 @@ export default function DashboardPage() {
 
           {/* Middle Column */}
           <div className="col-span-1 flex flex-col gap-6">
-            <div className="h-[350px]">
+            <div className="h-[420px]">
               <OptionChain />
             </div>
             <IndicatorGauge />

@@ -96,38 +96,40 @@ export function OptionChain() {
             <Progress value={pcr / 2 * 100} className="h-1.5" />
         </div>
       </CardHeader>
-      <CardContent className="p-0 flex-1">
-      <ScrollArea className="h-full w-full">
-        <Table>
-          <TableHeader>
-            <TableRow className="text-xs">
-              <TableHead className="w-[80px] text-center p-1">OI (Lacs)</TableHead>
-              <TableHead className="w-[60px] text-center p-1">IV</TableHead>
-              <TableHead className="w-[80px] text-center p-1 bg-red-900/10">CALLS LTP</TableHead>
-              <TableHead className="w-[100px] text-center font-bold text-foreground p-1">Strike</TableHead>
-              <TableHead className="w-[80px] text-center p-1 bg-green-900/10">PUTS LTP</TableHead>
-              <TableHead className="w-[60px] text-center p-1">IV</TableHead>
-              <TableHead className="w-[80px] text-center p-1">OI (Lacs)</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {optionChain.map((row) => (
-              <TableRow key={row.strike} className="text-center text-xs">
-                <TableCell className="p-1">{ (row.callOI / 100000).toFixed(2) }</TableCell>
-                <TableCell className="p-1">{row.callIV.toFixed(1)}</TableCell>
-                <TableCell className="bg-red-900/10 hover:bg-red-900/20 p-0 m-0"><OrderPopover ltp={row.callLTP} strike={row.strike} type="CALL" /></TableCell>
-                <TableCell className="font-bold text-sm bg-muted/50 p-1">
-                    <Badge variant={row.strike === 22800 ? "default" : "outline"} className="text-xs px-2 py-0.5">{row.strike}</Badge>
-                </TableCell>
-                <TableCell className="bg-green-900/10 hover:bg-green-900/20 p-0 m-0"><OrderPopover ltp={row.putLTP} strike={row.strike} type="PUT" /></TableCell>
-                <TableCell className="p-1">{row.putIV.toFixed(1)}</TableCell>
-                <TableCell className="p-1">{ (row.putOI / 100000).toFixed(2) }</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+      <CardContent className="p-0 flex-1 overflow-hidden">
+        <div className="relative h-full">
+            <ScrollArea className="absolute inset-0">
+                <Table>
+                <TableHeader>
+                    <TableRow className="text-xs">
+                    <TableHead className="w-[80px] text-center p-1">OI (Lacs)</TableHead>
+                    <TableHead className="w-[60px] text-center p-1">IV</TableHead>
+                    <TableHead className="w-[80px] text-center p-1 bg-red-900/10">CALLS LTP</TableHead>
+                    <TableHead className="w-[100px] text-center font-bold text-foreground p-1">Strike</TableHead>
+                    <TableHead className="w-[80px] text-center p-1 bg-green-900/10">PUTS LTP</TableHead>
+                    <TableHead className="w-[60px] text-center p-1">IV</TableHead>
+                    <TableHead className="w-[80px] text-center p-1">OI (Lacs)</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {optionChain.map((row) => (
+                    <TableRow key={row.strike} className="text-center text-xs">
+                        <TableCell className="p-1">{ (row.callOI / 100000).toFixed(2) }</TableCell>
+                        <TableCell className="p-1">{row.callIV.toFixed(1)}</TableCell>
+                        <TableCell className="bg-red-900/10 hover:bg-red-900/20 p-0 m-0"><OrderPopover ltp={row.callLTP} strike={row.strike} type="CALL" /></TableCell>
+                        <TableCell className="font-bold text-sm bg-muted/50 p-1">
+                            <Badge variant={row.strike === 22800 ? "default" : "outline"} className="text-xs px-2 py-0.5">{row.strike}</Badge>
+                        </TableCell>
+                        <TableCell className="bg-green-900/10 hover:bg-green-900/20 p-0 m-0"><OrderPopover ltp={row.putLTP} strike={row.strike} type="PUT" /></TableCell>
+                        <TableCell className="p-1">{row.putIV.toFixed(1)}</TableCell>
+                        <TableCell className="p-1">{ (row.putOI / 100000).toFixed(2) }</TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+                <ScrollBar orientation="vertical" />
+            </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );

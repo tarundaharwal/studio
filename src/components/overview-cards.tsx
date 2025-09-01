@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -143,12 +142,14 @@ export function OverviewCards() {
           <TrendingUp className="h-3 w-3 text-muted-foreground" />
         </CardHeader>
         <CardContent className="p-2 pt-0">
-          <div className={`text-base font-bold ${overview.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {overview.pnl >= 0 ? '+' : ''}₹{overview.pnl.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            <div className="flex items-baseline gap-2">
+                <div className={`text-base font-bold ${overview.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {overview.pnl >= 0 ? '+' : ''}₹{overview.pnl.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </div>
+                <p className={`text-[10px] leading-tight ${overview.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    ({overview.pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%)
+                </p>
             </div>
-          <p className={`text-[10px] leading-tight ${overview.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-            {overview.pnl >= 0 ? '+' : ''}{pnlPercent.toFixed(2)}%
-          </p>
         </CardContent>
       </Card>
 
@@ -158,12 +159,14 @@ export function OverviewCards() {
           <Activity className="h-3 w-3 text-muted-foreground" />
         </CardHeader>
         <CardContent className="p-2 pt-0">
-          <div className="text-base font-bold text-red-600">
-            -₹{overview.maxDrawdown.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            <div className="flex items-baseline gap-2">
+                <div className="text-base font-bold text-red-600">
+                    -₹{overview.maxDrawdown.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                </div>
+                <p className="text-[10px] leading-tight text-red-500">
+                    (-{drawdownPercent.toFixed(2)}%)
+                </p>
             </div>
-          <p className="text-[10px] leading-tight text-red-500">
-            -{drawdownPercent.toFixed(2)}%
-          </p>
         </CardContent>
       </Card>
     </>

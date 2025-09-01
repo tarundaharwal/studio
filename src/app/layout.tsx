@@ -23,7 +23,7 @@ import { Logo } from '@/components/icons';
 import { DashboardHeader } from '@/components/dashboard-header';
 
 export const metadata: Metadata = {
-  title: 'IndMon',
+  title: 'IndMonMachine',
   description: 'Personal, risk-first, fully automated Nifty trading console.',
 };
 
@@ -55,7 +55,7 @@ export default function RootLayout({
                   <Logo className="h-5 w-5" />
                 </div>
                 <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">
-                  IndMon
+                  IndMonMachine
                 </span>
               </div>
             </SidebarHeader>

@@ -18,7 +18,7 @@ import {
       <Card>
         <CardHeader className="p-4">
           <CardTitle>Signals Feed</CardTitle>
-          <CardDescription>Live feed of IndMon's trading decisions.</CardDescription>
+          <CardDescription>Live feed of IndMonMachine's trading decisions.</CardDescription>
         </CardHeader>
         <CardContent className="p-4 pt-0">
           <ScrollArea className="h-72">

@@ -10,14 +10,19 @@ const getRandom = (min: number, max: number, precision: number = 2) => {
 // Generate a consistent, non-random set of candlestick data
 const generateCandlestickData = (count: number, timeframeMinutes: number) => {
     const data = [];
-    let lastClose = 22750;
+    let lastClose = 22850; // Start at a higher price to create a dip
     const now = new Date();
     now.setHours(15, 30, 0, 0); // Set a fixed end time for consistency
     const interval = timeframeMinutes * 60 * 1000;
     const startTime = now.getTime() - (count * interval);
     
     // Pre-defined "random-like" values to ensure consistency on every load
-    const pseudoRandomFactors = [0.5, -0.2, 0.8, -0.5, 0.3, -0.1, 0.6, -0.4, 0.7, -0.3, 0.9, -0.6, 0.2, -0.8, 1.0, -0.7, 0.1, -0.9, 0.4, -0.0];
+    // This pattern is designed to create a dip and then a recovery.
+    const pseudoRandomFactors = [
+        -0.5, -0.8, -1.2, -1.5, -1.0, -0.6, // The dip
+        0.2, 0.5, 0.8, 1.1, 1.4, 1.0, 0.7, // The recovery
+        0.3, -0.1, 0.6, -0.4, 0.7, -0.3, 0.9, -0.6, 0.2, -0.8, 1.0, -0.7, 0.1, -0.9, 0.4, -0.0
+    ];
     
     for (let i = 0; i < count; i++) {
         const candleTime = new Date(startTime + i * interval);
@@ -25,7 +30,7 @@ const generateCandlestickData = (count: number, timeframeMinutes: number) => {
         
         // Use pseudo-random factors to get a consistent pattern
         const factor = pseudoRandomFactors[i % pseudoRandomFactors.length];
-        const movement = 25 * factor;
+        const movement = 15 * factor; // Reduced movement for more realistic candles
         
         let high, low;
         if (movement > 0) {
@@ -37,7 +42,8 @@ const generateCandlestickData = (count: number, timeframeMinutes: number) => {
         }
 
         const close = open + movement;
-        const volume = 100000 + (Math.abs(factor) * 150000);
+        // Make volume higher during the dip and recovery
+        const volume = 100000 + (Math.abs(factor) * 250000);
         
         lastClose = close;
         

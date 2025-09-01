@@ -152,6 +152,55 @@ const getNextTime = (lastTime: string, timeframeMinutes: number): string => {
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 };
 
+// Function to calculate RSI
+const calculateRSI = (data: ChartData[], period: number = 14): number | null => {
+    if (data.length < period + 1) {
+        return null; // Not enough data
+    }
+    
+    const prices = data.map(d => d.ohlc[3]);
+    let gains = 0;
+    let losses = 0;
+
+    // Calculate initial average gain and loss
+    for (let i = 1; i <= period; i++) {
+        const change = prices[i] - prices[i-1];
+        if (change > 0) {
+            gains += change;
+        } else {
+            losses -= change;
+        }
+    }
+    
+    let avgGain = gains / period;
+    let avgLoss = losses / period;
+
+    // Smooth the averages for the rest of the data
+    for (let i = period + 1; i < prices.length; i++) {
+        const change = prices[i] - prices[i-1];
+        let currentGain = 0;
+        let currentLoss = 0;
+        
+        if (change > 0) {
+            currentGain = change;
+        } else {
+            currentLoss = -change;
+        }
+
+        avgGain = (avgGain * (period - 1) + currentGain) / period;
+        avgLoss = (avgLoss * (period - 1) + currentLoss) / period;
+    }
+
+    if (avgLoss === 0) {
+        return 100; // Prevent division by zero
+    }
+
+    const rs = avgGain / avgLoss;
+    const rsi = 100 - (100 / (1 + rs));
+    
+    return rsi;
+}
+
 
 // This is the main simulation flow, defined with Genkit
 export const simulationFlow = ai.defineFlow(
@@ -193,7 +242,7 @@ export const simulationFlow = ai.defineFlow(
             throw new Error("AI failed to generate new candle data.");
         }
 
-        const { sentiment, nextCandle: predictedCandle } = output;
+        const { nextCandle: predictedCandle } = output;
         
         const newOpen = currentCandle.ohlc[3]; // New candle opens at last close
         newPrice = predictedCandle.close; // The final price for this new candle interval
@@ -201,17 +250,29 @@ export const simulationFlow = ai.defineFlow(
         const timeframeMinutes = timeframeDuration / (60 * 1000);
         const newTime = getNextTime(currentCandle.time, timeframeMinutes);
 
+        const newCandleForRSI: ChartData = {
+            time: newTime,
+            ohlc: [newOpen, predictedCandle.high, predictedCandle.low, predictedCandle.close],
+            volume: getRandom(50000, 250000),
+        };
+        
+        const rsiChartData = [...newChartData, newCandleForRSI];
+        const currentRSI = calculateRSI(rsiChartData);
+
         // --- TRADING LOGIC (Only on new candle & if trading is active) ---
-        if (tradingStatus === 'ACTIVE') {
+        if (tradingStatus === 'ACTIVE' && currentRSI !== null) {
             const hasOpenPosition = positions.length > 0;
             const nowLocale = new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-            if (sentiment === "BULLISH" && !hasOpenPosition) {
+            // RSI Buy Condition
+            if (currentRSI < 30 && !hasOpenPosition) {
                 const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
                 positions = [...positions, newPosition];
                 newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
-                newSignals.push({ time: nowLocale, strategy: 'AI-SENTIMENT', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: 'AI detected BULLISH sentiment.'});
-            } else if (sentiment === "BEARISH" && hasOpenPosition) {
+                newSignals.push({ time: nowLocale, strategy: 'RSI-Reversion', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `RSI is oversold (< 30) at ${currentRSI.toFixed(2)}.`});
+            
+            // RSI Sell Condition
+            } else if (currentRSI > 70 && hasOpenPosition) {
                 const positionToClose = positions[0];
                 newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
                 
@@ -219,17 +280,12 @@ export const simulationFlow = ai.defineFlow(
                 overview.equity += pnlFromTrade;
                 
                 positions = positions.filter(p => p.symbol !== positionToClose.symbol);
-                newSignals.push({ time: nowLocale, strategy: 'AI-SENTIMENT', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: 'AI detected BEARISH sentiment.'});
+                newSignals.push({ time: nowLocale, strategy: 'RSI-Reversion', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `RSI is overbought (> 70) at ${currentRSI.toFixed(2)}.`});
             }
         }
         
         // Create the new candle for the next period, using AI-generated data
-        const newCandle: ChartData = {
-            time: newTime,
-            ohlc: [newOpen, predictedCandle.high, predictedCandle.low, predictedCandle.close],
-            volume: getRandom(50000, 250000), // Keep volume random for now
-        };
-        newChartData = [...newChartData.slice(1), newCandle];
+        newChartData = [...newChartData.slice(1), newCandleForRSI];
 
     } else {
         // We are still in the same timeframe, so update the current (last) candle
@@ -251,12 +307,13 @@ export const simulationFlow = ai.defineFlow(
         putLTP: Math.max(0, opt.putLTP + getRandom(-0.5, 0.5) + (newClosePrice - opt.strike) / 100),
     }));
 
-    const priceMovement = newClosePrice - (chartData[chartData.length - 1]?.ohlc[3] || newClosePrice);
+    const calculatedRSI = calculateRSI(newChartData);
+
     const newIndicators = indicators.map(ind => {
         let newValue = ind.value;
-        if (ind.name.includes('RSI')) newValue = Math.max(0, Math.min(100, ind.value + priceMovement * 2));
-        else if (ind.name.includes('MACD')) newValue = ind.value + priceMovement / 10;
-        else if (ind.name.includes('ADX')) newValue = Math.max(10, ind.value + (Math.abs(priceMovement) > 1 ? 0.5 : -0.2));
+        if (ind.name.includes('RSI')) newValue = calculatedRSI ?? ind.value;
+        else if (ind.name.includes('MACD')) newValue = ind.value + (newClosePrice - chartData[chartData.length - 1].ohlc[3])/10;
+        else if (ind.name.includes('ADX')) newValue = Math.max(10, ind.value + (Math.abs(newClosePrice - chartData[chartData.length - 1].ohlc[3]) > 1 ? 0.5 : -0.2));
         return {...ind, value: parseFloat(newValue.toFixed(2))};
     });
 

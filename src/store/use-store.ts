@@ -96,7 +96,7 @@ export type Signal = {
     reason: string;
 }
 
-type TradingStatus = 'ACTIVE' | 'STOPPED';
+type TradingStatus = 'ACTIVE' | 'STOPPED' | 'EMERGENCY_STOP';
 type CandleType = 'candlestick' | 'heikin-ashi' | 'line';
 
 
@@ -123,6 +123,7 @@ export type StoreState = {
     toggleTradingStatus: () => void;
     setLastTickTime: (time: number) => void; 
     setCandleType: (type: CandleType) => void;
+    emergencyStop: () => void;
 };
 
 const INITIAL_EQUITY = 500000;
@@ -178,8 +179,10 @@ export const useStore = create<StoreState>((set, get) => ({
     updateIndicators: (newIndicators) => set({ indicators: newIndicators }),
     updateOptionChain: (newOptionChain) => set({ optionChain: newOptionChain }),
     addSignal: (newSignal) => set(state => ({ signals: [newSignal, ...state.signals].slice(0, 20) })),
-    toggleTradingStatus: () => set(state => ({
-        tradingStatus: state.tradingStatus === 'ACTIVE' ? 'STOPPED' : 'ACTIVE'
-    })),
+    toggleTradingStatus: () => set(state => {
+        if (state.tradingStatus === 'EMERGENCY_STOP') return {};
+        return { tradingStatus: state.tradingStatus === 'ACTIVE' ? 'STOPPED' : 'ACTIVE' };
+    }),
     setLastTickTime: (time) => set({ lastTickTime: time }),
+    emergencyStop: () => set({ tradingStatus: 'EMERGENCY_STOP' }),
 }));

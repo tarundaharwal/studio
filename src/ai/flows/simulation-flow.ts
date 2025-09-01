@@ -80,7 +80,7 @@ const SimulationInputSchema = z.object({
   overview: OverviewSchema,
   indicators: z.array(IndicatorSchema),
   optionChain: z.array(OptionSchema),
-  tradingStatus: z.enum(['ACTIVE', 'STOPPED']),
+  tradingStatus: z.enum(['ACTIVE', 'STOPPED', 'EMERGENCY_STOP']),
   lastTickTime: z.number(), // Added to track time between ticks
 });
 export type SimulationInput = z.infer<typeof SimulationInputSchema>;
@@ -96,6 +96,7 @@ const SimulationOutputSchema = z.object({
     optionChain: z.array(OptionSchema),
     newOrders: z.array(OrderSchema),
     newSignals: z.array(SignalSchema),
+    tradingStatus: z.enum(['ACTIVE', 'STOPPED', 'EMERGENCY_STOP']),
 });
 export type SimulationOutput = z.infer<typeof SimulationOutputSchema>;
 
@@ -215,24 +216,38 @@ export const simulationFlow = ai.defineFlow(
     
     const newOrders: z.infer<typeof OrderSchema>[] = [];
     const newSignals: z.infer<typeof SignalSchema>[] = [];
+    let nextTradingStatus = tradingStatus;
+    
+    const now = Date.now();
+    const nowLocale = new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    let newPrice = chartData[chartData.length - 1].ohlc[3]; // Default to last known price
+
+    // --- EMERGENCY STOP LOGIC ---
+    if (tradingStatus === 'EMERGENCY_STOP') {
+        if (positions.length > 0) {
+            positions.forEach(pos => {
+                newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: newPrice, status: 'EXECUTED' });
+                const pnlFromTrade = (newPrice - pos.avgPrice) * pos.qty;
+                overview.equity += pnlFromTrade;
+            });
+            newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP ACTIVATED', instrument: 'ALL', reason: 'User initiated emergency stop.' });
+            positions = []; // Clear all positions
+        }
+        nextTradingStatus = 'STOPPED'; // Set status to STOPPED after liquidating
+    }
 
     // --- MARKET DATA SIMULATION ---
     let newChartData = JSON.parse(JSON.stringify(chartData));
     let currentCandle = newChartData[newChartData.length - 1];
     
-    // Determine if the timeframe for the current candle has elapsed
     const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
     
     const [lastCandleHours, lastCandleMinutes] = currentCandle.time.split(':').map(Number);
     const lastCandleDate = new Date();
     lastCandleDate.setHours(lastCandleHours, lastCandleMinutes, 0, 0);
     
-    // We need to check if the current time has crossed into the next timeframe interval
-    const now = Date.now();
     const isNewCandleTime = (now - lastCandleDate.getTime()) >= timeframeDuration;
     
-    let newPrice: number;
-
     if (isNewCandleTime) {
         // AI-POWERED NEW CANDLE GENERATION
         const recentHistory = newChartData.slice(-5);
@@ -262,7 +277,6 @@ export const simulationFlow = ai.defineFlow(
         // --- TRADING LOGIC (Only on new candle & if trading is active) ---
         if (tradingStatus === 'ACTIVE' && currentRSI !== null) {
             const hasOpenPosition = positions.length > 0;
-            const nowLocale = new Date(now).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
             // RSI Buy Condition
             if (currentRSI < 30 && !hasOpenPosition) {
@@ -342,6 +356,7 @@ export const simulationFlow = ai.defineFlow(
       optionChain: newOptionChain,
       newOrders,
       newSignals,
+      tradingStatus: nextTradingStatus,
     };
   }
 );

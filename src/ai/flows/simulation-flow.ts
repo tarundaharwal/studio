@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview The backend simulation engine for the IndMon trading dashboard.
@@ -225,6 +224,7 @@ export const simulationFlow = ai.defineFlow(
     // --- EMERGENCY STOP LOGIC ---
     if (tradingStatus === 'EMERGENCY_STOP') {
         if (positions.length > 0) {
+            newPrice = chartData[chartData.length - 1].ohlc[3]; // Use last known price for closing
             positions.forEach(pos => {
                 newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: newPrice, status: 'EXECUTED' });
                 const pnlFromTrade = (newPrice - pos.avgPrice) * pos.qty;
@@ -242,10 +242,10 @@ export const simulationFlow = ai.defineFlow(
     
     const timeframeDuration = timeframes[timeframe] || timeframes['5m'];
     
-    const [lastCandleHours, lastCandleMinutes] = currentCandle.time.split(':').map(Number);
-    const lastCandleDate = new Date();
-    lastCandleDate.setHours(lastCandleHours, lastCandleMinutes, 0, 0);
-    
+    const lastCandleDate = new Date(lastTickTime); // Use lastTickTime to be precise
+    lastCandleDate.setMinutes(Math.floor(lastCandleDate.getMinutes() / (timeframeDuration / (60 * 1000))) * (timeframeDuration / (60 * 1000)));
+    lastCandleDate.setSeconds(0, 0);
+
     const isNewCandleTime = (now - lastCandleDate.getTime()) >= timeframeDuration;
     
     if (isNewCandleTime) {
@@ -335,7 +335,7 @@ export const simulationFlow = ai.defineFlow(
             }
         }
         
-        // Update positions after stop-loss check
+        // IMPORTANT: Update positions list immediately after stop-loss check
         positions = nextPositions;
         
         // ENTRY/EXIT LOGIC
@@ -351,6 +351,7 @@ export const simulationFlow = ai.defineFlow(
         const isBuySignal = !hasOpenPosition && currentRSI < 40 && currentMACD > 0 && currentADX > 25;
         
         // Smart Confluence SELL Condition
+        // Check hasOpenPosition again in case stop-loss just closed it
         const isSellSignal = hasOpenPosition && (currentRSI > 70 || currentMACD < 0);
 
         if (isBuySignal) {

@@ -45,8 +45,14 @@ export function DataSimulator() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API Error Response:", errorData);
+        // Try to get text first, as error response might not be JSON
+        const errorText = await response.text();
+        try {
+          const errorData = JSON.parse(errorText);
+          console.error("API Error Response (JSON):", errorData);
+        } catch (e) {
+          console.error("API Error Response (Text):", errorText);
+        }
         throw new Error(`API call failed with status: ${response.status}`);
       }
 

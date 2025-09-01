@@ -292,7 +292,7 @@ export const simulationFlow = ai.defineFlow(
         const hasOpenPosition = positions.length > 0;
         const calculatedRSI = calculateRSI(newChartData);
 
-        // Get current indicator values
+        // Get current indicator values, with safe fallbacks
         const currentRSI = calculatedRSI ?? indicators.find(i => i.name.includes('RSI'))?.value ?? 50;
         let currentMACD = indicators.find(i => i.name.includes('MACD'))?.value ?? 0;
         let currentADX = indicators.find(i => i.name.includes('ADX'))?.value ?? 20;
@@ -334,6 +334,7 @@ export const simulationFlow = ai.defineFlow(
     const newIndicators = indicators.map(ind => {
         let newValue = ind.value;
         if (ind.name.includes('RSI')) {
+            // Use the newly calculated RSI if available, otherwise keep the old value.
             newValue = calculatedRSI ?? ind.value;
         } else if (ind.name.includes('MACD')) {
             // This is a simplified simulation of MACD value change

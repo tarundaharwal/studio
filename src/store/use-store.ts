@@ -87,6 +87,7 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
             const open = data[58].ohlc[3];
             const close = open + 200; // Big jump to trigger profit state
             data[59].ohlc = [open, close + 20, open - 5, close];
+            data[59].volume = 300000;
         }
 
         // 6. SELL Signal (Focused/Purple): Create high RSI to take profit. Happens candle 61.
@@ -94,6 +95,7 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
             const open = data[60].ohlc[3];
             const close = open + 60; // Push RSI high to trigger SELL
             data[61].ohlc = [open, close + 30, open, close];
+            data[61].volume = 250000;
         }
         
         // 7. Second Buy for Loss Scenario. Happens candle 64.
@@ -108,6 +110,7 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
             const open = data[65].ohlc[3];
             const close = open - 250; // Big drop to trigger loss state
             data[66].ohlc = [open, open+10, close-10, close];
+            data[66].volume = 400000;
         }
     }
 

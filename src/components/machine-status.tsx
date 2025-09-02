@@ -30,14 +30,19 @@ export function MachineStatus() {
   const latestSignal = signals.length > 0 ? signals[0] : null;
 
   // This is the core logic that connects the entire app state to the brain's status.
+  // The order of these checks is CRITICAL. We check for the most specific and high-priority states first.
   const status: BrainStatus = useMemo(() => {
-    if (!isClient || tradingStatus === 'STOPPED' || tradingStatus === 'EMERGENCY_STOP') {
+    if (!isClient) {
+      return 'idle';
+    }
+
+    // 1. IDLE: Highest priority. If trading is off, nothing else matters.
+    if (tradingStatus === 'STOPPED' || tradingStatus === 'EMERGENCY_STOP') {
       return 'idle';
     }
     
+    // 2. FOCUSED: An action was just taken. This overrides everything for a few seconds.
     if (latestSignal) {
-        // focused status should be temporary after a signal
-        // We parse time from the signal string e.g. "14:35:12"
         const timeParts = latestSignal.time.split(':').map(Number);
         const signalDate = new Date();
         signalDate.setHours(timeParts[0], timeParts[1], timeParts[2]);
@@ -48,6 +53,7 @@ export function MachineStatus() {
         }
     }
 
+    // 3. PROFIT / LOSS: The state of an open position is very important.
     const hasOpenPosition = positions.length > 0;
     if (hasOpenPosition && positions[0]) {
         const pnlRatio = positions[0].pnl / overview.initialEquity;
@@ -55,7 +61,7 @@ export function MachineStatus() {
         if (pnlRatio < -0.01) return 'loss'; // Loss is > 1%
     }
     
-    // Alert conditions check
+    // 4. ALERT: If no major P&L event or action, check for dangerous market conditions.
     const rsi = indicators.find(i => i.name.includes('RSI'))?.value ?? 50;
     const totalPutOI = optionChain.reduce((acc, row) => acc + row.putOI, 0);
     const totalCallOI = optionChain.reduce((acc, row) => acc + row.callOI, 0);
@@ -72,7 +78,7 @@ export function MachineStatus() {
         return 'alert';
     }
 
-    // If none of the above, it's thinking
+    // 5. THINKING: If none of the above, the machine is in its default analysis state.
     return 'thinking';
 
   // We are using many state variables here to make the brain holistic
@@ -82,7 +88,7 @@ export function MachineStatus() {
 
   if (!isClient) {
     return (
-      <div className="flex h-[58px] w-24 animate-pulse rounded-md bg-muted"></div>
+      <div className="flex h-[58px] w-[58px] animate-pulse rounded-md bg-muted"></div>
     );
   }
 
@@ -99,7 +105,7 @@ export function MachineStatus() {
     <TooltipProvider>
         <Tooltip>
             <TooltipTrigger asChild>
-                <div className={cn("flex items-center justify-center rounded-lg border p-2 w-24 h-[58px] transition-colors duration-500", bgClass)}>
+                <div className={cn("flex items-center justify-center rounded-lg border p-1 w-[58px] h-[58px] transition-colors duration-500", bgClass)}>
                     <MachineBrainIcon status={status} />
                 </div>
             </TooltipTrigger>

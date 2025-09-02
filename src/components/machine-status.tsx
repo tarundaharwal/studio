@@ -37,7 +37,11 @@ export function MachineStatus() {
     
     if (latestSignal) {
         // focused status should be temporary after a signal
-        const signalTime = new Date(latestSignal.time).getTime();
+        // We parse time from the signal string e.g. "14:35:12"
+        const timeParts = latestSignal.time.split(':').map(Number);
+        const signalDate = new Date();
+        signalDate.setHours(timeParts[0], timeParts[1], timeParts[2]);
+        const signalTime = signalDate.getTime();
         const now = Date.now();
         if ((now - signalTime) < 3000 && latestSignal.strategy !== 'System' && latestSignal.strategy !== 'Risk Mgmt') {
              return 'focused';
@@ -45,7 +49,7 @@ export function MachineStatus() {
     }
 
     const hasOpenPosition = positions.length > 0;
-    if (hasOpenPosition) {
+    if (hasOpenPosition && positions[0]) {
         const pnlRatio = positions[0].pnl / overview.initialEquity;
         if (pnlRatio > 0.01) return 'profit'; // Profit is > 1% of initial capital
         if (pnlRatio < -0.01) return 'loss'; // Loss is > 1%

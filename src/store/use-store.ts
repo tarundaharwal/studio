@@ -54,51 +54,60 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
 
     if (isTestScenario) {
         // --- SCRIPTED TEST SCENARIO (ULTRA-ACCELERATED FOR DEMO) ---
-        // Events will happen back-to-back very quickly.
-
-        // 1. Initial calm period (Thinking state for ~5 candles)
+        // This script will force the state changes in a rapid sequence.
         
-        // 2. Volatility Spike (Alert state) -> Candle 6
+        // 1. Initial State: Normal/Thinking (Blue)
+        // The first few candles are generated with normal randomness.
+
+        // 2. Alert State (Yellow): Trigger high volatility. Happens around candle index 5.
+        if (data[5]) {
+            const open = data[4].ohlc[3];
+            const close = open - 150; // Sudden sharp drop
+            data[5].ohlc = [open, open + 10, close - 20, close];
+            data[5].volume = 450000;
+        }
+
+        // 3. Calm down to allow BUY signal. Happens at candle index 6.
         if (data[6]) {
             const open = data[5].ohlc[3];
-            const close = open - 150; // Sudden sharp drop
-            data[6].ohlc = [open, open + 10, close - 20, close];
-            data[6].volume = 450000;
-        }
-
-        // 3. Create a BUY condition -> Candle 8
-        if (data[8]) {
-            const open = data[7].ohlc[3];
-            const close = open + 5; // Stabilize to trigger BUY
-            data[8].ohlc = [open, close + 5, open - 5, close];
+            const close = open + 5; // Stabilize to exit alert state
+            data[6].ohlc = [open, close + 10, open - 10, close];
+            data[6].volume = 150000;
         }
         
-        // 4. Profit Period (Profit state) -> Candle 10
-        if (data[10]) {
-            const open = data[9].ohlc[3];
-            const close = open + 150; // Big jump to trigger profit
-            data[10].ohlc = [open, close + 20, open - 5, close];
-        }
-        
-        // 5. Sell Condition (to take profit) -> Candle 12
-         if (data[12]) {
-            const open = data[11].ohlc[3];
-            const close = open + 50; // Push RSI high to trigger SELL
-            data[12].ohlc = [open, close + 30, open, close];
+        // 4. BUY Signal (Focused/Purple): Create a low RSI condition. Happens at candle index 7.
+        if (data[7]) {
+            const open = data[6].ohlc[3];
+            const close = open - 45; // Small dip to make RSI go below 40
+            data[7].ohlc = [open, open + 5, close - 5, close];
         }
 
-        // 6. Loss Period (Loss state) -> Re-entry at 15, loss by 17
-        // New BUY signal
-        if (data[15]) {
-            const open = data[14].ohlc[3];
+        // 5. Profit State (Green): Create a strong upward trend after buying. Happens candle 9.
+        if (data[9]) {
+            const open = data[8].ohlc[3];
+            const close = open + 200; // Big jump to trigger profit state
+            data[9].ohlc = [open, close + 20, open - 5, close];
+        }
+
+        // 6. SELL Signal (Focused/Purple): Create high RSI to take profit. Happens candle 11.
+         if (data[11]) {
+            const open = data[10].ohlc[3];
+            const close = open + 60; // Push RSI high to trigger SELL
+            data[11].ohlc = [open, close + 30, open, close];
+        }
+        
+        // 7. Second Buy for Loss Scenario. Happens candle 14.
+        if (data[14]) {
+            const open = data[13].ohlc[3];
             const close = open - 40; // Small dip for re-entry
-            data[15].ohlc = [open, open+5, close-5, close];
+            data[14].ohlc = [open, open+5, close-5, close];
         }
-        // Sharp drop to cause loss
-        if (data[17]) {
-            const open = data[16].ohlc[3];
-            const close = open - 200; // Big drop to trigger loss state
-            data[17].ohlc = [open, open+10, close-10, close];
+
+        // 8. Loss State (Red): Create a sharp drop after the second buy. Happens candle 16.
+        if (data[16]) {
+            const open = data[15].ohlc[3];
+            const close = open - 250; // Big drop to trigger loss state
+            data[16].ohlc = [open, open+10, close-10, close];
         }
     }
 

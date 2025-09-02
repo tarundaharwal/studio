@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import type { BrainStatus } from './machine-status';
 
 const NUM_DOTS = 200;
@@ -27,10 +27,10 @@ const colors = {
 };
 
 export const MachineBrainIcon = ({ status }: { status: BrainStatus }) => {
-  const [dots, setDots] = useState<Dot[]>([]);
-  const [time, setTime] = useState(0);
+  const [dots, setDots] = React.useState<Dot[]>([]);
+  const [time, setTime] = React.useState(0);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const initialDots: Dot[] = [];
     for (let i = 0; i < NUM_DOTS; i++) {
       initialDots.push({
@@ -45,12 +45,12 @@ export const MachineBrainIcon = ({ status }: { status: BrainStatus }) => {
     setDots(initialDots);
   }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const animationFrame = requestAnimationFrame(() => setTime(t => t + 0.015));
     return () => cancelAnimationFrame(animationFrame);
   }, [time]);
   
-  const getDotProps = (dot: Dot, index: number) => {
+  const getDotProps = (dot: Dot) => {
     let currentRadius = dot.radius;
     let currentAngle = dot.angle;
     let opacity = dot.opacity;
@@ -65,7 +65,7 @@ export const MachineBrainIcon = ({ status }: { status: BrainStatus }) => {
              break;
 
         case 'thinking':
-            currentRadius = dot.radius * (1 + Math.sin(time * 4) * 0.05);
+            currentRadius = dot.radius * (1 + Math.sin(time * 4) * 0.05); // Gentle breathing
             currentAngle += Math.sin(time * 0.5) * 0.1; // Slow swirl
             break;
 
@@ -77,10 +77,11 @@ export const MachineBrainIcon = ({ status }: { status: BrainStatus }) => {
              break;
 
         case 'focused': // Just executed an order
-            const focusPulseTime = (time % 1); // Loop animation
+            const focusPulseTime = (time % 1); // Loop animation for 1s
             const focusPulseFactor = Math.exp(-focusPulseTime * 4) * Math.sin(focusPulseTime * Math.PI * 2);
             currentRadius = dot.radius * (1 - focusPulseFactor * 0.3); // Sharp INWARD pulse
             opacity = Math.max(0.1, 1 - focusPulseTime);
+            numVisibleDots = NUM_DOTS;
             break;
             
         case 'profit':
@@ -100,10 +101,8 @@ export const MachineBrainIcon = ({ status }: { status: BrainStatus }) => {
     
     const isVisible = dot.id < numVisibleDots;
 
-    const key = `${dot.id}-${status}-${index}`;
-
     return {
-        key: key,
+        key: `${dot.id}-${status}`,
         props: {
             cx: 25 + currentRadius * Math.cos(currentAngle),
             cy: 25 + currentRadius * Math.sin(currentAngle),
@@ -120,8 +119,8 @@ export const MachineBrainIcon = ({ status }: { status: BrainStatus }) => {
   return (
     <svg width="50" height="50" viewBox="0 0 50 50">
       <g>
-        {dots.map((dot, index) => {
-            const { key, props } = getDotProps(dot, index);
+        {dots.map((dot) => {
+            const { key, props } = getDotProps(dot);
             return <circle key={key} {...props} />;
         })}
       </g>

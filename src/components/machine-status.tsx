@@ -5,8 +5,18 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useStore } from '@/store/use-store';
 import { cn } from '@/lib/utils';
 import { MachineBrainIcon } from './machine-brain-icon';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 export type BrainStatus = 'idle' | 'thinking' | 'alert' | 'profit' | 'loss' | 'focused';
+
+const statusDescriptions: Record<BrainStatus, string> = {
+    idle: "Idle: Monitoring the market.",
+    thinking: "Thinking: Analyzing market data for opportunities.",
+    alert: "Alert: High volatility or extreme market conditions detected.",
+    profit: "Profit: Booking profits.",
+    loss: "Loss: Position is in loss.",
+    focused: "Focused: Executing an order.",
+};
 
 
 export function MachineStatus() {
@@ -79,8 +89,17 @@ export function MachineStatus() {
   }[status];
 
   return (
-    <div className={cn("flex items-center justify-center rounded-lg border p-2 w-24 h-[58px] transition-colors duration-500", bgClass)}>
-      <MachineBrainIcon status={status} />
-    </div>
+    <TooltipProvider>
+        <Tooltip>
+            <TooltipTrigger asChild>
+                <div className={cn("flex items-center justify-center rounded-lg border p-2 w-24 h-[58px] transition-colors duration-500", bgClass)}>
+                    <MachineBrainIcon status={status} />
+                </div>
+            </TooltipTrigger>
+            <TooltipContent>
+                <p>{statusDescriptions[status]}</p>
+            </TooltipContent>
+        </Tooltip>
+    </TooltipProvider>
   );
 }

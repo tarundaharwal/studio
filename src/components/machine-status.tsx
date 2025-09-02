@@ -6,73 +6,61 @@ import { useStore } from '@/store/use-store';
 import { cn } from '@/lib/utils';
 import { MachineBrainIcon } from './machine-brain-icon';
 
+export type BrainStatus = 'idle' | 'thinking' | 'alert' | 'profit' | 'loss' | 'focused';
+
 
 export function MachineStatus() {
-  const { signals, tradingStatus } = useStore();
+  const { signals, tradingStatus, overview, positions, indicators, optionChain, chartData } = useStore();
   const [isClient, setIsClient] = useState(false);
-  const [lastActionTime, setLastActionTime] = useState(0);
-
+  
   useEffect(() => {
     setIsClient(true);
   }, []);
 
   const latestSignal = signals.length > 0 ? signals[0] : null;
 
-  useEffect(() => {
-    if (latestSignal) {
-        // Any signal that isn't a system or risk management signal is a primary action
+  // This is the core logic that connects the entire app state to the brain's status.
+  const status: BrainStatus = useMemo(() => {
+    if (!isClient || tradingStatus === 'STOPPED' || tradingStatus === 'EMERGENCY_STOP') {
+      return 'idle';
+    }
+
+    const hasOpenPosition = positions.length > 0;
+    const currentPnl = hasOpenPosition ? positions[0].pnl : 0;
+    const rsi = indicators.find(i => i.name.includes('RSI'))?.value ?? 50;
+    const totalPutOI = optionChain.reduce((acc, row) => acc + row.putOI, 0);
+    const totalCallOI = optionChain.reduce((acc, row) => acc + row.callOI, 0);
+    const pcr = totalPutOI > 0 ? totalPutOI / totalCallOI : 0;
+
+    // Check for a recent order signal first (within 3 seconds)
+    if (latestSignal && (Date.now() - new Date(latestSignal.time).getTime()) < 3000) {
         if (latestSignal.strategy !== 'System' && latestSignal.strategy !== 'Risk Mgmt') {
-             setLastActionTime(Date.now());
-        }
-    }
-  }, [latestSignal]);
-
-
-  const status = useMemo(() => {
-    if (!latestSignal) {
-      return 'idle' as const;
-    }
-    
-    // If trading is stopped, it should be idle
-    if (tradingStatus === 'STOPPED') {
-        return 'idle' as const;
-    }
-
-    const action = latestSignal.action.toUpperCase();
-
-    // Show action status for 3 seconds, then revert to thinking.
-    const isRecentAction = (Date.now() - lastActionTime) < 3000;
-    
-    if (isRecentAction) {
-        if (action.includes('BUY')) {
-            return 'buy' as const;
-        }
-        if (action.includes('PROFIT')) {
-            return 'profit' as const;
-        }
-        if (action.includes('LOSS')) {
-            return 'loss' as const;
-        }
-        if (action.includes('EMERGENCY')) {
-            return 'loss' as const;
-        }
-        if (action.includes('STOP-LOSS')) {
-            return 'loss' as const;
-        }
-        if (action.includes('SELL')) {
-            return 'sell' as const;
+            return 'focused';
         }
     }
     
-    // Default/thinking state while active
-    if (tradingStatus === 'ACTIVE') {
-        return 'thinking' as const;
+    // Logic for profit and loss takes precedence if there is an open position
+    if (hasOpenPosition) {
+        if (currentPnl > overview.initialEquity * 0.01) return 'profit'; // Profit is > 1% of initial capital
+        if (currentPnl < -overview.initialEquity * 0.01) return 'loss'; // Loss is > 1%
+    }
+    
+    // Logic for market conditions
+    const lastCandles = chartData.slice(-3);
+    if (lastCandles.length >= 3) {
+      const priceChange = Math.abs(lastCandles[2]?.ohlc[3] - lastCandles[0]?.ohlc[0]);
+      const isVolatile = priceChange > 100; // If price moved more than 100 points in last 3 candles
+
+      if (isVolatile || rsi > 75 || rsi < 25 || pcr > 1.5 || pcr < 0.7) {
+          return 'alert';
+      }
     }
 
-    // Fallback to idle
-    return 'idle' as const;
 
-  }, [latestSignal, tradingStatus, lastActionTime]);
+    // If none of the above, it's thinking
+    return 'thinking';
+
+  }, [isClient, tradingStatus, signals, overview, positions, indicators, optionChain, chartData]);
 
 
   if (!isClient) {
@@ -83,11 +71,11 @@ export function MachineStatus() {
 
   const bgClass = {
     thinking: 'bg-blue-500/5',
-    buy: 'bg-green-500/10',
-    sell: 'bg-red-500/10',
     profit: 'bg-green-500/10',
     loss: 'bg-red-500/10',
     idle: 'bg-transparent',
+    alert: 'bg-yellow-500/10',
+    focused: 'bg-purple-500/10'
   }[status];
 
   return (

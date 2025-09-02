@@ -53,31 +53,31 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
     }
 
     if (isTestScenario) {
-        // --- SCRIPTED TEST SCENARIO ---
-        // This will override the random data to ensure all brain states are triggered.
+        // --- SCRIPTED TEST SCENARIO (Accelerated) ---
+        // This will override the random data to ensure all brain states are triggered quickly.
 
         // 1. Initial calm period (Thinking state)
-        // The first 20 candles will be relatively stable.
+        // First 10 candles are stable.
 
-        // 2. Volatility Spike (Alert state)
-        if (data[25]) {
-            const open = data[24].ohlc[3];
+        // 2. Volatility Spike (Alert state) -> Happens around candle 12
+        if (data[12]) {
+            const open = data[11].ohlc[3];
             const close = open - 120; // Sudden drop of 120 points
             const low = close - 20;
             const high = open + 10;
-            data[25].ohlc = [open, high, low, close];
-            data[25].volume = 400000;
+            data[12].ohlc = [open, high, low, close];
+            data[12].volume = 400000;
         }
 
-        // 3. Create a BUY condition (dip followed by stabilization)
-        let dipPrice = data[25]?.ohlc[3] || 22700;
+        // 3. Create a BUY condition (dip followed by stabilization) -> Happens around candle 15
+        let dipPrice = data[12]?.ohlc[3] || 22700;
         const buySetup = [
             { move: -20, vol: 0.8 },
-            { move: -10, vol: 0.6 }, // RSI should be low here
-            { move: 5, vol: 0.5 },   // Stabilization
+            { move: -10, vol: 0.6 }, // RSI should be low here, triggers BUY
+            { move: 5, vol: 0.5 },   
         ];
         for (let i = 0; i < buySetup.length; i++) {
-            const index = 26 + i;
+            const index = 13 + i;
             if (data[index]) {
                 const open = dipPrice;
                 const close = open + buySetup[i].move;
@@ -86,15 +86,15 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
             }
         }
         
-        // 4. Profit Period (Profit state)
-        let profitPrice = data[28]?.ohlc[3] || 22700;
+        // 4. Profit Period (Profit state) -> Happens around candle 18
+        let profitPrice = data[15]?.ohlc[3] || 22670;
         const profitRun = [
             { move: 40, vol: 1.0 },
             { move: 60, vol: 1.2 }, // Should trigger >1% profit
             { move: 50, vol: 1.1 },
         ];
         for (let i = 0; i < profitRun.length; i++) {
-            const index = 29 + i;
+            const index = 16 + i;
             if (data[index]) {
                 const open = profitPrice;
                 const close = open + profitRun[i].move;
@@ -103,23 +103,22 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
             }
         }
         
-        // 5. Sell Condition (to take profit)
-         if (data[32]) {
-            const open = data[31].ohlc[3];
-            const close = open + 20; // Push RSI high
-            data[32].ohlc = [open, close + 30, open, close];
+        // 5. Sell Condition (to take profit) -> Happens around candle 20
+         if (data[19]) {
+            const open = data[18].ohlc[3];
+            const close = open + 20; // Push RSI high to trigger SELL
+            data[19].ohlc = [open, close + 30, open, close];
         }
 
-        // 6. Loss Period (Loss state)
-        // Assuming a new trade is entered around candle 40
-        let lossPrice = data[40]?.ohlc[3] || 22900;
+        // 6. Loss Period (Loss state) -> Re-entry around candle 25, loss by candle 28
+        let lossPrice = data[24]?.ohlc[3] || 22900;
          const lossRun = [
             { move: 10, vol: 1.0 }, // Entry candle
             { move: -60, vol: 1.2 }, // Big drop
             { move: -50, vol: 1.1 }, // Should trigger >1% loss
         ];
         for (let i = 0; i < lossRun.length; i++) {
-            const index = 41 + i;
+            const index = 25 + i;
             if (data[index]) {
                 const open = lossPrice;
                 const close = open + lossRun[i].move;

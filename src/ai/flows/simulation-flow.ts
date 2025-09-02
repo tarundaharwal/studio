@@ -95,7 +95,7 @@ const SimulationOutputSchema = z.object({
     positions: z.array(PositionSchema),
     overview: OverviewSchema,
     indicators: z.array(IndicatorSchema),
-    optionChain: z.array(OptionSchema),
+    optionChain: z.array(OptionChainSchema),
     newOrders: z.array(OrderSchema),
     newSignals: z.array(SignalSchema),
     tradingStatus: z.enum(['ACTIVE', 'STOPPED', 'EMERGENCY_STOP']),
@@ -118,9 +118,13 @@ const getNextTime = (lastTime: string, timeframeMinutes: number): string => {
 
 const calculateRSI = (data: ChartData[], period: number = 14): number | null => {
     if (data.length <= period) return null;
-    const prices = data.map(d => d.ohlc[3]);
+    const prices = data.map(d => d.ohlc[3]); // Use closing prices
+    if(prices.length <= period) return null;
+
     let gains = 0;
     let losses = 0;
+
+    // Calculate initial average gain and loss
     for (let i = 1; i <= period; i++) {
         const change = prices[i] - prices[i-1];
         if (change > 0) gains += change;
@@ -128,11 +132,16 @@ const calculateRSI = (data: ChartData[], period: number = 14): number | null => 
     }
     let avgGain = gains / period;
     let avgLoss = losses / period;
+
+    // Calculate subsequent RSI values
     for (let i = period + 1; i < prices.length; i++) {
         const change = prices[i] - prices[i-1];
-        avgGain = (avgGain * (period - 1) + (change > 0 ? change : 0)) / period;
-        avgLoss = (avgLoss * (period - 1) + (change < 0 ? -change : 0)) / period;
+        const currentGain = change > 0 ? change : 0;
+        const currentLoss = change < 0 ? -change : 0;
+        avgGain = (avgGain * (period - 1) + currentGain) / period;
+        avgLoss = (avgLoss * (period - 1) + currentLoss) / period;
     }
+
     if (avgLoss === 0) return 100;
     const rs = avgGain / avgLoss;
     return 100 - (100 / (1 + rs));
@@ -149,88 +158,101 @@ export const simulationFlow = ai.defineFlow(
   async (input) => {
     let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, lastTickTime, tickCounter } = input;
     
+    let newPositions = [...positions];
     const newOrders: z.infer<typeof OrderSchema>[] = [];
     const newSignals: z.infer<typeof SignalSchema>[] = [];
     const now = new Date();
     const nowLocale = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     if (tradingStatus === 'STOPPED') {
-        return { chartData, positions, overview, indicators, optionChain, newOrders, newSignals, tradingStatus };
+        return { chartData, positions: newPositions, overview, indicators, optionChain, newOrders, newSignals, tradingStatus };
     }
     
     if (tradingStatus === 'EMERGENCY_STOP') {
         let pnlFromLiquidation = 0;
-        const closingPrice = chartData[chartData.length - 1].ohlc[3];
-        positions.forEach(pos => {
-            pnlFromLiquidation += (closingPrice - pos.avgPrice) * pos.qty;
-            newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: closingPrice, status: 'EXECUTED' });
-        });
-        newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP', instrument: 'ALL', reason: 'User initiated emergency stop.' });
+        const closingPrice = chartData.length > 0 ? chartData[chartData.length - 1].ohlc[3] : 0;
         
-        overview.equity += pnlFromLiquidation;
-        positions = [];
+        if (newPositions.length > 0) {
+            newPositions.forEach(pos => {
+                pnlFromLiquidation += (closingPrice - pos.avgPrice) * pos.qty;
+                newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: closingPrice, status: 'EXECUTED' });
+            });
+            newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP', instrument: 'ALL', reason: 'User initiated emergency stop.' });
+            
+            overview.equity += pnlFromLiquidation;
+            newPositions = [];
+        }
+        
         tradingStatus = 'STOPPED';
 
-        return { chartData, positions, overview, indicators, optionChain, newOrders, newSignals, tradingStatus };
+        return { chartData, positions: newPositions, overview, indicators, optionChain, newOrders, newSignals, tradingStatus };
     }
 
     // --- SCRIPTED SCENARIO LOGIC ---
-    let open = chartData[chartData.length - 1].ohlc[3];
-    let movement = (Math.random() - 0.5) * 25; // Base random movement
+    let open = chartData.length > 0 ? chartData[chartData.length - 1].ohlc[3] : 22800;
+    let movement = (Math.random() - 0.5) * 20; // Base random movement
     let vol = 150000;
-    let rsiOverride: number | null = null;
-
+    
     // SCENARIO STEPS DRIVEN BY TICK COUNTER
-    if (tickCounter === 15) { // Step 2: Sudden Drop -> Alert
+    // Step 1: Normal state (already handled by default)
+    
+    // Step 2: Sudden Drop -> Alert
+    if (tickCounter === 15) { 
         movement = -150;
         vol = 450000;
-        rsiOverride = 20;
         newSignals.push({ time: nowLocale, strategy: "Risk Mgmt", action: "ALERT", instrument: "NIFTY 50", reason: "High Volatility Detected" });
-    } else if (tickCounter === 22) { // Step 3: Buy Signal -> Focused
+    } 
+    // Step 3: Buy Signal -> Focused
+    else if (tickCounter === 22 && newPositions.length === 0) {
         movement = 20;
-        rsiOverride = 28; // Ensure RSI is low
         const price = open + movement;
         const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: price, ltp: price, pnl: 0 };
-        positions.push(newPosition);
+        newPositions.push(newPosition);
         newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: price, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'BUY', instrument: 'NIFTY AUG FUT', reason: `RSI<30, entering long position.`});
-    } else if (tickCounter > 25 && tickCounter <= 35) { // Step 4: Profit State
-        movement = 25; // Strong uptrend
+    } 
+    // Step 4: Profit State
+    else if (tickCounter > 25 && tickCounter <= 35) {
+        movement = 25; 
         vol = 250000;
-        if (tickCounter === 35) rsiOverride = 78; // Push RSI high for sell signal
-    } else if (tickCounter === 38) { // Step 5: Sell Signal -> Focused
+    } 
+    // Step 5: Sell Signal (Profit) -> Focused
+    else if (tickCounter === 38 && newPositions.length > 0) {
         movement = 15;
-        rsiOverride = 80;
-        const positionToClose = positions[0];
-        if (positionToClose) {
-            const price = open + movement;
-            const pnlFromTrade = (price - positionToClose.avgPrice) * positionToClose.qty;
-            overview.equity += pnlFromTrade;
-            newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
-            newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'SELL (Profit)', instrument: positionToClose.symbol, reason: `Profit booked: PnL was ${pnlFromTrade.toFixed(2)}`});
-            positions = [];
-        }
-    } else if (tickCounter === 45) { // Step 6a: Re-entry for loss
+        const positionToClose = newPositions[0];
+        const price = open + movement;
+        const pnlFromTrade = (price - positionToClose.avgPrice) * positionToClose.qty;
+        overview.equity += pnlFromTrade;
+        newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
+        newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'SELL (Profit)', instrument: positionToClose.symbol, reason: `Profit booked: PnL was ${pnlFromTrade.toFixed(2)}`});
+        // Remove position on the *next* tick to allow UI to show profit/loss state
+    }
+    else if (tickCounter === 39) { // Clear position from previous step
+        newPositions = [];
+    }
+    // Step 6a: Re-entry for loss
+    else if (tickCounter === 45 && newPositions.length === 0) {
         movement = -20;
-        rsiOverride = 45;
-         const price = open + movement;
+        const price = open + movement;
         const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: price, ltp: price, pnl: 0 };
-        positions.push(newPosition);
+        newPositions.push(newPosition);
         newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: price, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'BUY', instrument: 'NIFTY AUG FUT', reason: `Re-entering position.`});
-    } else if (tickCounter === 50) { // Step 6b: Big drop for Loss State
+    } 
+    // Step 6b: Big drop for Loss State
+    else if (tickCounter === 50 && newPositions.length > 0) {
         movement = -150;
         vol = 400000;
-        rsiOverride = 22;
-        const positionToClose = positions[0];
-        if (positionToClose) {
-            const price = open + movement;
-            const pnlFromTrade = (price - positionToClose.avgPrice) * positionToClose.qty;
-            overview.equity += pnlFromTrade;
-            newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
-            newSignals.push({ time: nowLocale, strategy: 'Risk Mgmt', action: 'STOP-LOSS', instrument: positionToClose.symbol, reason: `Loss booked: PnL was ${pnlFromTrade.toFixed(2)}`});
-            positions = [];
-        }
+        const positionToClose = newPositions[0];
+        const price = open + movement;
+        const pnlFromTrade = (price - positionToClose.avgPrice) * positionToClose.qty;
+        overview.equity += pnlFromTrade;
+        newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
+        newSignals.push({ time: nowLocale, strategy: 'Risk Mgmt', action: 'STOP-LOSS', instrument: positionToClose.symbol, reason: `Loss booked: PnL was ${pnlFromTrade.toFixed(2)}`});
+        // Remove position on the *next* tick
+    }
+    else if (tickCounter === 51) { // Clear position from previous step
+        newPositions = [];
     }
 
 
@@ -240,7 +262,7 @@ export const simulationFlow = ai.defineFlow(
     const low = Math.min(open, close) - getRandom(0, 15);
     const newPrice = close;
 
-    const lastCandleTime = chartData[chartData.length - 1].time;
+    const lastCandleTime = chartData.length > 0 ? chartData[chartData.length - 1].time : '09:10';
     const newTime = getNextTime(lastCandleTime, 5); // 5 min timeframe
 
     const newCandle: ChartData = {
@@ -251,7 +273,7 @@ export const simulationFlow = ai.defineFlow(
     const newChartData = [...chartData.slice(1), newCandle];
 
     // --- UPDATE POSITIONS PNL ---
-    positions = positions.map(pos => {
+    let positionsWithPnl = newPositions.map(pos => {
         const pnl = (newPrice - pos.avgPrice) * pos.qty;
         return { ...pos, ltp: newPrice, pnl: parseFloat(pnl.toFixed(2)) };
     });
@@ -261,10 +283,10 @@ export const simulationFlow = ai.defineFlow(
     const newIndicators = indicators.map(ind => {
         let newValue = ind.value;
         if (ind.name.includes('RSI')) {
-            newValue = rsiOverride ?? calculatedRSI ?? ind.value;
+            newValue = calculatedRSI ?? ind.value;
         } else if (ind.name.includes('MACD')) {
             newValue = ind.value + (movement / 10);
-        } else {
+        } else if (ind.name.includes('ADX')) {
             let adxChange = (Math.abs(movement) > 50 ? 2 : -1);
             newValue = Math.max(10, Math.min(100, ind.value + adxChange));
         }
@@ -279,7 +301,7 @@ export const simulationFlow = ai.defineFlow(
     }));
 
     // --- UPDATE PORTFOLIO DATA ---
-    const totalUnrealizedPnl = positions.reduce((acc, pos) => acc + pos.pnl, 0);
+    const totalUnrealizedPnl = positionsWithPnl.reduce((acc, pos) => acc + pos.pnl, 0);
     const realizedPnl = overview.equity - overview.initialEquity;
     overview.pnl = parseFloat((realizedPnl + totalUnrealizedPnl).toFixed(2));
     const currentTotalEquity = overview.equity + totalUnrealizedPnl;
@@ -290,7 +312,7 @@ export const simulationFlow = ai.defineFlow(
     // Return the new state
     return {
       chartData: newChartData,
-      positions: positions,
+      positions: positionsWithPnl,
       overview,
       indicators: newIndicators,
       optionChain: newOptionChain,
@@ -305,5 +327,3 @@ export const simulationFlow = ai.defineFlow(
 export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
     return simulationFlow(input);
 }
-
-    

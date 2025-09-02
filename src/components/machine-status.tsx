@@ -35,7 +35,7 @@ export function MachineStatus() {
     if (!isClient) {
       return 'idle';
     }
-
+    
     // 1. IDLE: Highest priority. If trading is off, nothing else matters.
     if (tradingStatus === 'STOPPED' || tradingStatus === 'EMERGENCY_STOP') {
       return 'idle';
@@ -43,44 +43,44 @@ export function MachineStatus() {
     
     // 2. FOCUSED: An action was just taken. This overrides everything for a few seconds.
     if (latestSignal) {
-        // A more robust way to parse time and check if it's recent
         const now = new Date();
-        const [hours, minutes, seconds] = latestSignal.time.split(':').map(Number);
+        const signalTimeParts = latestSignal.time.split(':').map(Number);
         const signalDate = new Date();
-        signalDate.setHours(hours, minutes, seconds);
+        signalDate.setHours(signalTimeParts[0], signalTimeParts[1], signalTimeParts[2]);
 
         // Handle case where signal is from previous day (e.g. 23:59 vs 00:01)
         if (signalDate > now) {
             signalDate.setDate(now.getDate() - 1);
         }
 
-        if ((now.getTime() - signalDate.getTime()) < 3000 && (latestSignal.action.includes('BUY') || latestSignal.action.includes('SELL'))) {
+        const isRecent = (now.getTime() - signalDate.getTime()) < 3000; // 3 seconds
+        const isAction = latestSignal.action.includes('BUY') || latestSignal.action.includes('SELL');
+
+        if (isRecent && isAction) {
              return 'focused';
         }
     }
 
     // 3. PROFIT / LOSS: The state of an open position is very important.
     const hasOpenPosition = positions.length > 0;
-    if (hasOpenPosition && positions[0]) {
-        const pnlRatio = positions[0].pnl / overview.initialEquity;
-        if (pnlRatio > 0.01) return 'profit'; // Profit is > 1% of initial capital
-        if (pnlRatio < -0.01) return 'loss'; // Loss is > 1%
+    if (hasOpenPosition) {
+        const currentPosition = positions[0];
+        const pnlRatio = currentPosition.pnl / overview.initialEquity;
+        if (pnlRatio > 0.005) return 'profit'; // Profit is > 0.5% of initial capital
+        if (pnlRatio < -0.005) return 'loss'; // Loss is > 0.5%
     }
     
     // 4. ALERT: If no major P&L event or action, check for dangerous market conditions.
     const rsi = indicators.find(i => i.name.includes('RSI'))?.value ?? 50;
-    const totalPutOI = optionChain.reduce((acc, row) => acc + row.putOI, 0);
-    const totalCallOI = optionChain.reduce((acc, row) => acc + row.callOI, 0);
-    const pcr = totalCallOI > 0 ? totalPutOI / totalCallOI : 0;
     
     const lastCandles = chartData.slice(-3);
     let isVolatile = false;
-    if (lastCandles.length >= 3 && lastCandles[0] && lastCandles[2]) {
-      const priceChange = Math.abs(lastCandles[2].ohlc[3] - lastCandles[0].ohlc[0]);
-      isVolatile = priceChange > 100; // If price moved more than 100 points in last 3 candles
+    if (lastCandles.length >= 2) {
+      const priceChange = Math.abs(lastCandles[1].ohlc[3] - lastCandles[0].ohlc[3]);
+      isVolatile = priceChange > 100; // If price moved more than 100 points in last candle
     }
 
-    if (isVolatile || rsi > 75 || rsi < 25 || pcr > 1.5 || pcr < 0.7) {
+    if (isVolatile || rsi > 75 || rsi < 25) {
         return 'alert';
     }
 
@@ -89,7 +89,7 @@ export function MachineStatus() {
 
   // We are using many state variables here to make the brain holistic
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, tradingStatus, signals, overview.initialEquity, positions, indicators, optionChain, chartData]);
+  }, [isClient, tradingStatus, signals, overview.initialEquity, positions, indicators, chartData]);
 
 
   if (!isClient) {

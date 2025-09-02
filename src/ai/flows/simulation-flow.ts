@@ -61,6 +61,7 @@ const OptionSchema = z.object({
     putIV: z.number(),
     putOI: z.number(),
 });
+export type Option = z.infer<typeof OptionSchema>;
 
 const SignalSchema = z.object({
     time: z.string(),
@@ -95,7 +96,7 @@ const SimulationOutputSchema = z.object({
     positions: z.array(PositionSchema),
     overview: OverviewSchema,
     indicators: z.array(IndicatorSchema),
-    optionChain: z.array(OptionChainSchema),
+    optionChain: z.array(OptionSchema),
     newOrders: z.array(OrderSchema),
     newSignals: z.array(SignalSchema),
     tradingStatus: z.enum(['ACTIVE', 'STOPPED', 'EMERGENCY_STOP']),
@@ -159,6 +160,7 @@ export const simulationFlow = ai.defineFlow(
     let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, lastTickTime, tickCounter } = input;
     
     let newPositions = [...positions];
+    let finalTradingStatus = tradingStatus;
     const newOrders: z.infer<typeof OrderSchema>[] = [];
     const newSignals: z.infer<typeof SignalSchema>[] = [];
     const now = new Date();
@@ -183,9 +185,19 @@ export const simulationFlow = ai.defineFlow(
             newPositions = [];
         }
         
-        tradingStatus = 'STOPPED';
+        finalTradingStatus = 'STOPPED';
 
-        return { chartData, positions: newPositions, overview, indicators, optionChain, newOrders, newSignals, tradingStatus };
+        // Even in a stopped state, return the full final state.
+        return { 
+            chartData, 
+            positions: newPositions, 
+            overview, 
+            indicators, 
+            optionChain, 
+            newOrders, 
+            newSignals, 
+            tradingStatus: finalTradingStatus 
+        };
     }
 
     // --- SCRIPTED SCENARIO LOGIC ---
@@ -194,15 +206,14 @@ export const simulationFlow = ai.defineFlow(
     let vol = 150000;
     
     // SCENARIO STEPS DRIVEN BY TICK COUNTER
-    // Step 1: Normal state (already handled by default)
     
-    // Step 2: Sudden Drop -> Alert
+    // Step 1: Sudden Drop -> Alert
     if (tickCounter === 15) { 
         movement = -150;
         vol = 450000;
         newSignals.push({ time: nowLocale, strategy: "Risk Mgmt", action: "ALERT", instrument: "NIFTY 50", reason: "High Volatility Detected" });
     } 
-    // Step 3: Buy Signal -> Focused
+    // Step 2: Buy Signal -> Focused
     else if (tickCounter === 22 && newPositions.length === 0) {
         movement = 20;
         const price = open + movement;
@@ -211,12 +222,12 @@ export const simulationFlow = ai.defineFlow(
         newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: price, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'BUY', instrument: 'NIFTY AUG FUT', reason: `RSI<30, entering long position.`});
     } 
-    // Step 4: Profit State
+    // Step 3: Profit State
     else if (tickCounter > 25 && tickCounter <= 35) {
         movement = 25; 
         vol = 250000;
     } 
-    // Step 5: Sell Signal (Profit) -> Focused
+    // Step 4: Sell Signal (Profit) -> Focused
     else if (tickCounter === 38 && newPositions.length > 0) {
         movement = 15;
         const positionToClose = newPositions[0];
@@ -225,12 +236,12 @@ export const simulationFlow = ai.defineFlow(
         overview.equity += pnlFromTrade;
         newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'SELL (Profit)', instrument: positionToClose.symbol, reason: `Profit booked: PnL was ${pnlFromTrade.toFixed(2)}`});
-        // Remove position on the *next* tick to allow UI to show profit/loss state
+        // Position will be removed on the next tick to allow UI to see profit state
     }
-    else if (tickCounter === 39) { // Clear position from previous step
+    else if (tickCounter === 39) { 
         newPositions = [];
     }
-    // Step 6a: Re-entry for loss
+    // Step 5: Re-entry for loss
     else if (tickCounter === 45 && newPositions.length === 0) {
         movement = -20;
         const price = open + movement;
@@ -239,7 +250,7 @@ export const simulationFlow = ai.defineFlow(
         newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: price, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'BUY', instrument: 'NIFTY AUG FUT', reason: `Re-entering position.`});
     } 
-    // Step 6b: Big drop for Loss State
+    // Step 6: Big drop for Loss State -> Sell
     else if (tickCounter === 50 && newPositions.length > 0) {
         movement = -150;
         vol = 400000;
@@ -248,10 +259,10 @@ export const simulationFlow = ai.defineFlow(
         const pnlFromTrade = (price - positionToClose.avgPrice) * positionToClose.qty;
         overview.equity += pnlFromTrade;
         newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
-        newSignals.push({ time: nowLocale, strategy: 'Risk Mgmt', action: 'STOP-LOSS', instrument: positionToClose.symbol, reason: `Loss booked: PnL was ${pnlFromTrade.toFixed(2)}`});
-        // Remove position on the *next* tick
+        newSignals.push({ time: nowLocale, strategy: 'Risk Mgmt', action: 'SELL (Loss)', instrument: positionToClose.symbol, reason: `Loss booked: PnL was ${pnlFromTrade.toFixed(2)}`});
+        // Position will be removed on the next tick
     }
-    else if (tickCounter === 51) { // Clear position from previous step
+    else if (tickCounter === 51) { 
         newPositions = [];
     }
 
@@ -318,7 +329,7 @@ export const simulationFlow = ai.defineFlow(
       optionChain: newOptionChain,
       newOrders,
       newSignals,
-      tradingStatus,
+      tradingStatus: finalTradingStatus,
     };
   }
 );

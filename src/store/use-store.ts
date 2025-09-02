@@ -22,7 +22,7 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
 
     for (let i = 0; i < count; i++) {
         const candleTime = new Date(startTime + i * interval);
-        const open = lastClose;
+        let open = lastClose;
 
         // Make volatility dynamic - it can increase or decrease over time
         volatility += (Math.random() - 0.5) * 0.1;
@@ -33,17 +33,17 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
         // The movement is influenced by drift, the random shock, and the current volatility
         const movement = drift + randomShock * volatility * 15;
 
-        const close = open + movement;
+        let close = open + movement;
 
         // Determine high and low based on volatility
         const highLowSpread = Math.abs(movement) + Math.random() * 25 * volatility;
-        const high = Math.max(open, close) + Math.random() * highLowSpread * 0.6; // 60% of spread above
-        const low = Math.min(open, close) - Math.random() * highLowSpread * 0.4; // 40% of spread below
+        let high = Math.max(open, close) + Math.random() * highLowSpread * 0.6; // 60% of spread above
+        let low = Math.min(open, close) - Math.random() * highLowSpread * 0.4; // 40% of spread below
 
         lastClose = close;
 
         // Volume should be somewhat correlated with the size of the price change
-        const volume = 100000 + (Math.abs(movement) * 8000) + (Math.random() * 75000);
+        let volume = 100000 + (Math.abs(movement) * 8000) + (Math.random() * 75000);
 
         data.push({
             time: candleTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
@@ -59,55 +59,55 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
         // 1. Initial State: Normal/Thinking (Blue)
         // The first few candles are generated with normal randomness.
 
-        // 2. Alert State (Yellow): Trigger high volatility. Happens around candle index 5.
-        if (data[5]) {
-            const open = data[4].ohlc[3];
+        // 2. Alert State (Yellow): Trigger high volatility. Happens around candle index 55.
+        if (data[55]) {
+            const open = data[54].ohlc[3];
             const close = open - 150; // Sudden sharp drop
-            data[5].ohlc = [open, open + 10, close - 20, close];
-            data[5].volume = 450000;
+            data[55].ohlc = [open, open + 10, close - 20, close];
+            data[55].volume = 450000;
         }
 
-        // 3. Calm down to allow BUY signal. Happens at candle index 6.
-        if (data[6]) {
-            const open = data[5].ohlc[3];
+        // 3. Calm down to allow BUY signal. Happens at candle index 56.
+        if (data[56]) {
+            const open = data[55].ohlc[3];
             const close = open + 5; // Stabilize to exit alert state
-            data[6].ohlc = [open, close + 10, open - 10, close];
-            data[6].volume = 150000;
+            data[56].ohlc = [open, close + 10, open - 10, close];
+            data[56].volume = 150000;
         }
         
-        // 4. BUY Signal (Focused/Purple): Create a low RSI condition. Happens at candle index 7.
-        if (data[7]) {
-            const open = data[6].ohlc[3];
+        // 4. BUY Signal (Focused/Purple): Create a low RSI condition. Happens at candle index 57.
+        if (data[57]) {
+            const open = data[56].ohlc[3];
             const close = open - 45; // Small dip to make RSI go below 40
-            data[7].ohlc = [open, open + 5, close - 5, close];
+            data[57].ohlc = [open, open + 5, close - 5, close];
         }
 
-        // 5. Profit State (Green): Create a strong upward trend after buying. Happens candle 9.
-        if (data[9]) {
-            const open = data[8].ohlc[3];
+        // 5. Profit State (Green): Create a strong upward trend after buying. Happens candle 59.
+        if (data[59]) {
+            const open = data[58].ohlc[3];
             const close = open + 200; // Big jump to trigger profit state
-            data[9].ohlc = [open, close + 20, open - 5, close];
+            data[59].ohlc = [open, close + 20, open - 5, close];
         }
 
-        // 6. SELL Signal (Focused/Purple): Create high RSI to take profit. Happens candle 11.
-         if (data[11]) {
-            const open = data[10].ohlc[3];
+        // 6. SELL Signal (Focused/Purple): Create high RSI to take profit. Happens candle 61.
+         if (data[61]) {
+            const open = data[60].ohlc[3];
             const close = open + 60; // Push RSI high to trigger SELL
-            data[11].ohlc = [open, close + 30, open, close];
+            data[61].ohlc = [open, close + 30, open, close];
         }
         
-        // 7. Second Buy for Loss Scenario. Happens candle 14.
-        if (data[14]) {
-            const open = data[13].ohlc[3];
+        // 7. Second Buy for Loss Scenario. Happens candle 64.
+        if (data[64]) {
+            const open = data[63].ohlc[3];
             const close = open - 40; // Small dip for re-entry
-            data[14].ohlc = [open, open+5, close-5, close];
+            data[64].ohlc = [open, open+5, close-5, close];
         }
 
-        // 8. Loss State (Red): Create a sharp drop after the second buy. Happens candle 16.
-        if (data[16]) {
-            const open = data[15].ohlc[3];
+        // 8. Loss State (Red): Create a sharp drop after the second buy. Happens candle 66.
+        if (data[66]) {
+            const open = data[65].ohlc[3];
             const close = open - 250; // Big drop to trigger loss state
-            data[16].ohlc = [open, open+10, close-10, close];
+            data[66].ohlc = [open, open+10, close-10, close];
         }
     }
 

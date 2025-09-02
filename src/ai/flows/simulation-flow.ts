@@ -227,15 +227,22 @@ export const simulationFlow = ai.defineFlow(
         if (positions.length > 0) {
             newPrice = chartData[chartData.length - 1].ohlc[3]; // Use last known price for closing
             positions.forEach(pos => {
-                newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: newPrice, status: 'EXECUTED' });
                 const pnlFromTrade = (newPrice - pos.avgPrice) * pos.qty;
                 overview.equity += pnlFromTrade;
+                newOrders.push({ time: nowLocale, symbol: pos.symbol, type: 'SELL', qty: pos.qty, price: newPrice, status: 'EXECUTED' });
             });
             newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP', instrument: 'ALL', reason: 'User initiated emergency stop.' });
             positions = []; // Clear all positions
         }
         nextTradingStatus = 'STOPPED'; // Set status to STOPPED after liquidating
     }
+    
+    // --- If trading is stopped, we only simulate market data, no new trades ---
+    if (tradingStatus === 'STOPPED') {
+        // Return the current state with market data potentially updated, but no trades
+        // This was a source of a bug - we need to run the simulation part too.
+    }
+
 
     // --- MARKET DATA SIMULATION ---
     let newChartData = JSON.parse(JSON.stringify(chartData));

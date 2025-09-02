@@ -43,12 +43,18 @@ export function MachineStatus() {
     
     // 2. FOCUSED: An action was just taken. This overrides everything for a few seconds.
     if (latestSignal) {
-        const timeParts = latestSignal.time.split(':').map(Number);
+        // A more robust way to parse time and check if it's recent
+        const now = new Date();
+        const [hours, minutes, seconds] = latestSignal.time.split(':').map(Number);
         const signalDate = new Date();
-        signalDate.setHours(timeParts[0], timeParts[1], timeParts[2]);
-        const signalTime = signalDate.getTime();
-        const now = Date.now();
-        if ((now - signalTime) < 3000 && latestSignal.strategy !== 'System' && latestSignal.strategy !== 'Risk Mgmt') {
+        signalDate.setHours(hours, minutes, seconds);
+
+        // Handle case where signal is from previous day (e.g. 23:59 vs 00:01)
+        if (signalDate > now) {
+            signalDate.setDate(now.getDate() - 1);
+        }
+
+        if ((now.getTime() - signalDate.getTime()) < 3000 && (latestSignal.action.includes('BUY') || latestSignal.action.includes('SELL'))) {
              return 'focused';
         }
     }
@@ -69,8 +75,8 @@ export function MachineStatus() {
     
     const lastCandles = chartData.slice(-3);
     let isVolatile = false;
-    if (lastCandles.length >= 3) {
-      const priceChange = Math.abs(lastCandles[2]?.ohlc[3] - lastCandles[0]?.ohlc[0]);
+    if (lastCandles.length >= 3 && lastCandles[0] && lastCandles[2]) {
+      const priceChange = Math.abs(lastCandles[2].ohlc[3] - lastCandles[0].ohlc[0]);
       isVolatile = priceChange > 100; // If price moved more than 100 points in last 3 candles
     }
 

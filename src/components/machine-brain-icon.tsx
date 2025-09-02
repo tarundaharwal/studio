@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { BrainStatus } from './machine-status';
 
 const NUM_DOTS = 200;
@@ -50,12 +50,11 @@ export const MachineBrainIcon = ({ status }: { status: BrainStatus }) => {
     return () => cancelAnimationFrame(animationFrame);
   }, [time]);
   
-  const getDotProps = (dot: Dot) => {
+  const getDotProps = (dot: Dot, index: number) => {
     let currentRadius = dot.radius;
     let currentAngle = dot.angle;
     let opacity = dot.opacity;
     let color = colors[status] || colors.idle;
-    const key = `${dot.id}-${status}`;
     let numVisibleDots = NUM_DOTS;
 
     switch (status) {
@@ -101,15 +100,19 @@ export const MachineBrainIcon = ({ status }: { status: BrainStatus }) => {
     
     const isVisible = dot.id < numVisibleDots;
 
+    const key = `${dot.id}-${status}-${index}`;
+
     return {
         key: key,
-        cx: 25 + currentRadius * Math.cos(currentAngle),
-        cy: 25 + currentRadius * Math.sin(currentAngle),
-        r: DOT_RADIUS,
-        fill: color,
-        style: { 
-            opacity: isVisible ? opacity : 0, 
-            transition: 'fill 0.5s ease-out, opacity 0.3s linear' 
+        props: {
+            cx: 25 + currentRadius * Math.cos(currentAngle),
+            cy: 25 + currentRadius * Math.sin(currentAngle),
+            r: DOT_RADIUS,
+            fill: color,
+            style: { 
+                opacity: isVisible ? opacity : 0, 
+                transition: 'fill 0.5s ease-out, opacity 0.3s linear' 
+            }
         }
     };
   };
@@ -117,9 +120,9 @@ export const MachineBrainIcon = ({ status }: { status: BrainStatus }) => {
   return (
     <svg width="50" height="50" viewBox="0 0 50 50">
       <g>
-        {dots.map((dot) => {
-            const props = getDotProps(dot);
-            return <circle {...props} />;
+        {dots.map((dot, index) => {
+            const { key, props } = getDotProps(dot, index);
+            return <circle key={key} {...props} />;
         })}
       </g>
     </svg>

@@ -19,39 +19,39 @@ export function MachineStatus() {
 
   const status = useMemo(() => {
     if (!latestSignal) {
-      return { text: 'Analyzing...', type: 'thinking' as const };
+      return { type: 'thinking' as const };
     }
 
     const action = latestSignal.action.toUpperCase();
 
     if (action.includes('BUY')) {
-      return { text: 'BUY Order Executed', type: 'buy' as const };
+      return { type: 'buy' as const };
     }
     if (action.includes('PROFIT')) {
-        return { text: 'Profit Booked', type: 'profit' as const };
+        return { type: 'profit' as const };
     }
     if (action.includes('LOSS')) {
-        return { text: 'Loss Booked', type: 'loss'as const };
+        return { type: 'loss'as const };
     }
     if (action.includes('EMERGENCY')) {
-        return { text: 'EMERGENCY STOP', type: 'loss' as const };
+        return { type: 'loss' as const };
     }
     if (action.includes('STOP-LOSS')) {
-        return { text: 'Stop-Loss Hit', type: 'loss' as const };
+        return { type: 'loss' as const };
     }
     if (action.includes('SELL')) {
-      return { text: 'SELL Order Executed', type: 'sell' as const };
+      return { type: 'sell' as const };
     }
     
     // Default/thinking state
-    return { text: 'Analyzing...', type: 'thinking' as const };
+    return { type: 'thinking' as const };
 
   }, [latestSignal]);
 
 
   if (!isClient) {
     return (
-      <div className="flex h-12 w-48 animate-pulse rounded-md bg-muted"></div>
+      <div className="flex h-[58px] w-24 animate-pulse rounded-md bg-muted"></div>
     );
   }
 
@@ -64,12 +64,8 @@ export function MachineStatus() {
   }[status.type];
 
   return (
-    <div className={cn("flex items-center gap-3 rounded-lg border p-2 min-w-fit flex-1", bgClass)}>
+    <div className={cn("flex items-center justify-center rounded-lg border p-2 w-24 h-[58px]", bgClass)}>
       <MachineBrainIcon status={status.type} />
-      <div className="flex flex-col">
-        <p className="text-xs font-bold text-foreground">{status.text}</p>
-        <p className="text-[10px] text-muted-foreground">IndMon Brain</p>
-      </div>
     </div>
   );
 }

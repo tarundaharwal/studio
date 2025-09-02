@@ -77,7 +77,7 @@ export const MachineBrainIcon = ({ status }: { status: 'thinking' | 'buy' | 'sel
   };
 
   return (
-    <svg width="50" height="50" viewBox="0 0 50 50" className="w-6 h-6">
+    <svg width="50" height="50" viewBox="0 0 50 50">
       <g>
         {dots.map((dot, index) => {
             const props = getDotProps(dot, index);

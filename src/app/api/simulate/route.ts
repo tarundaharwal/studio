@@ -10,10 +10,13 @@ export async function POST(req: NextRequest) {
     const newState: SimulationOutput = await runSimulation(body);
 
     // Pass the current time back to the client so it knows when the tick was processed
-    return NextResponse.json({ ...newState, lastTickTime: Date.now() });
+    // Also pass the tickCounter back so it can be incremented
+    return NextResponse.json({ ...newState, lastTickTime: Date.now(), tickCounter: body.tickCounter + 1 });
 
   } catch (error: any) {
     console.error("API Route Error:", error);
     return NextResponse.json({ message: "Error running simulation", error: error.message }, { status: 500 });
   }
 }
+
+    

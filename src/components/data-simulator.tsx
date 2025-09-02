@@ -16,7 +16,8 @@ const pickStateForAPI = (state: StoreState) => ({
   indicators: state.indicators,
   optionChain: state.optionChain,
   tradingStatus: state.tradingStatus,
-  lastTickTime: state.lastTickTime, // Pass the last tick time
+  lastTickTime: state.lastTickTime,
+  tickCounter: state.tickCounter, // Pass the current tick counter
 });
 
 
@@ -28,7 +29,6 @@ export function DataSimulator() {
 
   const tick = async () => {
     if (isRunning.current) {
-      // If a request is already in flight, skip this tick.
       return;
     }
 
@@ -45,15 +45,8 @@ export function DataSimulator() {
       });
 
       if (!response.ok) {
-        // Try to get text first, as error response might not be JSON
         const errorText = await response.text();
-        try {
-          // Try parsing as JSON, but if it fails, log the raw text.
-          const errorData = JSON.parse(errorText);
-          console.error("API Error Response (JSON):", errorData);
-        } catch (e) {
-          console.error("API Error Response (Text):", errorText);
-        }
+        console.error("API Error Response:", errorText);
         throw new Error(`API call failed with status: ${response.status}`);
       }
 
@@ -65,11 +58,10 @@ export function DataSimulator() {
       store.updateOverview(newState.overview);
       store.updateIndicators(newState.indicators);
       store.updateOptionChain(newState.optionChain);
-      store.setLastTickTime(newState.lastTickTime); // Update the last tick time from the server response
+      store.setLastTickTime(newState.lastTickTime);
       store.setTradingStatus(newState.tradingStatus);
-      
-      // We don't directly set orders and signals, as they are append-only.
-      // The simulation flow returns the *new* orders/signals for this tick.
+      store.setTickCounter(newState.tickCounter); // Update the tick counter from the response
+
       if (newState.newOrders && newState.newOrders.length > 0) {
         newState.newOrders.forEach((order: any) => store.addOrder(order));
       }
@@ -84,30 +76,28 @@ export function DataSimulator() {
         description: "Could not connect to the simulation backend.",
         variant: "destructive",
       });
-       // Stop the loop on error
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
       return; 
     } finally {
       isRunning.current = false;
-       // Schedule the next tick
       timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
     }
   };
 
   useEffect(() => {
-    // Start the simulation loop
     timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
 
-    // Cleanup function to stop the loop when the component unmounts
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency array ensures this runs only once on mount
+  }, []);
 
-  return null; // This component does not render anything
+  return null;
 }
+
+    

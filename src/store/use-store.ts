@@ -1,49 +1,23 @@
 
 import { create } from 'zustand';
 
-// Helper to generate a random number within a range
-const getRandom = (min: number, max: number, precision: number = 2) => {
-    return parseFloat((Math.random() * (max - min) + min).toFixed(precision));
-};
-
-
-// A more sophisticated, realistic chart data generator
-const generateCandlestickData = (count: number, timeframeMinutes: number, isTestScenario: boolean = true) => {
+const generateCandlestickData = (count: number) => {
     const data = [];
-    let lastClose = 22800; // A realistic starting point
+    let lastClose = 22800;
     const now = new Date();
-    now.setHours(15, 30, 0, 0); // Fix end time for consistency
-    const interval = timeframeMinutes * 60 * 1000;
+    now.setHours(9, 15, 0, 0); // Start of trading day
+    const interval = 5 * 60 * 1000; // 5 minutes
     const startTime = now.getTime() - count * interval;
-
-    // Parameters for a more realistic random walk
-    const drift = 0.05; // A very slight upward trend bias
-    let volatility = 0.6; // Start with some base volatility
-
+    
     for (let i = 0; i < count; i++) {
         const candleTime = new Date(startTime + i * interval);
         let open = lastClose;
-
-        // Make volatility dynamic - it can increase or decrease over time
-        volatility += (Math.random() - 0.5) * 0.1;
-        volatility = Math.max(0.3, Math.min(volatility, 1.2)); // Clamp volatility to realistic range
-
-        // The core random movement - a random value between -1 and 1
-        const randomShock = (Math.random() - 0.5) * 2;
-        // The movement is influenced by drift, the random shock, and the current volatility
-        const movement = drift + randomShock * volatility * 15;
-
+        const movement = (Math.random() - 0.5) * 40;
         let close = open + movement;
-
-        // Determine high and low based on volatility
-        const highLowSpread = Math.abs(movement) + Math.random() * 25 * volatility;
-        let high = Math.max(open, close) + Math.random() * highLowSpread * 0.6; // 60% of spread above
-        let low = Math.min(open, close) - Math.random() * highLowSpread * 0.4; // 40% of spread below
-
+        let high = Math.max(open, close) + Math.random() * 15;
+        let low = Math.min(open, close) - Math.random() * 15;
         lastClose = close;
-
-        // Volume should be somewhat correlated with the size of the price change
-        let volume = 100000 + (Math.abs(movement) * 8000) + (Math.random() * 75000);
+        let volume = 100000 + (Math.random() * 150000);
 
         data.push({
             time: candleTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
@@ -51,80 +25,7 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
             volume: Math.round(volume),
         });
     }
-
-    if (isTestScenario) {
-        // --- SCRIPTED TEST SCENARIO (ULTRA-ACCELERATED FOR DEMO) ---
-        // This script will force the state changes in a rapid sequence.
-        
-        // 1. Initial State: Normal/Thinking (Blue)
-        // The first few candles are generated with normal randomness.
-
-        // 2. Alert State (Yellow): Trigger high volatility. Happens around candle index 55.
-        if (data[55]) {
-            const open = data[54].ohlc[3];
-            const close = open - 150; // Sudden sharp drop
-            data[55].ohlc = [open, open + 10, close - 20, close];
-            data[55].volume = 450000;
-        }
-
-        // 3. Calm down to allow BUY signal. Happens at candle index 56.
-        if (data[56]) {
-            const open = data[55].ohlc[3];
-            const close = open + 5; // Stabilize to exit alert state
-            data[56].ohlc = [open, close + 10, open - 10, close];
-            data[56].volume = 150000;
-        }
-        
-        // 4. BUY Signal (Focused/Purple): Create a low RSI condition. Happens at candle index 57.
-        if (data[57]) {
-            const open = data[56].ohlc[3];
-            const close = open - 45; // Small dip to make RSI go below 40
-            data[57].ohlc = [open, open + 5, close - 5, close];
-        }
-
-        // 5. Profit State (Green): Create a strong upward trend after buying. Happens candle 59.
-        if (data[59]) {
-            const open = data[58].ohlc[3];
-            const close = open + 200; // Big jump to trigger profit state
-            data[59].ohlc = [open, close + 20, open - 5, close];
-            data[59].volume = 300000;
-        }
-
-        // 6. SELL Signal (Focused/Purple): Create high RSI to take profit. Happens candle 61.
-         if (data[61]) {
-            const open = data[60].ohlc[3];
-            const close = open + 60; // Push RSI high to trigger SELL
-            data[61].ohlc = [open, close + 30, open, close];
-            data[61].volume = 250000;
-        }
-        
-        // 7. Second Buy for Loss Scenario. Happens candle 64.
-        if (data[64]) {
-            const open = data[63].ohlc[3];
-            const close = open - 40; // Small dip for re-entry
-            data[64].ohlc = [open, open+5, close-5, close];
-        }
-
-        // 8. Loss State (Red): Create a sharp drop after the second buy. Happens candle 66.
-        if (data[66]) {
-            const open = data[65].ohlc[3];
-            const close = open - 250; // Big drop to trigger loss state
-            data[66].ohlc = [open, open+10, close-10, close];
-            data[66].volume = 400000;
-        }
-    }
-
-
     return data;
-};
-
-
-
-const timeframes: { [key: string]: number } = {
-    '1m': 1,
-    '5m': 5,
-    '15m': 15,
-    '1h': 60,
 };
 
 export type ChartData = {
@@ -196,6 +97,7 @@ export type StoreState = {
     signals: Signal[];
     tradingStatus: TradingStatus;
     lastTickTime: number; 
+    tickCounter: number;
     candleType: CandleType;
     setChartData: (newData: ChartData[]) => void;
     setTimeframe: (newTimeframe: string) => void;
@@ -207,6 +109,7 @@ export type StoreState = {
     addSignal: (newSignal: Signal) => void;
     toggleTradingStatus: () => void;
     setLastTickTime: (time: number) => void; 
+    setTickCounter: (count: number) => void;
     setCandleType: (type: CandleType) => void;
     emergencyStop: () => void;
     setTradingStatus: (status: TradingStatus) => void;
@@ -216,7 +119,7 @@ const INITIAL_EQUITY = 500000;
 
 export const useStore = create<StoreState>((set, get) => ({
     // Initial State
-    chartData: generateCandlestickData(78, timeframes['5m']),
+    chartData: generateCandlestickData(80),
     timeframe: '5m',
     tradingStatus: 'ACTIVE',
     candleType: 'candlestick',
@@ -247,17 +150,20 @@ export const useStore = create<StoreState>((set, get) => ({
     ],
     signals: [],
     lastTickTime: Date.now(),
+    tickCounter: 0,
 
     // Actions
+    setTickCounter: (count) => set({ tickCounter: count }),
     setTradingStatus: (status) => set({ tradingStatus: status }),
     setCandleType: (type) => set({ candleType: type }),
     setChartData: (newData) => set({ chartData: newData }),
     setTimeframe: (newTimeframe) => set((state) => {
-        const newChartData = generateCandlestickData(78, timeframes[newTimeframe] || 5, true); // Keep test scenario on timeframe change
+        // For simplicity, we just reset the chart data and counter on timeframe change
         return {
             timeframe: newTimeframe,
-            chartData: newChartData,
-            lastTickTime: Date.now(), // Reset tick time on timeframe change
+            chartData: generateCandlestickData(80),
+            tickCounter: 0,
+            lastTickTime: Date.now(),
         }
     }),
     updatePositions: (newPositions) => set({ positions: newPositions }),
@@ -268,13 +174,15 @@ export const useStore = create<StoreState>((set, get) => ({
     addSignal: (newSignal) => set(state => ({ signals: [newSignal, ...state.signals].slice(0, 20) })),
     toggleTradingStatus: () => set(state => {
         if (state.tradingStatus === 'EMERGENCY_STOP') return {};
-        return { tradingStatus: state.tradingStatus === 'ACTIVE' ? 'STOPPED' : 'ACTIVE' };
+        // When user toggles, reset the tick counter to restart the scenario
+        const newStatus = state.tradingStatus === 'ACTIVE' ? 'STOPPED' : 'ACTIVE';
+        return { tradingStatus: newStatus, tickCounter: 0 };
     }),
     setLastTickTime: (time) => set({ lastTickTime: time }),
     emergencyStop: () => set(state => {
-      // Don't do anything if already stopping
       if (state.tradingStatus === 'EMERGENCY_STOP') return {};
-      // Just set the status. The backend will handle the logic.
       return { tradingStatus: 'EMERGENCY_STOP' };
     }),
 }));
+
+    

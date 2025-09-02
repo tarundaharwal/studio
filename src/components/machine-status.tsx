@@ -20,7 +20,7 @@ const statusDescriptions: Record<BrainStatus, string> = {
 
 
 export function MachineStatus() {
-  const { signals, tradingStatus, overview, positions, indicators, optionChain, chartData } = useStore();
+  const { signals, tradingStatus, overview, positions, indicators, chartData } = useStore();
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
@@ -45,13 +45,8 @@ export function MachineStatus() {
     if (latestSignal) {
         const now = new Date();
         const signalTimeParts = latestSignal.time.split(':').map(Number);
-        const signalDate = new Date();
-        signalDate.setHours(signalTimeParts[0], signalTimeParts[1], signalTimeParts[2]);
-
-        // Handle case where signal is from previous day (e.g. 23:59 vs 00:01)
-        if (signalDate > now) {
-            signalDate.setDate(now.getDate() - 1);
-        }
+        // Correctly create a Date object for today with the signal's time
+        const signalDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), signalTimeParts[0], signalTimeParts[1], signalTimeParts[2] || 0);
 
         const isRecent = (now.getTime() - signalDate.getTime()) < 3000; // 3 seconds
         const isAction = latestSignal.action.includes('BUY') || latestSignal.action.includes('SELL');

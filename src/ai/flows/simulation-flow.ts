@@ -187,7 +187,6 @@ export const simulationFlow = ai.defineFlow(
         
         finalTradingStatus = 'STOPPED';
 
-        // Even in a stopped state, return the full final state.
         return { 
             chartData, 
             positions: newPositions, 
@@ -236,7 +235,7 @@ export const simulationFlow = ai.defineFlow(
         overview.equity += pnlFromTrade;
         newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'SELL (Profit)', instrument: positionToClose.symbol, reason: `Profit booked: PnL was ${pnlFromTrade.toFixed(2)}`});
-        // Position will be removed on the next tick to allow UI to see profit state
+        // CRITICAL: Position will be removed on the *next tick* to allow UI to see profit state
     }
     else if (tickCounter === 39) { 
         newPositions = [];
@@ -260,7 +259,7 @@ export const simulationFlow = ai.defineFlow(
         overview.equity += pnlFromTrade;
         newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'Risk Mgmt', action: 'SELL (Loss)', instrument: positionToClose.symbol, reason: `Loss booked: PnL was ${pnlFromTrade.toFixed(2)}`});
-        // Position will be removed on the next tick
+        // CRITICAL: Position will be removed on the *next tick*
     }
     else if (tickCounter === 51) { 
         newPositions = [];

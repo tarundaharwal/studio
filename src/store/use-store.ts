@@ -8,7 +8,7 @@ const getRandom = (min: number, max: number, precision: number = 2) => {
 
 
 // A more sophisticated, realistic chart data generator
-const generateCandlestickData = (count: number, timeframeMinutes: number) => {
+const generateCandlestickData = (count: number, timeframeMinutes: number, isTestScenario: boolean = true) => {
     const data = [];
     let lastClose = 22800; // A realistic starting point
     const now = new Date();
@@ -52,38 +52,79 @@ const generateCandlestickData = (count: number, timeframeMinutes: number) => {
         });
     }
 
-    // This is the crucial part:
-    // After generating a realistic but random chart, we will now override a small section
-    // of it to guarantee that our specific trading condition is met.
-    // This gives us the best of both worlds: a realistic-looking chart AND a guaranteed trade.
+    if (isTestScenario) {
+        // --- SCRIPTED TEST SCENARIO ---
+        // This will override the random data to ensure all brain states are triggered.
 
-    if (data.length > 40) {
-        // Let's create a "dip" opportunity around the 30th candle
-        const dipIndex = 30;
-        let dipPrice = data[dipIndex - 1].ohlc[3]; // Start from the price before the dip
+        // 1. Initial calm period (Thinking state)
+        // The first 20 candles will be relatively stable.
 
-        const dipData = [
-            { movement: -15, vol: 1.2 }, // Sharp drop
-            { movement: -10, vol: 1.0 },
-            { movement: -5,  vol: 0.8 }, // Bottoming out
-            { movement: 2,   vol: 0.7 },
-            { movement: 8,   vol: 0.9 }, // Recovery starts
-            { movement: 12,  vol: 1.1 },
+        // 2. Volatility Spike (Alert state)
+        if (data[25]) {
+            const open = data[24].ohlc[3];
+            const close = open - 120; // Sudden drop of 120 points
+            const low = close - 20;
+            const high = open + 10;
+            data[25].ohlc = [open, high, low, close];
+            data[25].volume = 400000;
+        }
+
+        // 3. Create a BUY condition (dip followed by stabilization)
+        let dipPrice = data[25]?.ohlc[3] || 22700;
+        const buySetup = [
+            { move: -20, vol: 0.8 },
+            { move: -10, vol: 0.6 }, // RSI should be low here
+            { move: 5, vol: 0.5 },   // Stabilization
         ];
-
-        for (let i = 0; i < dipData.length; i++) {
-            const index = dipIndex + i;
+        for (let i = 0; i < buySetup.length; i++) {
+            const index = 26 + i;
             if (data[index]) {
                 const open = dipPrice;
-                const close = open + dipData[i].movement;
-                const high = Math.max(open, close) + getRandom(2, 8) * dipData[i].vol;
-                const low = Math.min(open, close) - getRandom(2, 8) * dipData[i].vol;
-                const volume = 250000 + Math.random() * 150000;
-
-                data[index].ohlc = [open, high, low, close];
-                data[index].volume = volume;
-
+                const close = open + buySetup[i].move;
+                data[index].ohlc = [open, open + 5, close - 5, close];
                 dipPrice = close;
+            }
+        }
+        
+        // 4. Profit Period (Profit state)
+        let profitPrice = data[28]?.ohlc[3] || 22700;
+        const profitRun = [
+            { move: 40, vol: 1.0 },
+            { move: 60, vol: 1.2 }, // Should trigger >1% profit
+            { move: 50, vol: 1.1 },
+        ];
+        for (let i = 0; i < profitRun.length; i++) {
+            const index = 29 + i;
+            if (data[index]) {
+                const open = profitPrice;
+                const close = open + profitRun[i].move;
+                data[index].ohlc = [open, close + 10, open - 5, close];
+                profitPrice = close;
+            }
+        }
+        
+        // 5. Sell Condition (to take profit)
+         if (data[32]) {
+            const open = data[31].ohlc[3];
+            const close = open + 20; // Push RSI high
+            data[32].ohlc = [open, close + 30, open, close];
+        }
+
+        // 6. Loss Period (Loss state)
+        // Assuming a new trade is entered around candle 40
+        let lossPrice = data[40]?.ohlc[3] || 22900;
+         const lossRun = [
+            { move: 10, vol: 1.0 }, // Entry candle
+            { move: -60, vol: 1.2 }, // Big drop
+            { move: -50, vol: 1.1 }, // Should trigger >1% loss
+        ];
+        for (let i = 0; i < lossRun.length; i++) {
+            const index = 41 + i;
+            if (data[index]) {
+                const open = lossPrice;
+                const close = open + lossRun[i].move;
+                data[index].ohlc = [open, open + 5, close - 10, close];
+                lossPrice = close;
             }
         }
     }
@@ -227,7 +268,7 @@ export const useStore = create<StoreState>((set, get) => ({
     setCandleType: (type) => set({ candleType: type }),
     setChartData: (newData) => set({ chartData: newData }),
     setTimeframe: (newTimeframe) => set((state) => {
-        const newChartData = generateCandlestickData(78, timeframes[newTimeframe] || 5);
+        const newChartData = generateCandlestickData(78, timeframes[newTimeframe] || 5, true); // Keep test scenario on timeframe change
         return {
             timeframe: newTimeframe,
             chartData: newChartData,

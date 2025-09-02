@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview The backend simulation engine for the IndMon trading dashboard.
@@ -230,7 +231,7 @@ export const simulationFlow = ai.defineFlow(
                 const pnlFromTrade = (newPrice - pos.avgPrice) * pos.qty;
                 overview.equity += pnlFromTrade;
             });
-            newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP ACTIVATED', instrument: 'ALL', reason: 'User initiated emergency stop.' });
+            newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP', instrument: 'ALL', reason: 'User initiated emergency stop.' });
             positions = []; // Clear all positions
         }
         nextTradingStatus = 'STOPPED'; // Set status to STOPPED after liquidating
@@ -251,13 +252,20 @@ export const simulationFlow = ai.defineFlow(
     if (isNewCandleTime) {
         // AI-POWERED NEW CANDLE GENERATION
         const recentHistory = newChartData.slice(-5);
-        const { output } = await marketSentimentPrompt({ history: recentHistory });
+        let output;
+        try {
+            const { output: aiOutput } = await marketSentimentPrompt({ history: recentHistory });
+            output = aiOutput;
+        } catch (e) {
+            console.error("AI prompt failed:", e);
+            output = null; // Ensure output is null on failure
+        }
         
         let newCandleForIndicators: ChartData;
 
         // Fallback logic if AI fails to generate a candle
         if (!output || !output.nextCandle) {
-             console.warn("AI failed to generate candle. Using random fallback.");
+             console.warn("AI failed to generate candle or returned invalid format. Using random fallback.");
              const newOpen = currentCandle.ohlc[3];
              const change = (Math.random() - 0.5) * 50; // A wider fluctuation for the new candle
              const newClose = newOpen + change;
@@ -325,9 +333,9 @@ export const simulationFlow = ai.defineFlow(
                 newSignals.push({
                     time: nowLocale,
                     strategy: 'Risk Mgmt',
-                    action: 'EXIT LONG',
+                    action: 'STOP-LOSS',
                     instrument: pos.symbol,
-                    reason: `Stop-loss triggered at P&L ${pos.pnl.toFixed(2)}.`
+                    reason: `PnL ${pos.pnl.toFixed(2)} hit stop-loss threshold.`
                 });
                 // Do not add the closed position to nextPositions
             } else {
@@ -358,7 +366,7 @@ export const simulationFlow = ai.defineFlow(
             const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: newPrice, ltp: newPrice, pnl: 0 };
             positions = [...positions, newPosition];
             newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: newPrice, status: 'EXECUTED' });
-            newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'ENTER LONG', instrument: 'NIFTY AUG FUT', reason: `RSI<40, MACD>0, ADX>25`});
+            newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'BUY', instrument: 'NIFTY AUG FUT', reason: `RSI<40, MACD>0, ADX>25`});
         
         } else if (isSellSignal) {
             const positionToClose = positions[0]; // Assuming one position at a time
@@ -367,9 +375,12 @@ export const simulationFlow = ai.defineFlow(
                 
                 const pnlFromTrade = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
                 overview.equity += pnlFromTrade;
+
+                const reason = pnlFromTrade >= 0 ? 'Profit Booked' : 'Loss Booked';
+                const action = pnlFromTrade >= 0 ? 'SELL (Profit)' : 'SELL (Loss)';
                 
                 positions = positions.filter(p => p.symbol !== positionToClose.symbol);
-                newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'EXIT LONG', instrument: positionToClose.symbol, reason: `RSI>70 or MACD<0`});
+                newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: action, instrument: positionToClose.symbol, reason: `${reason}: PnL was ${pnlFromTrade.toFixed(2)}`});
             }
         }
     }
@@ -382,13 +393,13 @@ export const simulationFlow = ai.defineFlow(
         putLTP: Math.max(0, opt.putLTP + getRandom(-0.5, 0.5) + (newClosePrice - opt.strike) / 100),
     }));
 
-    const calculatedRSI = calculateRSI(newChartData);
+    const newCalculatedRSI = calculateRSI(newChartData);
 
     const newIndicators = indicators.map(ind => {
         let newValue = ind.value;
         if (ind.name.includes('RSI')) {
             // Use the newly calculated RSI if available, otherwise keep the old value.
-            newValue = calculatedRSI ?? ind.value;
+            newValue = newCalculatedRSI ?? ind.value;
         } else if (ind.name.includes('MACD')) {
             // This is a simplified simulation of MACD value change
             newValue = ind.value + (newClosePrice - chartData[chartData.length - 1].ohlc[3]) / 10;

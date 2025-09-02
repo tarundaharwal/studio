@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { OverviewCards } from './overview-cards';
+import { MachineStatus } from './machine-status';
 
 export function DashboardHeader() {
   return (
@@ -24,6 +25,7 @@ export function DashboardHeader() {
       
       {/* Overview Cards will be visible here on larger screens */}
       <div className="hidden flex-1 items-center gap-2 lg:flex">
+         <MachineStatus />
          <OverviewCards />
       </div>
 
@@ -59,6 +61,7 @@ export function DashboardHeader() {
       
        {/* Overview Cards will be visible here on smaller screens as a second row */}
        <div className="flex w-full items-center gap-2 overflow-x-auto lg:hidden">
+         <MachineStatus />
          <OverviewCards />
       </div>
     </header>

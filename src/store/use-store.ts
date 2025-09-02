@@ -53,78 +53,52 @@ const generateCandlestickData = (count: number, timeframeMinutes: number, isTest
     }
 
     if (isTestScenario) {
-        // --- SCRIPTED TEST SCENARIO (Accelerated) ---
-        // This will override the random data to ensure all brain states are triggered quickly.
+        // --- SCRIPTED TEST SCENARIO (ULTRA-ACCELERATED FOR DEMO) ---
+        // Events will happen back-to-back very quickly.
 
-        // 1. Initial calm period (Thinking state)
-        // First 10 candles are stable.
+        // 1. Initial calm period (Thinking state for ~5 candles)
+        
+        // 2. Volatility Spike (Alert state) -> Candle 6
+        if (data[6]) {
+            const open = data[5].ohlc[3];
+            const close = open - 150; // Sudden sharp drop
+            data[6].ohlc = [open, open + 10, close - 20, close];
+            data[6].volume = 450000;
+        }
 
-        // 2. Volatility Spike (Alert state) -> Happens around candle 12
-        if (data[12]) {
+        // 3. Create a BUY condition -> Candle 8
+        if (data[8]) {
+            const open = data[7].ohlc[3];
+            const close = open + 5; // Stabilize to trigger BUY
+            data[8].ohlc = [open, close + 5, open - 5, close];
+        }
+        
+        // 4. Profit Period (Profit state) -> Candle 10
+        if (data[10]) {
+            const open = data[9].ohlc[3];
+            const close = open + 150; // Big jump to trigger profit
+            data[10].ohlc = [open, close + 20, open - 5, close];
+        }
+        
+        // 5. Sell Condition (to take profit) -> Candle 12
+         if (data[12]) {
             const open = data[11].ohlc[3];
-            const close = open - 120; // Sudden drop of 120 points
-            const low = close - 20;
-            const high = open + 10;
-            data[12].ohlc = [open, high, low, close];
-            data[12].volume = 400000;
+            const close = open + 50; // Push RSI high to trigger SELL
+            data[12].ohlc = [open, close + 30, open, close];
         }
 
-        // 3. Create a BUY condition (dip followed by stabilization) -> Happens around candle 15
-        let dipPrice = data[12]?.ohlc[3] || 22700;
-        const buySetup = [
-            { move: -20, vol: 0.8 },
-            { move: -10, vol: 0.6 }, // RSI should be low here, triggers BUY
-            { move: 5, vol: 0.5 },   
-        ];
-        for (let i = 0; i < buySetup.length; i++) {
-            const index = 13 + i;
-            if (data[index]) {
-                const open = dipPrice;
-                const close = open + buySetup[i].move;
-                data[index].ohlc = [open, open + 5, close - 5, close];
-                dipPrice = close;
-            }
+        // 6. Loss Period (Loss state) -> Re-entry at 15, loss by 17
+        // New BUY signal
+        if (data[15]) {
+            const open = data[14].ohlc[3];
+            const close = open - 40; // Small dip for re-entry
+            data[15].ohlc = [open, open+5, close-5, close];
         }
-        
-        // 4. Profit Period (Profit state) -> Happens around candle 18
-        let profitPrice = data[15]?.ohlc[3] || 22670;
-        const profitRun = [
-            { move: 40, vol: 1.0 },
-            { move: 60, vol: 1.2 }, // Should trigger >1% profit
-            { move: 50, vol: 1.1 },
-        ];
-        for (let i = 0; i < profitRun.length; i++) {
-            const index = 16 + i;
-            if (data[index]) {
-                const open = profitPrice;
-                const close = open + profitRun[i].move;
-                data[index].ohlc = [open, close + 10, open - 5, close];
-                profitPrice = close;
-            }
-        }
-        
-        // 5. Sell Condition (to take profit) -> Happens around candle 20
-         if (data[19]) {
-            const open = data[18].ohlc[3];
-            const close = open + 20; // Push RSI high to trigger SELL
-            data[19].ohlc = [open, close + 30, open, close];
-        }
-
-        // 6. Loss Period (Loss state) -> Re-entry around candle 25, loss by candle 28
-        let lossPrice = data[24]?.ohlc[3] || 22900;
-         const lossRun = [
-            { move: 10, vol: 1.0 }, // Entry candle
-            { move: -60, vol: 1.2 }, // Big drop
-            { move: -50, vol: 1.1 }, // Should trigger >1% loss
-        ];
-        for (let i = 0; i < lossRun.length; i++) {
-            const index = 25 + i;
-            if (data[index]) {
-                const open = lossPrice;
-                const close = open + lossRun[i].move;
-                data[index].ohlc = [open, open + 5, close - 10, close];
-                lossPrice = close;
-            }
+        // Sharp drop to cause loss
+        if (data[17]) {
+            const open = data[16].ohlc[3];
+            const close = open - 200; // Big drop to trigger loss state
+            data[17].ohlc = [open, open+10, close-10, close];
         }
     }
 

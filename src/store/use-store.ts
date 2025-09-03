@@ -9,15 +9,42 @@ const generateCandlestickData = (count: number) => {
     const interval = 5 * 60 * 1000; // 5 minutes
     const startTime = now.getTime() - count * interval;
     
+    // This is a heavily scripted test scenario to ensure all brain states are triggered reliably.
+    const isTestScenario = true; 
+    
     for (let i = 0; i < count; i++) {
         const candleTime = new Date(startTime + i * interval);
         let open = lastClose;
-        const movement = (Math.random() - 0.5) * 40;
+        let movement = (Math.random() - 0.5) * 20; // Base random movement
+        let volume = 100000 + (Math.random() * 150000);
+
+        if(isTestScenario) {
+            // SCENARIO STEPS DRIVEN BY TICK COUNTER
+            if (i === 15) { // Step 1: Sudden Drop -> Alert
+                movement = -150;
+                volume = 450000;
+            } else if (i > 15 && i < 22) {
+                movement = (Math.random() - 0.2) * 10; // Calm after drop
+            } else if (i === 22) { // Step 2: Buy Signal
+                movement = 20;
+            } else if (i > 25 && i <= 35) { // Step 3: Profit State
+                movement = 25; 
+                volume = 250000;
+            } else if (i === 38) { // Step 4: Sell Signal (Profit)
+                movement = 15;
+            } else if (i === 45) { // Step 5: Re-entry for loss
+                movement = -20;
+            } else if (i === 50) { // Step 6: Big drop for Loss State -> Sell
+                movement = -150;
+                volume = 400000;
+            }
+        }
+
+
         let close = open + movement;
         let high = Math.max(open, close) + Math.random() * 15;
         let low = Math.min(open, close) - Math.random() * 15;
         lastClose = close;
-        let volume = 100000 + (Math.random() * 150000);
 
         data.push({
             time: candleTime.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
@@ -152,37 +179,32 @@ export const useStore = create<StoreState>((set, get) => ({
     lastTickTime: Date.now(),
     tickCounter: 0,
 
-    // Actions
+    // Actions - These will be simplified as we move logic to the backend.
     setTickCounter: (count) => set({ tickCounter: count }),
     setTradingStatus: (status) => set({ tradingStatus: status }),
     setCandleType: (type) => set({ candleType: type }),
     setChartData: (newData) => set({ chartData: newData }),
-    setTimeframe: (newTimeframe) => set((state) => {
-        // For simplicity, we just reset the chart data and counter on timeframe change
-        return {
-            timeframe: newTimeframe,
-            chartData: generateCandlestickData(80),
-            tickCounter: 0,
-            lastTickTime: Date.now(),
-        }
-    }),
+    setTimeframe: (newTimeframe) => set({ timeframe: newTimeframe }),
     updatePositions: (newPositions) => set({ positions: newPositions }),
     addOrder: (newOrder) => set(state => ({ orders: [newOrder, ...state.orders].slice(0, 100) })),
     updateOverview: (newOverview) => set(state => ({ overview: { ...state.overview, ...newOverview } })),
     updateIndicators: (newIndicators) => set({ indicators: newIndicators }),
     updateOptionChain: (newOptionChain) => set({ optionChain: newOptionChain }),
     addSignal: (newSignal) => set(state => ({ signals: [newSignal, ...state.signals].slice(0, 20) })),
+    setLastTickTime: (time) => set({ lastTickTime: time }),
+    
+    // These actions will be handled by the real backend soon.
+    // The frontend will just send a request and the backend will handle the logic.
     toggleTradingStatus: () => set(state => {
         if (state.tradingStatus === 'EMERGENCY_STOP') return {};
-        // When user toggles, reset the tick counter to restart the scenario
         const newStatus = state.tradingStatus === 'ACTIVE' ? 'STOPPED' : 'ACTIVE';
+        // In the future, this will send an API call to the backend to start/stop the trading engine.
+        // For now, it just toggles the state and resets the scenario.
         return { tradingStatus: newStatus, tickCounter: 0 };
     }),
-    setLastTickTime: (time) => set({ lastTickTime: time }),
     emergencyStop: () => set(state => {
       if (state.tradingStatus === 'EMERGENCY_STOP') return {};
+       // In the future, this will send an API call to liquidate all positions.
       return { tradingStatus: 'EMERGENCY_STOP' };
     }),
 }));
-
-    

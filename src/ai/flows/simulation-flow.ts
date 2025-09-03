@@ -249,7 +249,6 @@ export const simulationFlow = ai.defineFlow(
     // --- TRADING STRATEGY LOGIC ---
     const hasOpenPosition = newPositions.length > 0;
     const TRADE_SYMBOL = 'NIFTY50';
-    const TRADE_QTY = 50; // Fixed quantity for now
 
     // 1. Sell Condition
     if (hasOpenPosition && currentRSI > 70) {
@@ -263,7 +262,7 @@ export const simulationFlow = ai.defineFlow(
     } 
     // 2. Buy Condition
     else if (!hasOpenPosition && currentRSI < 30 && finalTradingStatus === 'ACTIVE') {
-        const quantityToBuy = TRADE_QTY;
+        const quantityToBuy = 50; // Revert to fixed quantity for now
         newPositions.push({ symbol: TRADE_SYMBOL, qty: quantityToBuy, avgPrice: newPrice, ltp: newPrice, pnl: 0 });
         newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'BUY', qty: quantityToBuy, price: newPrice, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_TO_OPEN', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}). Buying ${quantityToBuy} units.` });
@@ -333,6 +332,8 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
 
 
 
+
+    
 
     
 

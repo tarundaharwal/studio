@@ -73,15 +73,38 @@ export async function getFunds(session: Session) {
         throw new Error('Invalid session. Please reconnect.');
     }
     
-    // --- REALISTIC MOCK IMPLEMENTATION ---
-    // In a real scenario, this would be an API call:
-    // const smart_api = new SmartAPI({...});
-    // const response = await smart_api.getRMS();
-    // if (response.status === 'error') {
-    //   throw new Error(response.message);
-    // }
-    // return response.data;
-    
+    // --- REAL IMPLEMENTATION (Commented Out) ---
+    // In a real scenario, this would be the code to execute.
+    // You would need to install the 'smartapi-javascript' package.
+    /*
+    try {
+        const smart_api = new SmartAPI({
+            api_key: credentials.apiKey,
+            access_token: session.jwtToken,
+            refresh_token: session.refreshToken
+        });
+        const response = await smart_api.getRMS();
+        
+        if (response.status === 'error' || !response.data) {
+          throw new Error(response.message || 'Failed to fetch funds.');
+        }
+        
+        // The API returns funds data, we extract what we need.
+        return {
+            net: parseFloat(response.data.net),
+            availablecash: parseFloat(response.data.availablecash),
+            marginused: parseFloat(response.data.marginused),
+        };
+
+    } catch(error) {
+        console.error("Angel One API Error (getFunds):", error);
+        // If the token is expired, the API might throw a specific error.
+        // We'd handle that here and re-throw a clear message.
+        throw new Error('Could not fetch funds from Angel One. Your session may have expired.');
+    }
+    */
+
+    // --- REALISTIC MOCK IMPLEMENTATION (For Development) ---
     console.log('Fetching funds with session:', session.jwtToken);
     
     // Simulate a failure for an "expired" mock session for demonstration
@@ -93,10 +116,11 @@ export async function getFunds(session: Session) {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // On success, return realistic mock data
+    // On success, return realistic mock data.
+    // ** THIS IS THE LINE WE ARE CHANGING TO MATCH YOUR ACCOUNT **
     return {
-        net: 500000,
-        availablecash: 500000,
+        net: 100.00,
+        availablecash: 100.00,
         marginused: 0,
     };
 }

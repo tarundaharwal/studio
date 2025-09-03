@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview The backend simulation engine for the IndMon trading dashboard.
@@ -165,9 +166,8 @@ export const simulationFlow = ai.defineFlow(
     if (session) {
       try {
         const funds = await getFunds(session);
+        // This resets the initial equity on every tick to the actual funds.
         overview.initialEquity = funds.net;
-        overview.peakEquity = funds.net;
-        overview.realizedPnl = 0;
       } catch (e: any) {
         console.error("Could not fetch funds:", e.message);
       }
@@ -339,3 +339,6 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
 }
 
 
+
+
+    

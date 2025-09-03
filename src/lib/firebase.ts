@@ -4,11 +4,10 @@ import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/a
 // =========================================================================================
 // TODO: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
 // =========================================================================================
-// 1. Go to https://console.firebase.google.com/ and create a new project.
-// 2. In your project dashboard, click the web icon (</>) to add a web app.
-// 3. Follow the steps, and Firebase will give you a `firebaseConfig` object.
-// 4. Paste that entire object here, replacing the placeholder below.
-// 5. In the Firebase Console, go to Build > Authentication > Sign-in method and enable "Email/Password".
+// 1. Go to your Firebase project: "IndMonMachine"
+// 2. Go to Project Settings (gear icon).
+// 3. In the "General" tab, scroll down to "Your apps".
+// 4. Find your web app and copy the `firebaseConfig` object here.
 // =========================================================================================
 
 const firebaseConfig: FirebaseOptions = {

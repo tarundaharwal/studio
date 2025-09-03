@@ -1,5 +1,5 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 
 // =========================================================================================
 // TODO: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
@@ -11,7 +11,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 // 5. In the Firebase Console, go to Build > Authentication > Sign-in method and enable "Email/Password".
 // =========================================================================================
 
-const firebaseConfig = {
+const firebaseConfig: FirebaseOptions = {
   // --- PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
   // apiKey: "AIza....",
   // authDomain: "your-project.firebaseapp.com",
@@ -23,11 +23,12 @@ const firebaseConfig = {
 };
 
 
-// Initialize Firebase
-// This line automatically handles app initialization, preventing errors from re-initializing.
-export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-
 // Helper to check if the config is just a placeholder
 export const isFirebaseConfigured = () => {
     return firebaseConfig && firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('...');
 };
+
+// Initialize Firebase App
+// This line handles app initialization, preventing errors from re-initializing.
+// It will only initialize if the config is valid.
+export const app = isFirebaseConfigured() && !getApps().length ? initializeApp(firebaseConfig) : (getApps().length > 0 ? getApp() : undefined);

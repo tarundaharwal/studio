@@ -30,12 +30,20 @@ export default function SignupPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const auth = getAuth(app);
-
+    
+    // Auth will only be initialized if firebase is ready
+    const auth = firebaseReady && app ? getAuth(app) : null;
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!firebaseReady) return;
+        if (!auth) {
+            toast({
+                title: "Firebase Not Configured",
+                description: "Please add your Firebase configuration to src/lib/firebase.ts",
+                variant: "destructive",
+            });
+            return;
+        }
         setIsLoading(true);
         setError(null);
         try {
@@ -49,7 +57,7 @@ export default function SignupPage() {
             setError(error.message);
             toast({
                 title: "Signup Failed",
-                description: "Please check the Firebase configuration or try again.",
+                description: "Please check your credentials or ensure Firebase Auth is enabled.",
                 variant: "destructive",
               });
         } finally {
@@ -71,10 +79,10 @@ export default function SignupPage() {
             {!firebaseReady && (
               <Alert variant="destructive">
                 <Terminal className="h-4 w-4" />
-                <AlertTitle>Action Required</AlertTitle>
+                <AlertTitle>Action Required: Firebase Not Configured</AlertTitle>
                 <AlertDescription>
-                  Firebase is not configured. Please add your Firebase configuration to{" "}
-                  <code className="font-mono text-xs">src/lib/firebase.ts</code> to enable sign-up.
+                  To enable sign up, please create a Firebase project, enable Email/Password authentication, and paste your Firebase config object into{' '}
+                  <code className="font-mono text-xs">src/lib/firebase.ts</code>.
                 </AlertDescription>
               </Alert>
             )}

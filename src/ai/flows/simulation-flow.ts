@@ -162,20 +162,23 @@ export const simulationFlow = ai.defineFlow(
   async (input) => {
     let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, tickCounter, session } = input;
     
+    let newPositions = [...positions];
+    let newOverview = {...overview};
+    
     // If we have a session, try to fetch real funds.
-    if (session) {
+    if (session && tickCounter === 0) { // Only fetch on the first tick to set the baseline
       try {
         const funds = await getFunds(session);
-        // This resets the initial equity on every tick to the actual funds.
-        overview.initialEquity = funds.net;
+        // CRITICAL FIX: Reset initial equity AND peak equity to the fetched funds.
+        newOverview.initialEquity = funds.net;
+        newOverview.peakEquity = funds.net;
+        newOverview.equity = funds.net; // Also set current equity
       } catch (e: any) {
         console.error("Could not fetch funds:", e.message);
       }
     }
 
 
-    let newPositions = [...positions];
-    let newOverview = {...overview};
     let finalTradingStatus = tradingStatus;
     const newOrders: z.infer<typeof OrderSchema>[] = [];
     const newSignals: z.infer<typeof SignalSchema>[] = [];
@@ -197,16 +200,13 @@ export const simulationFlow = ai.defineFlow(
             });
             newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP', instrument: 'ALL', reason: 'User initiated emergency stop.' });
             
-            // Add liquidated PNL to the total REALIZED PNL
             newOverview.realizedPnl += pnlFromLiquidation;
             newPositions = [];
         }
         
         finalTradingStatus = 'STOPPED';
-        // The final equity will be calculated at the end.
     }
     
-    // --- FETCH LIVE DATA ---
     const lastPrice = chartData.length > 0 ? chartData[chartData.length - 1].ohlc[3] : 22800;
     let newPrice = lastPrice;
     if (session) {
@@ -218,7 +218,6 @@ export const simulationFlow = ai.defineFlow(
         }
     }
 
-    // --- MARKET DATA SIMULATION ---
     const open = lastPrice;
     const close = newPrice;
     const high = Math.max(open, close) + getRandom(0, 15);
@@ -226,7 +225,7 @@ export const simulationFlow = ai.defineFlow(
     const vol = 150000 + getRandom(10000, 50000);
 
     const lastCandleTime = chartData.length > 0 ? chartData[chartData.length - 1].time : '09:10';
-    const newTime = getNextTime(lastCandleTime, 5); // 5 min timeframe
+    const newTime = getNextTime(lastCandleTime, 5);
 
     const newCandle: ChartData = {
         time: newTime,
@@ -235,7 +234,6 @@ export const simulationFlow = ai.defineFlow(
     };
     const newChartData = [...chartData.slice(1), newCandle];
 
-    // --- UPDATE INDICATORS ---
     const calculatedRSI = calculateRSI(newChartData);
     const newIndicators = indicators.map(ind => {
         let newValue = ind.value;
@@ -246,57 +244,47 @@ export const simulationFlow = ai.defineFlow(
     });
     const currentRSI = newIndicators.find(i => i.name.includes('RSI'))?.value ?? 50;
     
-    // --- TRADING STRATEGY LOGIC ---
     const hasOpenPosition = newPositions.length > 0;
     const TRADE_SYMBOL = 'NIFTY50';
 
-    // 1. Sell Condition
     if (hasOpenPosition && currentRSI > 70) {
         const positionToClose = newPositions[0];
         const realizedPnl = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
         
-        newOverview.realizedPnl += realizedPnl; // Add realized PNL to the total
+        newOverview.realizedPnl += realizedPnl;
         newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'SELL_TO_CLOSE', instrument: TRADE_SYMBOL, reason: `RSI > 70 (${currentRSI.toFixed(2)}). Closing position for a profit/loss of ${realizedPnl.toFixed(2)}.` });
-        newPositions = []; // Clear positions
+        newPositions = [];
     } 
-    // 2. Buy Condition
     else if (!hasOpenPosition && currentRSI < 30 && finalTradingStatus === 'ACTIVE') {
-        const quantityToBuy = 50; // Revert to fixed quantity for now
+        const quantityToBuy = 50;
         newPositions.push({ symbol: TRADE_SYMBOL, qty: quantityToBuy, avgPrice: newPrice, ltp: newPrice, pnl: 0 });
         newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'BUY', qty: quantityToBuy, price: newPrice, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_TO_OPEN', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}). Buying ${quantityToBuy} units.` });
     }
 
-    // --- UPDATE POSITIONS PNL ---
     let positionsWithPnl = newPositions.map(pos => {
         const pnl = (newPrice - pos.avgPrice) * pos.qty;
         return { ...pos, ltp: newPrice, pnl: parseFloat(pnl.toFixed(2)) };
     });
 
-    // --- UPDATE OPTION CHAIN ---
      const newOptionChain = optionChain.map(opt => ({
         ...opt,
         callLTP: Math.max(0, opt.callLTP + getRandom(-0.5, 0.5) - (newPrice - opt.strike) / 100),
         putLTP: Math.max(0, opt.putLTP + getRandom(-0.5, 0.5) + (newPrice - opt.strike) / 100),
     }));
 
-    // --- UPDATE PORTFOLIO DATA (REVISED LOGIC) ---
     const totalUnrealizedPnl = positionsWithPnl.reduce((acc, pos) => acc + pos.pnl, 0);
     
-    // Total PNL is the sum of all closed trades (realized) and the current open trade (unrealized).
     const totalPnl = newOverview.realizedPnl + totalUnrealizedPnl;
     newOverview.pnl = parseFloat(totalPnl.toFixed(2));
     
-    // The final equity is always the starting equity plus the total PNL so far.
     const currentTotalEquity = newOverview.initialEquity + totalPnl;
     newOverview.equity = parseFloat(currentTotalEquity.toFixed(2));
     
-    // Update peak equity and drawdown based on the current total equity.
     newOverview.peakEquity = Math.max(newOverview.peakEquity, currentTotalEquity);
     newOverview.maxDrawdown = Math.max(newOverview.maxDrawdown, newOverview.peakEquity - currentTotalEquity);
 
-    // Return the new state
     return {
       chartData: newChartData,
       positions: positionsWithPnl,
@@ -310,11 +298,10 @@ export const simulationFlow = ai.defineFlow(
   }
 );
 
-// This is the exported function that the API route will call.
 export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
   if (!input.session) {
       console.warn("runSimulation called without a session. Returning current state without processing.");
-      const { session, tickCounter, ...rest } = input;
+      const { session, ...rest } = input;
       const newOverview = { ...rest.overview, realizedPnl: rest.overview.realizedPnl || 0};
       return {
         ...rest,
@@ -323,18 +310,8 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
         newSignals: [],
       };
   }
-  // Initialize realizedPnl if it doesn't exist
   const newOverview = { ...input.overview, realizedPnl: input.overview.realizedPnl || 0};
   const newInput = { ...input, overview: newOverview };
 
   return simulationFlow(newInput);
 }
-
-
-
-
-    
-
-    
-
-    

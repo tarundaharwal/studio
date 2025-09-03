@@ -119,8 +119,8 @@ export async function getFunds(session: Session) {
     // On success, return realistic mock data.
     // ** THIS IS THE LINE WE ARE CHANGING TO MATCH YOUR ACCOUNT **
     return {
-        net: 100.00,
-        availablecash: 100.00,
+        net: 1000000.00,
+        availablecash: 1000000.00,
         marginused: 0,
     };
 }

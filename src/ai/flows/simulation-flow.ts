@@ -165,14 +165,11 @@ export const simulationFlow = ai.defineFlow(
     if (session) {
       try {
         const funds = await getFunds(session);
-        // Only update initialEquity on the first tick to establish a baseline for P&L calculation
         if (tickCounter === 0) {
             overview.initialEquity = funds.net;
             overview.peakEquity = funds.net;
         }
-        // Always update equity to reflect the latest from the broker.
-        // The P&L calculations below will handle unrealized gains/losses.
-        overview.equity = funds.net;
+        overview.equity = funds.net; // Update with the base equity from broker
       } catch (e: any) {
         console.error("Could not fetch funds:", e.message);
       }
@@ -202,12 +199,13 @@ export const simulationFlow = ai.defineFlow(
             });
             newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP', instrument: 'ALL', reason: 'User initiated emergency stop.' });
             
-            newOverview.equity += pnlFromLiquidation;
+            // This is a realized PNL, so it gets added to the total PNL
+            newOverview.pnl += pnlFromLiquidation;
             newPositions = [];
         }
         
         finalTradingStatus = 'STOPPED';
-
+        // The final equity will be calculated at the end.
         return { 
             chartData, 
             positions: newPositions, 
@@ -256,7 +254,6 @@ export const simulationFlow = ai.defineFlow(
         if (ind.name.includes('RSI')) {
             newValue = calculatedRSI ?? ind.value;
         }
-        // Other indicators can be updated here...
         return {...ind, value: parseFloat(newValue.toFixed(2))};
     });
     const currentRSI = newIndicators.find(i => i.name.includes('RSI'))?.value ?? 50;
@@ -271,7 +268,7 @@ export const simulationFlow = ai.defineFlow(
         const positionToClose = newPositions[0];
         const realizedPnl = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
         
-        newOverview.equity += realizedPnl; // Realize the P&L
+        newOverview.pnl += realizedPnl; // Add realized PNL to the total PNL
         newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'SELL_TO_CLOSE', instrument: TRADE_SYMBOL, reason: `RSI > 70 (${currentRSI.toFixed(2)}). Closing position for a profit/loss of ${realizedPnl.toFixed(2)}.` });
         newPositions = []; // Clear positions
@@ -298,10 +295,9 @@ export const simulationFlow = ai.defineFlow(
 
     // --- UPDATE PORTFOLIO DATA ---
     const totalUnrealizedPnl = positionsWithPnl.reduce((acc, pos) => acc + pos.pnl, 0);
-    // Realized PNL is now implicitly handled by updating overview.equity on sell.
-    // The total PNL displayed is the sum of today's realized and unrealized PNL.
-    const currentTotalEquity = newOverview.equity + totalUnrealizedPnl;
-    newOverview.pnl = parseFloat((currentTotalEquity - newOverview.initialEquity).toFixed(2));
+    // The final equity is the initial base equity plus ALL realized PNL so far, plus any current unrealized PNL.
+    const currentTotalEquity = newOverview.initialEquity + newOverview.pnl + totalUnrealizedPnl;
+    newOverview.equity = parseFloat(currentTotalEquity.toFixed(2));
     
     newOverview.peakEquity = Math.max(newOverview.peakEquity, currentTotalEquity);
     newOverview.maxDrawdown = Math.max(newOverview.maxDrawdown, newOverview.peakEquity - currentTotalEquity);
@@ -333,5 +329,3 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
   }
   return simulationFlow(input);
 }
-
-    

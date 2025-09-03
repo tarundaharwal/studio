@@ -42,10 +42,13 @@ export default function ProtectedLayout({
 
   if (loading || !user) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
+      <div className="flex h-screen w-full items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
-            <Logo className="h-10 w-10 animate-pulse" />
-            <p className="text-muted-foreground">Loading your dashboard...</p>
+          <div className="relative h-12 w-12">
+            <div className="absolute inset-0 rounded-full border-4 border-muted"></div>
+            <div className="absolute inset-0 rounded-full border-t-4 border-b-4 border-primary animate-spin"></div>
+          </div>
+          <p className="text-muted-foreground animate-pulse">Verifying your session...</p>
         </div>
       </div>
     )

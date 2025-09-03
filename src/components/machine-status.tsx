@@ -13,14 +13,14 @@ const statusDescriptions: Record<BrainStatus, string> = {
     idle: "निष्क्रिय, बाजार की निगरानी कर रहा हूँ।",
     thinking: "सोच रहा हूँ... बाजार का विश्लेषण कर रहा हूँ।",
     alert: "सावधान! बाजार में उच्च अस्थिरता या चरम स्थितियाँ।",
-    profit: "लाभ दर्ज कर रहा हूँ।",
+    profit: "लाभ की स्थिति में।",
     loss: "घाटे की स्थिति। जोखिम का प्रबंधन कर रहा हूँ।",
     focused: "आदेश निष्पादित कर रहा हूँ...",
 };
 
 
 export function MachineStatus() {
-  const { signals, tradingStatus, overview, positions, indicators, chartData } = useStore();
+  const { signals, tradingStatus, positions, indicators, chartData } = useStore();
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
@@ -45,8 +45,7 @@ export function MachineStatus() {
     if (latestSignal) {
         const now = new Date();
         const signalTimeParts = latestSignal.time.split(':').map(Number);
-        // Correctly create a Date object for today with the signal's time
-        const signalDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), signalTimeParts[0], signalTimeParts[1], signalTimeParts[2] || 0);
+        const signalDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), signalTimeParts[0] || 0, signalTimeParts[1] || 0, signalTimeParts[2] || 0);
 
         const isRecent = (now.getTime() - signalDate.getTime()) < 3000; // 3 seconds
         const isAction = latestSignal.action.includes('BUY') || latestSignal.action.includes('SELL');
@@ -60,9 +59,8 @@ export function MachineStatus() {
     const hasOpenPosition = positions.length > 0;
     if (hasOpenPosition) {
         const currentPosition = positions[0];
-        // Check for significant P&L. Using absolute P&L instead of ratio for simplicity.
-        if (currentPosition.pnl > 5000) return 'profit'; // Profit is > 5k
-        if (currentPosition.pnl < -5000) return 'loss'; // Loss is > 5k
+        if (currentPosition.pnl > 0) return 'profit';
+        if (currentPosition.pnl < 0) return 'loss';
     }
     
     // 4. ALERT: If no major P&L event or action, check for dangerous market conditions.
@@ -84,7 +82,7 @@ export function MachineStatus() {
 
   // We are using many state variables here to make the brain holistic
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, tradingStatus, signals, overview.initialEquity, positions, indicators, chartData]);
+  }, [isClient, tradingStatus, signals, positions, indicators, chartData]);
 
 
   if (!isClient) {

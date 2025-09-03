@@ -24,14 +24,22 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { updateProfile } from 'firebase/auth';
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // State for API Keys
   const [apiKey, setApiKey] = React.useState('');
   const [apiSecret, setApiSecret] = React.useState('');
   const [totpSecret, setTotpSecret] = React.useState('');
   const [isConnected, setIsConnected] = React.useState(false);
+
+  // State for Profile
+  const [displayName, setDisplayName] = React.useState(user?.displayName || '');
+  const [isSavingProfile, setIsSavingProfile] = React.useState(false);
+
 
   const handleConnect = () => {
     // In a real app, you would send these to a secure backend to be encrypted and stored.
@@ -52,6 +60,26 @@ export default function SettingsPage() {
     }
   }
 
+  const handleProfileSave = async () => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    try {
+        await updateProfile(user, { displayName });
+        toast({
+            title: "Profile Updated",
+            description: "Your name has been successfully updated.",
+        });
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: "Could not update your profile. Please try again.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsSavingProfile(false);
+    }
+  }
+
 
   return (
     <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
@@ -62,7 +90,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="api_keys" className="space-y-4">
+      <Tabs defaultValue="profile" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="api_keys">API Keys</TabsTrigger>
@@ -79,7 +107,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4 p-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue={user?.displayName || 'Your Name'} />
+                <Input id="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -87,7 +115,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
             <CardFooter className="p-4">
-              <Button>Save Changes</Button>
+              <Button onClick={handleProfileSave} disabled={isSavingProfile}>
+                {isSavingProfile ? 'Saving...' : 'Save Changes'}
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>

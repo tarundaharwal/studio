@@ -102,3 +102,5 @@ export async function placeOrder(session: Session, orderDetails: any) {
     orderid: `mock_${Math.round(Math.random() * 100000)}`,
   };
 }
+
+    

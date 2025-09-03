@@ -4,7 +4,7 @@
  * @fileOverview The backend simulation engine for the IndMon trading dashboard.
  * This flow acts as the "brain" of the simulator, taking the current state of the market
  * and portfolio, and returning the state after one tick of activity.
- * It now includes a deterministic, scripted scenario for testing purposes.
+ * It now includes a simple RSI-based trading strategy.
  */
 
 import { ai } from '@/ai/genkit';
@@ -165,21 +165,22 @@ export const simulationFlow = ai.defineFlow(
     if (session) {
       try {
         const funds = await getFunds(session);
-        overview.equity = funds.net;
         // Only update initialEquity on the first tick to establish a baseline for P&L calculation
         if (tickCounter === 0) {
             overview.initialEquity = funds.net;
             overview.peakEquity = funds.net;
         }
+        // Always update equity to reflect the latest from the broker.
+        // The P&L calculations below will handle unrealized gains/losses.
+        overview.equity = funds.net;
       } catch (e: any) {
         console.error("Could not fetch funds:", e.message);
-        // This might happen if the session is valid but some other API fails.
-        // We can let the simulation continue with the last known values.
       }
     }
 
 
     let newPositions = [...positions];
+    let newOverview = {...overview};
     let finalTradingStatus = tradingStatus;
     const newOrders: z.infer<typeof OrderSchema>[] = [];
     const newSignals: z.infer<typeof SignalSchema>[] = [];
@@ -187,7 +188,7 @@ export const simulationFlow = ai.defineFlow(
     const nowLocale = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
     if (tradingStatus === 'STOPPED') {
-        return { chartData, positions: newPositions, overview, indicators, optionChain, newOrders, newSignals, tradingStatus };
+        return { chartData, positions: newPositions, overview: newOverview, indicators, optionChain, newOrders, newSignals, tradingStatus };
     }
     
     if (tradingStatus === 'EMERGENCY_STOP') {
@@ -201,7 +202,7 @@ export const simulationFlow = ai.defineFlow(
             });
             newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP', instrument: 'ALL', reason: 'User initiated emergency stop.' });
             
-            overview.equity += pnlFromLiquidation;
+            newOverview.equity += pnlFromLiquidation;
             newPositions = [];
         }
         
@@ -210,7 +211,7 @@ export const simulationFlow = ai.defineFlow(
         return { 
             chartData, 
             positions: newPositions, 
-            overview, 
+            overview: newOverview, 
             indicators, 
             optionChain, 
             newOrders, 
@@ -228,7 +229,6 @@ export const simulationFlow = ai.defineFlow(
             newPrice = marketData.ltp;
         } catch (e: any) {
             console.error("Could not fetch live market data:", e.message);
-            // If fetching fails, we'll just use the last known price to keep the simulation running.
         }
     }
 
@@ -249,28 +249,46 @@ export const simulationFlow = ai.defineFlow(
     };
     const newChartData = [...chartData.slice(1), newCandle];
 
+    // --- UPDATE INDICATORS ---
+    const calculatedRSI = calculateRSI(newChartData);
+    const newIndicators = indicators.map(ind => {
+        let newValue = ind.value;
+        if (ind.name.includes('RSI')) {
+            newValue = calculatedRSI ?? ind.value;
+        }
+        // Other indicators can be updated here...
+        return {...ind, value: parseFloat(newValue.toFixed(2))};
+    });
+    const currentRSI = newIndicators.find(i => i.name.includes('RSI'))?.value ?? 50;
+    
+    // --- TRADING STRATEGY LOGIC ---
+    const hasOpenPosition = newPositions.length > 0;
+    const TRADE_SYMBOL = 'NIFTY50';
+    const TRADE_QTY = 50;
+
+    // 1. Sell Condition
+    if (hasOpenPosition && currentRSI > 70) {
+        const positionToClose = newPositions[0];
+        const realizedPnl = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
+        
+        newOverview.equity += realizedPnl; // Realize the P&L
+        newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
+        newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'SELL_TO_CLOSE', instrument: TRADE_SYMBOL, reason: `RSI > 70 (${currentRSI.toFixed(2)}). Closing position for a profit/loss of ${realizedPnl.toFixed(2)}.` });
+        newPositions = []; // Clear positions
+    } 
+    // 2. Buy Condition
+    else if (!hasOpenPosition && currentRSI < 30) {
+        newPositions.push({ symbol: TRADE_SYMBOL, qty: TRADE_QTY, avgPrice: newPrice, ltp: newPrice, pnl: 0 });
+        newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'BUY', qty: TRADE_QTY, price: newPrice, status: 'EXECUTED' });
+        newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_TO_OPEN', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}). Entering new long position.` });
+    }
+
     // --- UPDATE POSITIONS PNL ---
     let positionsWithPnl = newPositions.map(pos => {
         const pnl = (newPrice - pos.avgPrice) * pos.qty;
         return { ...pos, ltp: newPrice, pnl: parseFloat(pnl.toFixed(2)) };
     });
 
-    // --- UPDATE INDICATORS ---
-    const calculatedRSI = calculateRSI(newChartData);
-    const newIndicators = indicators.map(ind => {
-        let newValue = ind.value;
-        const movement = newPrice - lastPrice;
-        if (ind.name.includes('RSI')) {
-            newValue = calculatedRSI ?? ind.value;
-        } else if (ind.name.includes('MACD')) {
-            newValue = ind.value + (movement / 10);
-        } else if (ind.name.includes('ADX')) {
-            let adxChange = (Math.abs(movement) > 50 ? 2 : -1);
-            newValue = Math.max(10, Math.min(100, ind.value + adxChange));
-        }
-        return {...ind, value: parseFloat(newValue.toFixed(2))};
-    });
-    
     // --- UPDATE OPTION CHAIN ---
      const newOptionChain = optionChain.map(opt => ({
         ...opt,
@@ -280,18 +298,19 @@ export const simulationFlow = ai.defineFlow(
 
     // --- UPDATE PORTFOLIO DATA ---
     const totalUnrealizedPnl = positionsWithPnl.reduce((acc, pos) => acc + pos.pnl, 0);
-    const realizedPnl = overview.equity - overview.initialEquity;
-    overview.pnl = parseFloat((realizedPnl + totalUnrealizedPnl).toFixed(2));
-    const currentTotalEquity = overview.equity + totalUnrealizedPnl;
+    // Realized PNL is now implicitly handled by updating overview.equity on sell.
+    // The total PNL displayed is the sum of today's realized and unrealized PNL.
+    const currentTotalEquity = newOverview.equity + totalUnrealizedPnl;
+    newOverview.pnl = parseFloat((currentTotalEquity - newOverview.initialEquity).toFixed(2));
     
-    overview.peakEquity = Math.max(overview.peakEquity, currentTotalEquity);
-    overview.maxDrawdown = Math.max(overview.maxDrawdown, overview.peakEquity - currentTotalEquity);
+    newOverview.peakEquity = Math.max(newOverview.peakEquity, currentTotalEquity);
+    newOverview.maxDrawdown = Math.max(newOverview.maxDrawdown, newOverview.peakEquity - currentTotalEquity);
 
     // Return the new state
     return {
       chartData: newChartData,
       positions: positionsWithPnl,
-      overview,
+      overview: newOverview,
       indicators: newIndicators,
       optionChain: newOptionChain,
       newOrders,
@@ -303,8 +322,6 @@ export const simulationFlow = ai.defineFlow(
 
 // This is the exported function that the API route will call.
 export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
-  // If there's no session, we shouldn't be running the simulation.
-  // The frontend should ideally prevent this, but this is a safeguard.
   if (!input.session) {
       console.warn("runSimulation called without a session. Returning current state without processing.");
       const { session, ...rest } = input;
@@ -316,3 +333,5 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
   }
   return simulationFlow(input);
 }
+
+    

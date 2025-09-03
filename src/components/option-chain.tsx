@@ -61,6 +61,20 @@ const OrderPopover = ({ ltp, strike, type }: { ltp: number, strike: number, type
 export function OptionChain() {
   const { optionChain } = useStore();
 
+  if (!optionChain || optionChain.length === 0) {
+    return (
+        <Card className="h-full flex flex-col">
+            <CardHeader className="p-2 space-y-2">
+                <CardTitle>Option Chain</CardTitle>
+                <CardDescription className="text-xs">NIFTY 50 - 29 AUG 2024</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 flex-1 overflow-hidden flex items-center justify-center">
+                <p className="text-muted-foreground text-sm">Loading option data...</p>
+            </CardContent>
+        </Card>
+    );
+  }
+
   const totalPutOI = optionChain.reduce((acc, row) => acc + row.putOI, 0);
   const totalCallOI = optionChain.reduce((acc, row) => acc + row.callOI, 0);
   const pcr = totalPutOI > 0 ? totalPutOI / totalCallOI : 0;

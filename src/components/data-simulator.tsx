@@ -88,7 +88,7 @@ export function DataSimulator() {
       store.updatePositions(newState.positions);
       store.updateOverview(newState.overview);
       store.updateIndicators(newState.indicators);
-      store.updateOptionChain(newState.updateOptionChain); // Corrected from updateOptionChain
+      store.updateOptionChain(newState.optionChain); // Corrected from updateOptionChain
       store.setLastTickTime(newState.lastTickTime);
       store.setTradingStatus(newState.tradingStatus);
       store.setTickCounter(newState.tickCounter);

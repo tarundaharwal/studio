@@ -1,17 +1,26 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
+// =========================================================================================
+// TODO: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
+// =========================================================================================
+// 1. Go to https://console.firebase.google.com/ and create a new project.
+// 2. In your project dashboard, click the web icon (</>) to add a web app.
+// 3. Follow the steps, and Firebase will give you a `firebaseConfig` object.
+// 4. Paste that entire object here, replacing the placeholder below.
+// 5. In the Firebase Console, go to Authentication > Sign-in method and enable "Email/Password".
+// =========================================================================================
+
 const firebaseConfig = {
-  apiKey: "AIzaSyDPs5zaEa11S43d5xSj5lJz3a9rF9e5p9Y",
-  authDomain: "dev-session-20240822-83549.firebaseapp.com",
-  projectId: "dev-session-20240822-83549",
-  storageBucket: "dev-session-20240822-83549.appspot.com",
-  messagingSenderId: "633190282126",
-  appId: "1:633190282126:web:1301297e59b92641031846"
+  apiKey: "PASTE_YOUR_API_KEY_HERE",
+  authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
+  projectId: "PASTE_YOUR_PROJECT_ID_HERE",
+  storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
+  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
+  appId: "PASTE_YOUR_APP_ID_HERE"
 };
 
+
 // Initialize Firebase
+// This line automatically handles app initialization, preventing errors from re-initializing.
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();

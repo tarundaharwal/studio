@@ -19,14 +19,28 @@ import { OverviewCards } from '../app/(protected)/overview-cards';
 import { MachineStatus } from './machine-status';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 export function DashboardHeader() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleLogout = async () => {
-    await logout();
-    router.push('/login');
+    try {
+        await logout();
+        toast({
+            title: 'Logged Out',
+            description: 'You have been successfully logged out.',
+        });
+        router.push('/login');
+    } catch (error) {
+        toast({
+            title: 'Logout Failed',
+            description: 'Something went wrong. Please try again.',
+            variant: 'destructive',
+        });
+    }
   }
 
   return (
@@ -58,7 +72,7 @@ export function DashboardHeader() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href="/settings">Settings</Link>

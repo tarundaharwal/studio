@@ -23,8 +23,10 @@ import { Switch } from "@/components/ui/switch"
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, XCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function SettingsPage() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [apiKey, setApiKey] = React.useState('');
   const [apiSecret, setApiSecret] = React.useState('');
@@ -77,11 +79,11 @@ export default function SettingsPage() {
             <CardContent className="space-y-4 p-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue="Your Name" />
+                <Input id="name" defaultValue={user?.displayName || 'Your Name'} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue="your.email@example.com" disabled />
+                <Input id="email" type="email" defaultValue={user?.email || ''} disabled />
               </div>
             </CardContent>
             <CardFooter className="p-4">
@@ -106,15 +108,15 @@ export default function SettingsPage() {
                   </Badge>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="api-key">API Key</Label>
+                <Label htmlFor="api-key">Angel One API Key</Label>
                 <Input id="api-key" placeholder="Enter your API key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}/>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="api-secret">API Secret</Label>
+                <Label htmlFor="api-secret">Angel One API Secret</Label>
                 <Input id="api-secret" placeholder="Enter your API secret" type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)}/>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="totp-secret">TOTP Secret</Label>
+                <Label htmlFor="totp-secret">Angel One TOTP Secret</Label>
                 <Input id="totp-secret" placeholder="Enter your TOTP authenticator secret" type="password" value={totpSecret} onChange={(e) => setTotpSecret(e.target.value)}/>
               </div>
             </CardContent>

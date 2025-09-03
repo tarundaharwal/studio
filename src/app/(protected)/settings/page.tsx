@@ -22,63 +22,56 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
+import { connectToBroker, Session } from '@/services/angelone';
 
 export default function SettingsPage() {
-  const { user, updateUserProfile, loading } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  
-  // State for Profile
-  const [displayName, setDisplayName] = React.useState(user?.displayName || '');
   
   // State for API Keys
   const [apiKey, setApiKey] = React.useState('');
   const [apiSecret, setApiSecret] = React.useState('');
   const [totpSecret, setTotpSecret] = React.useState('');
-  const [isConnected, setIsConnected] = React.useState(false);
 
-  React.useEffect(() => {
-    if (user?.displayName) {
-      setDisplayName(user.displayName);
-    }
-  }, [user?.displayName]);
+  // State for Connection Status
+  const [session, setSession] = React.useState<Session | null>(null);
+  const [isConnecting, setIsConnecting] = React.useState(false);
+  const isConnected = session !== null;
 
-
-  const handleProfileSave = async () => {
-    try {
-      await updateUserProfile(displayName);
-      toast({
-        title: "Profile Updated",
-        description: "Your name has been successfully updated.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Update Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  }
-
-  const handleConnect = () => {
-    // In a real app, you would send these to a secure backend to be encrypted and stored.
-    // The backend would then verify them with Angel One.
-    if (apiKey && apiSecret && totpSecret) {
-      setIsConnected(true);
-      toast({
-        title: "API Keys Saved!",
-        description: "Your Angel One API keys have been securely stored.",
-      });
-    } else {
-      setIsConnected(false);
+  const handleConnect = async () => {
+    if (!apiKey || !apiSecret || !totpSecret) {
       toast({
         title: "Error: Missing Information",
         description: "Please provide all three API keys to connect.",
         variant: "destructive",
-      })
+      });
+      return;
     }
-  }
+    
+    setIsConnecting(true);
+    setSession(null);
+
+    try {
+      const credentials = { apiKey, apiSecret, totpSecret };
+      const newSession = await connectToBroker(credentials);
+      setSession(newSession);
+      toast({
+        title: "Connection Successful!",
+        description: "Successfully connected to Angel One broker.",
+      });
+    } catch (error: any) {
+      setSession(null);
+      toast({
+        title: "Connection Failed",
+        description: error.message || "Could not connect to the broker.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   return (
     <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
@@ -89,7 +82,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-4">
+      <Tabs defaultValue="api_keys" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="api_keys">API Keys</TabsTrigger>
@@ -106,7 +99,7 @@ export default function SettingsPage() {
             <CardContent className="space-y-4 p-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" value={displayName} disabled />
+                <Input id="name" value={user?.displayName || 'Not Set'} disabled />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
@@ -126,10 +119,17 @@ export default function SettingsPage() {
             <CardContent className="space-y-4 p-4">
               <div className="flex items-center gap-4 rounded-md border bg-muted/30 p-3">
                   <Label>Status:</Label>
-                  <Badge variant={isConnected ? "outline" : "destructive"} className={isConnected ? 'border-green-600 text-green-600' : ''}>
-                      {isConnected ? <CheckCircle className="mr-2 h-4 w-4" /> : <XCircle className="mr-2 h-4 w-4" />}
-                      {isConnected ? 'Connected' : 'Not Connected'}
-                  </Badge>
+                  {isConnecting ? (
+                      <Badge variant="outline" className="border-yellow-500 text-yellow-500">
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Connecting...
+                      </Badge>
+                  ) : (
+                    <Badge variant={isConnected ? "outline" : "destructive"} className={isConnected ? 'border-green-600 text-green-600' : ''}>
+                        {isConnected ? <CheckCircle className="mr-2 h-4 w-4" /> : <XCircle className="mr-2 h-4 w-4" />}
+                        {isConnected ? 'Connected' : 'Not Connected'}
+                    </Badge>
+                  )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="api-key">Angel One API Key</Label>
@@ -145,7 +145,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
             <CardFooter className="p-4">
-              <Button onClick={handleConnect}>Save & Connect Broker</Button>
+              <Button onClick={handleConnect} disabled={isConnecting}>
+                {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</> : 'Save & Connect Broker'}
+              </Button>
             </CardFooter>
           </Card>
         </TabsContent>

@@ -161,17 +161,20 @@ export const simulationFlow = ai.defineFlow(
   async (input) => {
     let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, tickCounter, session } = input;
     
-    // If we have a session, try to fetch real funds, but only on the first tick
-    if (session && tickCounter === 0) {
+    // If we have a session, try to fetch real funds.
+    if (session) {
       try {
         const funds = await getFunds(session);
-        overview.initialEquity = funds.net;
+        // Only update initialEquity on the first tick to establish a baseline for P&L calculation
+        if (tickCounter === 0) {
+            overview.initialEquity = funds.net;
+            overview.peakEquity = funds.net;
+        }
         overview.equity = funds.net;
-        overview.peakEquity = funds.net;
       } catch (e: any) {
         console.error("Could not fetch funds:", e.message);
         // This might happen if the session is valid but some other API fails.
-        // We can let the simulation continue with the default store values.
+        // We can let the simulation continue with the last known values.
       }
     }
 
@@ -365,3 +368,5 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
   }
   return simulationFlow(input);
 }
+
+    

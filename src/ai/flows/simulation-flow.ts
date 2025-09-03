@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview The backend simulation engine for the IndMon trading dashboard.
@@ -43,7 +42,8 @@ export type Order = z.infer<typeof OrderSchema>;
 const OverviewSchema = z.object({
   equity: z.number(),
   initialEquity: z.number(),
-  pnl: z.number(),
+  pnl: z.number(), // This will now represent TOTAL PNL (realized + unrealized)
+  realizedPnl: z.number(), // We'll track realized PNL separately
   maxDrawdown: z.number(),
   peakEquity: z.number(),
 });
@@ -165,11 +165,11 @@ export const simulationFlow = ai.defineFlow(
     if (session) {
       try {
         const funds = await getFunds(session);
-        if (tickCounter === 0) {
+        if (tickCounter === 0) { // Set initial equity only once
             overview.initialEquity = funds.net;
             overview.peakEquity = funds.net;
+            overview.realizedPnl = 0; // Reset realized PNL on new session
         }
-        overview.equity = funds.net; // Update with the base equity from broker
       } catch (e: any) {
         console.error("Could not fetch funds:", e.message);
       }
@@ -199,23 +199,13 @@ export const simulationFlow = ai.defineFlow(
             });
             newSignals.push({ time: nowLocale, strategy: 'System', action: 'EMERGENCY STOP', instrument: 'ALL', reason: 'User initiated emergency stop.' });
             
-            // This is a realized PNL, so it gets added to the total PNL
-            newOverview.pnl += pnlFromLiquidation;
+            // Add liquidated PNL to the total REALIZED PNL
+            newOverview.realizedPnl += pnlFromLiquidation;
             newPositions = [];
         }
         
         finalTradingStatus = 'STOPPED';
         // The final equity will be calculated at the end.
-        return { 
-            chartData, 
-            positions: newPositions, 
-            overview: newOverview, 
-            indicators, 
-            optionChain, 
-            newOrders, 
-            newSignals, 
-            tradingStatus: finalTradingStatus 
-        };
     }
     
     // --- FETCH LIVE DATA ---
@@ -268,13 +258,13 @@ export const simulationFlow = ai.defineFlow(
         const positionToClose = newPositions[0];
         const realizedPnl = (newPrice - positionToClose.avgPrice) * positionToClose.qty;
         
-        newOverview.pnl += realizedPnl; // Add realized PNL to the total PNL
+        newOverview.realizedPnl += realizedPnl; // Add realized PNL to the total
         newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'SELL', qty: positionToClose.qty, price: newPrice, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'SELL_TO_CLOSE', instrument: TRADE_SYMBOL, reason: `RSI > 70 (${currentRSI.toFixed(2)}). Closing position for a profit/loss of ${realizedPnl.toFixed(2)}.` });
         newPositions = []; // Clear positions
     } 
     // 2. Buy Condition
-    else if (!hasOpenPosition && currentRSI < 30) {
+    else if (!hasOpenPosition && currentRSI < 30 && finalTradingStatus === 'ACTIVE') {
         newPositions.push({ symbol: TRADE_SYMBOL, qty: TRADE_QTY, avgPrice: newPrice, ltp: newPrice, pnl: 0 });
         newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'BUY', qty: TRADE_QTY, price: newPrice, status: 'EXECUTED' });
         newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_TO_OPEN', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}). Entering new long position.` });
@@ -293,12 +283,18 @@ export const simulationFlow = ai.defineFlow(
         putLTP: Math.max(0, opt.putLTP + getRandom(-0.5, 0.5) + (newPrice - opt.strike) / 100),
     }));
 
-    // --- UPDATE PORTFOLIO DATA ---
+    // --- UPDATE PORTFOLIO DATA (REVISED LOGIC) ---
     const totalUnrealizedPnl = positionsWithPnl.reduce((acc, pos) => acc + pos.pnl, 0);
-    // The final equity is the initial base equity plus ALL realized PNL so far, plus any current unrealized PNL.
-    const currentTotalEquity = newOverview.initialEquity + newOverview.pnl + totalUnrealizedPnl;
+    
+    // Total PNL is the sum of all closed trades (realized) and the current open trade (unrealized).
+    const totalPnl = newOverview.realizedPnl + totalUnrealizedPnl;
+    newOverview.pnl = parseFloat(totalPnl.toFixed(2));
+    
+    // The final equity is always the starting equity plus the total PNL so far.
+    const currentTotalEquity = newOverview.initialEquity + totalPnl;
     newOverview.equity = parseFloat(currentTotalEquity.toFixed(2));
     
+    // Update peak equity and drawdown based on the current total equity.
     newOverview.peakEquity = Math.max(newOverview.peakEquity, currentTotalEquity);
     newOverview.maxDrawdown = Math.max(newOverview.maxDrawdown, newOverview.peakEquity - currentTotalEquity);
 
@@ -320,12 +316,19 @@ export const simulationFlow = ai.defineFlow(
 export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
   if (!input.session) {
       console.warn("runSimulation called without a session. Returning current state without processing.");
-      const { session, ...rest } = input;
+      const { session, tickCounter, ...rest } = input;
+      const newOverview = { ...rest.overview, realizedPnl: rest.overview.realizedPnl || 0};
       return {
         ...rest,
+        overview: newOverview,
         newOrders: [],
         newSignals: [],
       };
   }
-  return simulationFlow(input);
+  // Initialize realizedPnl if it doesn't exist
+  const newOverview = { ...input.overview, realizedPnl: input.overview.realizedPnl || 0};
+  const newInput = { ...input, overview: newOverview };
+
+  return simulationFlow(newInput);
 }
+

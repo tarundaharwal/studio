@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 
 // This function is now only for generating initial placeholder data.
@@ -58,6 +57,7 @@ export type Overview = {
     equity: number;
     initialEquity: number;
     pnl: number;
+    realizedPnl: number; // To keep track of profits from closed trades
     maxDrawdown: number;
     peakEquity: number;
 }
@@ -132,6 +132,7 @@ export const useStore = create<StoreState>((set, get) => ({
         equity: INITIAL_EQUITY,
         initialEquity: INITIAL_EQUITY,
         pnl: 0,
+        realizedPnl: 0,
         maxDrawdown: 0,
         peakEquity: INITIAL_EQUITY,
     },

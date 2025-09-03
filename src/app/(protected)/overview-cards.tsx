@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -71,6 +70,7 @@ export function OverviewCards() {
     )
   }
 
+  // P&L percentage is now based on the total PNL (realized + unrealized)
   const pnlPercent = overview.initialEquity > 0 ? (overview.pnl / overview.initialEquity) * 100 : 0;
   const drawdownPercent = overview.peakEquity > 0 ? (overview.maxDrawdown / overview.peakEquity) * 100 : 0;
 
@@ -149,7 +149,7 @@ export function OverviewCards() {
       <Card className="min-w-fit flex-1">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 p-2 pb-1">
           <CardTitle className="text-xs font-medium">
-            P&L
+            Total P&amp;L
           </CardTitle>
           <TrendingUp className="h-3 w-3 text-muted-foreground" />
         </CardHeader>

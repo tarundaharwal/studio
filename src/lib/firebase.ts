@@ -12,15 +12,22 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 // =========================================================================================
 
 const firebaseConfig = {
-  apiKey: "PASTE_YOUR_API_KEY_HERE",
-  authDomain: "PASTE_YOUR_AUTH_DOMAIN_HERE",
-  projectId: "PASTE_YOUR_PROJECT_ID_HERE",
-  storageBucket: "PASTE_YOUR_STORAGE_BUCKET_HERE",
-  messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
-  appId: "PASTE_YOUR_APP_ID_HERE"
+  // --- PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
+  // apiKey: "AIza....",
+  // authDomain: "your-project.firebaseapp.com",
+  // projectId: "your-project",
+  // storageBucket: "your-project.appspot.com",
+  // messagingSenderId: "...",
+  // appId: "..."
+  // ---------------------------------------------
 };
 
 
 // Initialize Firebase
 // This line automatically handles app initialization, preventing errors from re-initializing.
 export const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+
+// Helper to check if the config is just a placeholder
+export const isFirebaseConfigured = () => {
+    return firebaseConfig && firebaseConfig.apiKey && !firebaseConfig.apiKey.includes('...');
+};

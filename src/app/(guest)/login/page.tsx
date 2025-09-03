@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { app, isFirebaseConfigured } from '@/lib/firebase';
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -13,10 +13,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import Link from "next/link";
 import { useToast } from '@/hooks/use-toast';
+import { Terminal } from 'lucide-react';
+
+const firebaseReady = isFirebaseConfigured();
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,6 +33,7 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!firebaseReady) return;
     setIsLoading(true);
     setError(null);
     try {
@@ -42,7 +47,7 @@ export default function LoginPage() {
       setError(error.message);
       toast({
         title: "Login Failed",
-        description: error.message,
+        description: "Please check your credentials or the Firebase configuration.",
         variant: "destructive",
       });
     } finally {
@@ -61,17 +66,27 @@ export default function LoginPage() {
         </CardHeader>
         <form onSubmit={handleLogin}>
             <CardContent className="grid gap-4">
+            {!firebaseReady && (
+              <Alert variant="destructive">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Action Required</AlertTitle>
+                <AlertDescription>
+                  Firebase is not configured. Please add your Firebase configuration to{" "}
+                  <code className="font-mono text-xs">src/lib/firebase.ts</code> to enable login.
+                </AlertDescription>
+              </Alert>
+            )}
             <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={!firebaseReady}/>
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={!firebaseReady} />
             </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-                <Button className="w-full" disabled={isLoading}>
+                <Button className="w-full" disabled={isLoading || !firebaseReady}>
                     {isLoading ? 'Signing in...' : 'Sign in'}
                 </Button>
                 <div className="text-center text-sm">

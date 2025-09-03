@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { app, isFirebaseConfigured } from '@/lib/firebase';
 import { Button } from "@/components/ui/button"
 import {
@@ -64,6 +65,30 @@ export default function LoginPage() {
     }
   }
 
+  const handlePasswordReset = async () => {
+    if (!auth) {
+        toast({ title: "Error", description: "Firebase is not configured.", variant: "destructive" });
+        return;
+    }
+    if (!email) {
+        toast({ title: "Email Required", description: "Please enter your email address to reset your password.", variant: "destructive" });
+        return;
+    }
+    try {
+        await sendPasswordResetEmail(auth, email);
+        toast({
+            title: "Password Reset Email Sent",
+            description: `A password reset link has been sent to ${email}. Please check your inbox.`,
+        });
+    } catch (error: any) {
+        toast({
+            title: "Error Sending Reset Email",
+            description: error.message,
+            variant: "destructive",
+        });
+    }
+  };
+
   return (
     <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-sm">
@@ -90,7 +115,17 @@ export default function LoginPage() {
                 <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} disabled={!firebaseReady}/>
             </div>
             <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center">
+                    <Label htmlFor="password">Password</Label>
+                    <button
+                        type="button"
+                        onClick={handlePasswordReset}
+                        className="ml-auto inline-block text-sm underline"
+                        disabled={!firebaseReady}
+                    >
+                        Forgot your password?
+                    </button>
+                </div>
                 <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} disabled={!firebaseReady} />
             </div>
             </CardContent>

@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { app, isFirebaseConfigured } from '@/lib/firebase';
 import { Button } from "@/components/ui/button"
 import {
@@ -47,7 +48,13 @@ export default function SignupPage() {
         setIsLoading(true);
         setError(null);
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+            // After creating the user, update their profile with the full name
+            if (userCredential.user) {
+                await updateProfile(userCredential.user, {
+                    displayName: fullName
+                });
+            }
             toast({
                 title: "Account Created!",
                 description: "You have been successfully signed up.",

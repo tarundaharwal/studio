@@ -249,6 +249,7 @@ export const simulationFlow = ai.defineFlow(
     // --- TRADING STRATEGY LOGIC ---
     const hasOpenPosition = newPositions.length > 0;
     const TRADE_SYMBOL = 'NIFTY50';
+    const TRADE_QTY = 50; // Fixed quantity for now
 
     // 1. Sell Condition
     if (hasOpenPosition && currentRSI > 70) {
@@ -262,18 +263,10 @@ export const simulationFlow = ai.defineFlow(
     } 
     // 2. Buy Condition
     else if (!hasOpenPosition && currentRSI < 30 && finalTradingStatus === 'ACTIVE') {
-        const equity = newOverview.equity;
-        // Risk 50% of equity per trade. In a real scenario, this would be much lower (e.g., 1-2%).
-        const tradeValue = equity * 0.5; 
-        const quantityToBuy = Math.floor(tradeValue / newPrice);
-
-        if (quantityToBuy > 0) {
-            newPositions.push({ symbol: TRADE_SYMBOL, qty: quantityToBuy, avgPrice: newPrice, ltp: newPrice, pnl: 0 });
-            newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'BUY', qty: quantityToBuy, price: newPrice, status: 'EXECUTED' });
-            newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_TO_OPEN', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}), Equity: ${equity.toFixed(0)}. Buying ${quantityToBuy} units.` });
-        } else {
-            newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_SKIP', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}), but not enough equity to buy even one unit.` });
-        }
+        const quantityToBuy = TRADE_QTY;
+        newPositions.push({ symbol: TRADE_SYMBOL, qty: quantityToBuy, avgPrice: newPrice, ltp: newPrice, pnl: 0 });
+        newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'BUY', qty: quantityToBuy, price: newPrice, status: 'EXECUTED' });
+        newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_TO_OPEN', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}). Buying ${quantityToBuy} units.` });
     }
 
     // --- UPDATE POSITIONS PNL ---
@@ -340,5 +333,7 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
 
 
 
+
+    
 
     

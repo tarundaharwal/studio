@@ -5,7 +5,6 @@ import { IndicatorGauge } from '@/components/indicator-gauge';
 import { OptionChain } from '@/components/option-chain';
 import { OrdersTable } from '@/components/orders-table';
 import { PerformanceChart } from '@/components/performance-chart';
-import { PositionsTable } from '@/components/positions-table';
 import { SignalsFeed } from '@/components/signals-feed';
 import { TradingTerminal } from '@/components/trading-terminal';
 import { DataSimulator } from '@/components/data-simulator';
@@ -21,8 +20,7 @@ export default function DashboardPage() {
               <div className="h-[420px]">
                 <TradingTerminal />
               </div>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <PositionsTable />
+              <div className="grid grid-cols-1 gap-6">
                 <OrdersTable />
               </div>
           </div>

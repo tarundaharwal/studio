@@ -46,7 +46,7 @@ export function OrdersTable() {
                       <div className="font-mono text-xs text-muted-foreground">{order.time}</div>
                     </TableCell>
                     <TableCell className="p-2">
-                      <Badge variant={order.type === 'BUY' ? 'outline' : 'secondary'} className={order.type === 'BUY' ? 'text-green-600 border-green-600' : 'text-red-600 border-red-600'}>
+                      <Badge variant={'secondary'} className={order.type === 'BUY' ? 'text-green-600 bg-green-500/10 hover:bg-green-500/20' : 'text-red-600 bg-red-500/10 hover:bg-red-500/20'}>
                         {order.type}
                       </Badge>
                     </TableCell>

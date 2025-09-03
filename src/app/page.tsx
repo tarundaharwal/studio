@@ -1,51 +1,33 @@
 
 'use client'
 
-import { IndicatorGauge } from '@/components/indicator-gauge';
-import { OptionChain } from '@/components/option-chain';
-import { OrdersTable } from '@/components/orders-table';
-import { PerformanceChart } from '@/components/performance-chart';
-import { PositionsTable } from '@/components/positions-table';
-import { SignalsFeed } from '@/components/signals-feed';
-import { TradingTerminal } from '@/components/trading-terminal';
-import { DataSimulator } from '@/components/data-simulator';
+import React from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/use-auth';
+import { Logo } from '@/components/icons';
 
-export default function DashboardPage() {
-  return (
-    <>
-      <DataSimulator />
-      <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
-          {/* Main Column */}
-          <div className="col-span-1 flex flex-col gap-6 lg:col-span-3">
-              <div className="h-[420px]">
-                <TradingTerminal />
-              </div>
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <PositionsTable />
-                <OrdersTable />
-              </div>
-          </div>
+// For now, we will redirect to the login page.
+// In the future, we will check if the user is authenticated.
+export default function LandingPage() {
+    const { user, loading } = useAuth();
+    const router = useRouter();
 
-          {/* Right Column Group */}
-          <div className="col-span-1 flex flex-col gap-6 lg:col-span-2">
-            <div className="h-[420px]">
-              <OptionChain />
+    React.useEffect(() => {
+        if (!loading) {
+            if (user) {
+                router.push('/dashboard');
+            } else {
+                router.push('/login');
+            }
+        }
+    }, [user, loading, router]);
+
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <Logo className="h-10 w-10 animate-pulse" />
+                <p className="text-muted-foreground">Loading...</p>
             </div>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <div>
-                    <IndicatorGauge />
-                    <div className="mt-6">
-                        <SignalsFeed />
-                    </div>
-                </div>
-                <div>
-                    <PerformanceChart />
-                </div>
-            </div>
-          </div>
         </div>
-      </main>
-    </>
-  );
+    )
 }

@@ -22,17 +22,32 @@ const statusDescriptions: Record<BrainStatus, string> = {
 export function MachineStatus() {
   const { signals, tradingStatus, positions, indicators, chartData } = useStore();
   const [isClient, setIsClient] = useState(false);
-  const [lastSignalId, setLastSignalId] = useState('');
-  const [focusTimer, setFocusTimer] = useState<NodeJS.Timeout | null>(null);
+  const [focusState, setFocusState] = useState<BrainStatus | null>(null);
   
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const latestSignal = signals.length > 0 ? signals[0] : null;
+  // Effect to handle the 'focused' state for 3 seconds
+  useEffect(() => {
+    if (signals.length === 0) return;
+
+    const latestSignal = signals[0];
+    const isAction = latestSignal.action.includes('BUY') || latestSignal.action.includes('SELL');
+
+    if (isAction) {
+        setFocusState('focused');
+        const timer = setTimeout(() => {
+            setFocusState(null);
+        }, 3000); // Disappear after 3 seconds
+
+        return () => clearTimeout(timer);
+    }
+  }, [signals]);
+
 
   // This is the core logic that connects the entire app state to the brain's status.
-  // The order of these checks is CRITICAL. We check for the most specific and high-priority states first.
+  // The order of these checks is CRITICAL.
   const status: BrainStatus = useMemo(() => {
     if (!isClient) {
       return 'idle';
@@ -44,29 +59,15 @@ export function MachineStatus() {
     }
 
     // 2. FOCUSED: An action was just taken. This overrides everything for a few seconds.
-    // Check if the latest signal is a new buy/sell action
-    if (latestSignal && latestSignal.time !== lastSignalId) {
-        const isAction = latestSignal.action.includes('BUY') || latestSignal.action.includes('SELL');
-        if (isAction) {
-            // This is a new action, trigger focused state
-            if (focusTimer) clearTimeout(focusTimer);
-            setLastSignalId(latestSignal.time); // Mark this signal as seen
-            setFocusTimer(setTimeout(() => {
-                setLastSignalId(''); // Reset after 3 seconds
-            }, 3000));
-            return 'focused';
-        }
-    }
-    
-    // If we are still within the 3-second focus window
-    if(lastSignalId){
+    if (focusState === 'focused') {
         return 'focused';
     }
-
+    
     // 3. PROFIT / LOSS: The state of an open position is very important.
     const hasOpenPosition = positions.length > 0;
     if (hasOpenPosition) {
         const currentPosition = positions[0];
+        // Use a small threshold to avoid flickering
         if (currentPosition.pnl > 0) return 'profit';
         if (currentPosition.pnl < 0) return 'loss';
     }
@@ -88,9 +89,7 @@ export function MachineStatus() {
     // 5. THINKING: If none of the above, the machine is in its default analysis state.
     return 'thinking';
 
-  // We are using many state variables here to make the brain holistic
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, tradingStatus, signals, positions, indicators, chartData, lastSignalId]);
+  }, [isClient, tradingStatus, signals, positions, indicators, chartData, focusState]);
 
 
   if (!isClient) {

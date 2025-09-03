@@ -24,24 +24,27 @@ import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
-import { connectToBroker, Session } from '@/services/angelone';
+import { connectToBroker } from '@/services/angelone';
+import { useAuthStore } from '@/store/use-auth-store';
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // State for API Keys
-  const [apiKey, setApiKey] = React.useState('');
-  const [apiSecret, setApiSecret] = React.useState('');
-  const [totpSecret, setTotpSecret] = React.useState('');
+  // Use the new persistent store
+  const { credentials, session, setCredentials, setSession } = useAuthStore();
 
-  // State for Connection Status
-  const [session, setSession] = React.useState<Session | null>(null);
+  // Local state for input fields, initialized from the store
+  const [apiKey, setApiKey] = React.useState(credentials?.apiKey || '');
+  const [apiSecret, setApiSecret] = React.useState(credentials?.apiSecret || '');
+  const [totpSecret, setTotpSecret] = React.useState(credentials?.totpSecret || '');
+
   const [isConnecting, setIsConnecting] = React.useState(false);
   const isConnected = session !== null;
 
   const handleConnect = async () => {
-    if (!apiKey || !apiSecret || !totpSecret) {
+    const currentCredentials = { apiKey, apiSecret, totpSecret };
+    if (!currentCredentials.apiKey || !currentCredentials.apiSecret || !currentCredentials.totpSecret) {
       toast({
         title: "Error: Missing Information",
         description: "Please provide all three API keys to connect.",
@@ -54,8 +57,10 @@ export default function SettingsPage() {
     setSession(null);
 
     try {
-      const credentials = { apiKey, apiSecret, totpSecret };
-      const newSession = await connectToBroker(credentials);
+      // Save credentials to the persistent store FIRST
+      setCredentials(currentCredentials);
+      
+      const newSession = await connectToBroker(currentCredentials);
       setSession(newSession);
       toast({
         title: "Connection Successful!",
@@ -113,7 +118,7 @@ export default function SettingsPage() {
             <CardHeader className="p-4 pb-2">
               <CardTitle>API Keys</CardTitle>
               <CardDescription>
-                Manage your broker API keys for live trading. Your keys are stored securely.
+                Manage your broker API keys for live trading. Your keys are stored securely in your browser.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4">

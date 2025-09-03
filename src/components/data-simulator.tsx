@@ -4,11 +4,12 @@
 import { useEffect, useRef } from 'react';
 import { useStore, StoreState } from '@/store/use-store';
 import { useToast } from '@/hooks/use-toast';
+import { useAuthStore } from '@/store/use-auth-store';
 
 const TICK_INTERVAL = 2000; // 2 seconds
 
 // Helper function to pick only the required state for the API call
-const pickStateForAPI = (state: StoreState) => ({
+const pickStateForAPI = (state: StoreState, authState: any) => ({
   chartData: state.chartData,
   timeframe: state.timeframe,
   positions: state.positions,
@@ -17,12 +18,14 @@ const pickStateForAPI = (state: StoreState) => ({
   optionChain: state.optionChain,
   tradingStatus: state.tradingStatus,
   lastTickTime: state.lastTickTime,
-  tickCounter: state.tickCounter, // Pass the current tick counter
+  tickCounter: state.tickCounter,
+  credentials: authState.credentials, // Pass the credentials from the auth store
 });
 
 
 export function DataSimulator() {
   const store = useStore();
+  const { credentials } = useAuthStore(); // Get credentials from the new auth store
   const { toast } = useToast();
   const isRunning = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -34,7 +37,7 @@ export function DataSimulator() {
 
     try {
       isRunning.current = true;
-      const currentState = pickStateForAPI(useStore.getState());
+      const currentState = pickStateForAPI(useStore.getState(), useAuthStore.getState());
       
       const response = await fetch('/api/simulate', {
         method: 'POST',
@@ -99,5 +102,3 @@ export function DataSimulator() {
 
   return null;
 }
-
-    

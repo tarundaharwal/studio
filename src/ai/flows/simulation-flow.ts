@@ -87,6 +87,11 @@ const SimulationInputSchema = z.object({
   tradingStatus: z.enum(['ACTIVE', 'STOPPED', 'EMERGENCY_STOP']),
   lastTickTime: z.number(),
   tickCounter: z.number(), // Added to drive the scripted scenario
+  credentials: z.object({
+    apiKey: z.string(),
+    apiSecret: z.string(),
+    totpSecret: z.string(),
+  }).nullable(),
 });
 export type SimulationInput = z.infer<typeof SimulationInputSchema>;
 
@@ -159,8 +164,22 @@ export const simulationFlow = ai.defineFlow(
     outputSchema: SimulationOutputSchema,
   },
   async (input) => {
-    let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, lastTickTime, tickCounter } = input;
+    let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, lastTickTime, tickCounter, credentials } = input;
     
+    // If we have credentials, try to connect and fetch real funds
+    if (credentials && tickCounter === 1) { // Only on the first tick
+      try {
+        const session = await connectToBroker(credentials);
+        const funds = await getFunds(session);
+        overview.initialEquity = funds.net;
+        overview.equity = funds.net;
+        overview.peakEquity = funds.net;
+      } catch (e) {
+        console.error("Could not connect to broker, using simulated funds.", e);
+      }
+    }
+
+
     let newPositions = [...positions];
     let finalTradingStatus = tradingStatus;
     const newOrders: z.infer<typeof OrderSchema>[] = [];
@@ -339,5 +358,3 @@ export const simulationFlow = ai.defineFlow(
 export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
     return simulationFlow(input);
 }
-
-    

@@ -18,5 +18,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: "Error running simulation", error: error.message }, { status: 500 });
   }
 }
-
-    

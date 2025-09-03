@@ -60,9 +60,9 @@ export function MachineStatus() {
     const hasOpenPosition = positions.length > 0;
     if (hasOpenPosition) {
         const currentPosition = positions[0];
-        const pnlRatio = currentPosition.pnl / overview.initialEquity;
-        if (pnlRatio > 0.005) return 'profit'; // Profit is > 0.5% of initial capital
-        if (pnlRatio < -0.005) return 'loss'; // Loss is > 0.5%
+        // Check for significant P&L. Using absolute P&L instead of ratio for simplicity.
+        if (currentPosition.pnl > 5000) return 'profit'; // Profit is > 5k
+        if (currentPosition.pnl < -5000) return 'loss'; // Loss is > 5k
     }
     
     // 4. ALERT: If no major P&L event or action, check for dangerous market conditions.

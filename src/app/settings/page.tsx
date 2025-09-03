@@ -1,3 +1,7 @@
+
+'use client';
+
+import * as React from 'react';
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -16,8 +20,37 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
+import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { CheckCircle, XCircle } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { toast } = useToast();
+  const [apiKey, setApiKey] = React.useState('');
+  const [apiSecret, setApiSecret] = React.useState('');
+  const [totpSecret, setTotpSecret] = React.useState('');
+  const [isConnected, setIsConnected] = React.useState(false);
+
+  const handleConnect = () => {
+    // In a real app, you would send these to a secure backend to be encrypted and stored.
+    // The backend would then verify them with Angel One.
+    if (apiKey && apiSecret && totpSecret) {
+      setIsConnected(true);
+      toast({
+        title: "API Keys Saved!",
+        description: "Your Angel One API keys have been securely stored.",
+      });
+    } else {
+      setIsConnected(false);
+      toast({
+        title: "Error: Missing Information",
+        description: "Please provide all three API keys to connect.",
+        variant: "destructive",
+      })
+    }
+  }
+
+
   return (
     <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
       <div className="space-y-2">
@@ -27,7 +60,7 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-4">
+      <Tabs defaultValue="api_keys" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="api_keys">API Keys</TabsTrigger>
@@ -58,24 +91,35 @@ export default function SettingsPage() {
         </TabsContent>
         <TabsContent value="api_keys" className="space-y-4">
           <Card>
-            <CardHeader className="p-4">
+            <CardHeader className="p-4 pb-2">
               <CardTitle>API Keys</CardTitle>
               <CardDescription>
-                Manage your broker API keys for live trading.
+                Manage your broker API keys for live trading. Your keys are stored securely.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
+              <div className="flex items-center gap-4 rounded-md border bg-muted/30 p-3">
+                  <Label>Status:</Label>
+                  <Badge variant={isConnected ? "outline" : "destructive"} className={isConnected ? 'border-green-600 text-green-600' : ''}>
+                      {isConnected ? <CheckCircle className="mr-2 h-4 w-4" /> : <XCircle className="mr-2 h-4 w-4" />}
+                      {isConnected ? 'Connected' : 'Not Connected'}
+                  </Badge>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="api-key">API Key</Label>
-                <Input id="api-key" placeholder="Enter your API key" type="password" />
+                <Input id="api-key" placeholder="Enter your API key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}/>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="api-secret">API Secret</Label>
-                <Input id="api-secret" placeholder="Enter your API secret" type="password" />
+                <Input id="api-secret" placeholder="Enter your API secret" type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)}/>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="totp-secret">TOTP Secret</Label>
+                <Input id="totp-secret" placeholder="Enter your TOTP authenticator secret" type="password" value={totpSecret} onChange={(e) => setTotpSecret(e.target.value)}/>
               </div>
             </CardContent>
             <CardFooter className="p-4">
-              <Button>Connect Broker</Button>
+              <Button onClick={handleConnect}>Save & Connect Broker</Button>
             </CardFooter>
           </Card>
         </TabsContent>

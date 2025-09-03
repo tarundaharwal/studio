@@ -169,13 +169,14 @@ export const useStore = create<StoreState>((set, get) => ({
     addSignal: (newSignal) => set(state => ({ signals: [newSignal, ...state.signals].slice(0, 20) })),
     setLastTickTime: (time) => set({ lastTickTime: time }),
     
-    // These actions will now primarily be driven by the real backend.
-    // The frontend sends a request, and the backend handles the core logic.
+    // Actions below are now primarily for sending requests to the backend.
+    // The backend handles the core logic.
     toggleTradingStatus: () => set(state => {
+        // This will now send an API call to the backend to start/stop the trading engine.
+        // For now, we'll just toggle the state locally as a placeholder.
         if (state.tradingStatus === 'EMERGENCY_STOP') return {};
         const newStatus = state.tradingStatus === 'ACTIVE' ? 'STOPPED' : 'ACTIVE';
-        // In the future, this will send an API call to the backend to start/stop the trading engine.
-        return { tradingStatus: newStatus, tickCounter: 0 };
+        return { tradingStatus: newStatus };
     }),
     emergencyStop: () => set({ tradingStatus: 'EMERGENCY_STOP' }),
 }));

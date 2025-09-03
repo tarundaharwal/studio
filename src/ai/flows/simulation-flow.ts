@@ -9,7 +9,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { connectToBroker, getFunds, UserCredentials } from '@/services/angelone';
+import { connectToBroker, getFunds, UserCredentials, Session } from '@/services/angelone';
 
 
 // Define schemas for the data structures we'll be working with.
@@ -85,13 +85,8 @@ const SimulationInputSchema = z.object({
   indicators: z.array(IndicatorSchema),
   optionChain: z.array(OptionSchema),
   tradingStatus: z.enum(['ACTIVE', 'STOPPED', 'EMERGENCY_STOP']),
-  lastTickTime: z.number(),
-  tickCounter: z.number(), // Added to drive the scripted scenario
-  credentials: z.object({
-    apiKey: z.string(),
-    apiSecret: z.string(),
-    totpSecret: z.string(),
-  }).nullable(),
+  tickCounter: z.number(),
+  session: z.custom<Session>().nullable(),
 });
 export type SimulationInput = z.infer<typeof SimulationInputSchema>;
 
@@ -164,19 +159,19 @@ export const simulationFlow = ai.defineFlow(
     outputSchema: SimulationOutputSchema,
   },
   async (input) => {
-    let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, lastTickTime, tickCounter, credentials } = input;
+    let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, tickCounter, session } = input;
     
-    // If we have credentials, try to connect and fetch real funds
-    if (credentials && credentials.apiKey && tickCounter === 0) { // Only on the very first tick
+    // If we have a session, try to fetch real funds, but only on the first tick
+    if (session && tickCounter === 0) {
       try {
-        const session = await connectToBroker(credentials);
         const funds = await getFunds(session);
         overview.initialEquity = funds.net;
         overview.equity = funds.net;
         overview.peakEquity = funds.net;
-      } catch (e) {
-        console.error("Could not connect to broker, will use simulated funds.", e);
-        // Do nothing, will just use the default store values.
+      } catch (e: any) {
+        console.error("Could not fetch funds:", e.message);
+        // This might happen if the session is valid but some other API fails.
+        // We can let the simulation continue with the default store values.
       }
     }
 
@@ -357,7 +352,16 @@ export const simulationFlow = ai.defineFlow(
 
 // This is the exported function that the API route will call.
 export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
-    return simulationFlow(input);
+  // If there's no session, we shouldn't be running the simulation.
+  // The frontend should ideally prevent this, but this is a safeguard.
+  if (!input.session) {
+      console.warn("runSimulation called without a session. Returning current state without processing.");
+      const { session, ...rest } = input;
+      return {
+        ...rest,
+        newOrders: [],
+        newSignals: [],
+      };
+  }
+  return simulationFlow(input);
 }
-
-    

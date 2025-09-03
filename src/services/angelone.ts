@@ -35,20 +35,26 @@ export type Session = z.infer<typeof SessionSchema>;
 export async function connectToBroker(credentials: UserCredentials): Promise<Session> {
   console.log('Attempting to connect to Angel One with credentials:', credentials.apiKey);
 
-  // --- MOCK IMPLEMENTATION ---
+  // --- MOCK IMPLEMENTATION WITH ERROR HANDLING ---
   // In a real implementation, we would use a library like 'smartapi-javascript'
   // to perform the login flow, including TOTP generation.
-  // For now, we'll simulate a successful connection and return mock tokens.
+  // For now, we'll simulate a successful connection or a failure based on credentials.
   if (!credentials.apiKey || !credentials.apiSecret || !credentials.totpSecret) {
-    throw new Error('Missing API credentials.');
+    throw new Error('API Key, API Secret, and TOTP Secret are all required.');
   }
 
   // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 1500));
 
+  // Simulate a failure condition for demonstration
+  if (credentials.apiKey === 'fail') {
+    console.error('Angel One Mock Error: Invalid API Key provided.');
+    throw new Error('Invalid API Key. Please check your credentials.');
+  }
+
   console.log('Successfully connected to Angel One (Mock).');
   
-  // Return mock session data
+  // Return mock session data on success
   return {
     jwtToken: `mock_jwt_${Date.now()}`,
     refreshToken: `mock_refresh_${Date.now()}`,
@@ -62,6 +68,10 @@ export async function connectToBroker(credentials: UserCredentials): Promise<Ses
  * @returns A promise that resolves to the user's funds information.
  */
 export async function getFunds(session: Session) {
+    // Validate session
+    if (!session || !session.jwtToken) {
+        throw new Error('Invalid session. Please reconnect.');
+    }
   // MOCK IMPLEMENTATION
   console.log('Fetching funds with session:', session.jwtToken);
   await new Promise(resolve => setTimeout(resolve, 500));
@@ -79,6 +89,10 @@ export async function getFunds(session: Session) {
  * @returns A promise that resolves to the order response from the broker.
  */
 export async function placeOrder(session: Session, orderDetails: any) {
+    // Validate session
+    if (!session || !session.jwtToken) {
+        throw new Error('Invalid session. Please reconnect.');
+    }
   // MOCK IMPLEMENTATION
   console.log('Placing order with details:', orderDetails);
   await new Promise(resolve => setTimeout(resolve, 800));

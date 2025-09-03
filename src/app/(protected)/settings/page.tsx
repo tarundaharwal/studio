@@ -42,10 +42,8 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   
-  // Use the new persistent store
   const { credentials, session, setCredentials, setSession, clearAuth } = useAuthStore();
 
-  // Local state for input fields, initialized from the store
   const [apiKey, setApiKey] = React.useState(credentials?.apiKey || '');
   const [apiSecret, setApiSecret] = React.useState(credentials?.apiSecret || '');
   const [totpSecret, setTotpSecret] = React.useState(credentials?.totpSecret || '');
@@ -65,10 +63,9 @@ export default function SettingsPage() {
     }
     
     setIsConnecting(true);
-    setSession(null); // Clear previous session
+    setSession(null); 
 
     try {
-      // Save credentials to the persistent store FIRST
       setCredentials(currentCredentials);
       
       const newSession = await connectToBroker(currentCredentials);
@@ -78,10 +75,10 @@ export default function SettingsPage() {
         description: "Successfully connected to Angel One broker.",
       });
     } catch (error: any) {
-      setSession(null); // Ensure session is cleared on failure
+      setSession(null); 
       toast({
         title: "Connection Failed",
-        description: error.message || "Could not connect to the broker.",
+        description: error.message || "Could not connect to the broker. Check console for details.",
         variant: "destructive",
       });
     } finally {
@@ -91,11 +88,22 @@ export default function SettingsPage() {
   
   const handleDisconnect = () => {
     clearAuth();
+    setApiKey('');
+    setApiSecret('');
+    setTotpSecret('');
     toast({
         title: "Disconnected",
-        description: "Your broker session has been cleared.",
+        description: "Your broker session and API keys have been cleared.",
     });
   }
+
+  React.useEffect(() => {
+    // Sync local state with store when credentials change (e.g., on load or disconnect)
+    setApiKey(credentials?.apiKey || '');
+    setApiSecret(credentials?.apiSecret || '');
+    setTotpSecret(credentials?.totpSecret || '');
+  }, [credentials]);
+
 
   return (
     <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
@@ -149,7 +157,7 @@ export default function SettingsPage() {
                           Connecting...
                       </Badge>
                   ) : (
-                    <Badge variant={isConnected ? "outline" : "destructive"} className={isConnected ? 'border-green-600 text-green-600' : ''}>
+                    <Badge variant={isConnected ? "outline" : "destructive"} className={cn('transition-colors', isConnected ? 'border-green-600 text-green-600' : '')}>
                         {isConnected ? <CheckCircle className="mr-2 h-4 w-4" /> : <XCircle className="mr-2 h-4 w-4" />}
                         {isConnected ? 'Connected' : 'Not Connected'}
                     </Badge>
@@ -157,15 +165,15 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="api-key">Angel One API Key</Label>
-                <Input id="api-key" placeholder="Enter your API key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} disabled={isConnected}/>
+                <Input id="api-key" placeholder="Enter your API key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} disabled={isConnected || isConnecting}/>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="api-secret">Angel One API Secret</Label>
-                <Input id="api-secret" placeholder="Enter your API secret" type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} disabled={isConnected}/>
+                <Input id="api-secret" placeholder="Enter your API secret" type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} disabled={isConnected || isConnecting}/>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="totp-secret">Angel One TOTP Secret</Label>
-                <Input id="totp-secret" placeholder="Enter your TOTP authenticator secret" type="password" value={totpSecret} onChange={(e) => setTotpSecret(e.target.value)} disabled={isConnected}/>
+                <Input id="totp-secret" placeholder="Enter your TOTP authenticator secret" type="password" value={totpSecret} onChange={(e) => setTotpSecret(e.target.value)} disabled={isConnected || isConnecting}/>
               </div>
             </CardContent>
             <CardFooter className="p-4 flex justify-between">
@@ -240,5 +248,3 @@ export default function SettingsPage() {
     </main>
   )
 }
-
-    

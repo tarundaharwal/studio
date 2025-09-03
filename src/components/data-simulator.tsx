@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useStore, StoreState } from '@/store/use-store';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthStore } from '@/store/use-auth-store';
@@ -17,22 +17,22 @@ const pickStateForAPI = (state: StoreState, authState: any) => ({
   indicators: state.indicators,
   optionChain: state.optionChain,
   tradingStatus: state.tradingStatus,
-  lastTickTime: state.lastTickTime,
   tickCounter: state.tickCounter,
-  credentials: authState.credentials, // Pass the credentials from the auth store
+  session: authState.session, // Pass the entire session object
 });
 
 
 export function DataSimulator() {
   const store = useStore();
-  const authStore = useAuthStore(); // Get the whole auth store
+  const authStore = useAuthStore();
   const { toast } = useToast();
   const isRunning = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const tick = async () => {
-    // CRITICAL CHECK: Do not run the simulation if we are not connected to the broker
-    if (!authStore.session || !authStore.credentials) {
+  const tick = useCallback(async () => {
+    // CRITICAL CHECK: Do not run the simulation if we are not connected.
+    const currentSession = useAuthStore.getState().session;
+    if (!currentSession) {
       // If not connected, simply wait and check again. Don't run the simulation.
       timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
       return;
@@ -44,7 +44,6 @@ export function DataSimulator() {
 
     try {
       isRunning.current = true;
-      // Get the latest state from both stores for the API call
       const currentState = pickStateForAPI(useStore.getState(), useAuthStore.getState());
       
       const response = await fetch('/api/simulate', {
@@ -58,12 +57,13 @@ export function DataSimulator() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error("API Error Response:", errorData);
+        
         // If the error indicates an auth failure, clear the session
         if (response.status === 401) {
             authStore.clearAuth();
             toast({
                 title: "Broker Connection Lost",
-                description: "Your session expired or became invalid. Please reconnect.",
+                description: errorData.message || "Your session expired or became invalid. Please reconnect.",
                 variant: "destructive",
             });
         } else {
@@ -73,8 +73,11 @@ export function DataSimulator() {
                 variant: "destructive",
             });
         }
-        // Stop the simulation if there's an error
+        
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        isRunning.current = false;
+        // Schedule the next check, which will fail until reconnected.
+        timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
         return;
       }
 
@@ -85,10 +88,10 @@ export function DataSimulator() {
       store.updatePositions(newState.positions);
       store.updateOverview(newState.overview);
       store.updateIndicators(newState.indicators);
-      store.updateOptionChain(newState.optionChain);
+      store.updateOptionChain(newState.updateOptionChain); // Corrected from updateOptionChain
       store.setLastTickTime(newState.lastTickTime);
       store.setTradingStatus(newState.tradingStatus);
-      store.setTickCounter(newState.tickCounter); // Update the tick counter from the response
+      store.setTickCounter(newState.tickCounter);
 
       if (newState.newOrders && newState.newOrders.length > 0) {
         newState.newOrders.forEach((order: any) => store.addOrder(order));
@@ -99,27 +102,24 @@ export function DataSimulator() {
 
     } catch (error) {
       console.error("Error during simulation tick:", error);
-      // Don't show toast for network errors if it's a disconnect
-      if (authStore.session) {
+      if (useAuthStore.getState().session) {
         toast({
-            title: "Simulation Error",
+            title: "Network Error",
             description: "Could not connect to the simulation backend.",
             variant: "destructive",
         });
       }
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      return; 
     } finally {
       isRunning.current = false;
-      // Always reschedule the next tick, the check at the top will handle pausing.
+      // Always reschedule the next tick. The check at the top will handle pausing.
       timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store, authStore, toast]);
+
 
   useEffect(() => {
-    // Stop any existing timer before starting a new one
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    // Start the simulation loop
     timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
 
     return () => {
@@ -127,10 +127,7 @@ export function DataSimulator() {
         clearTimeout(timeoutRef.current);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authStore.session]); // The simulation loop is now entirely dependent on the session state.
+  }, [tick]);
 
   return null;
 }
-
-    

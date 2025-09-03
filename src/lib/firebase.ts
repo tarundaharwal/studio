@@ -2,23 +2,16 @@
 import { initializeApp, getApps, getApp, type FirebaseOptions } from "firebase/app";
 
 // =========================================================================================
-// TODO: PASTE YOUR FIREBASE CONFIGURATION OBJECT HERE
+// The user's Firebase Project Configuration
 // =========================================================================================
-// 1. Go to your Firebase project: "IndMonMachine"
-// 2. Go to Project Settings (gear icon).
-// 3. In the "General" tab, scroll down to "Your apps".
-// 4. Find your web app and copy the `firebaseConfig` object here.
-// =========================================================================================
-
 const firebaseConfig: FirebaseOptions = {
-  // --- PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
-  // apiKey: "AIza....",
-  // authDomain: "your-project.firebaseapp.com",
-  // projectId: "your-project",
-  // storageBucket: "your-project.appspot.com",
-  // messagingSenderId: "...",
-  // appId: "..."
-  // ---------------------------------------------
+  apiKey: "AIzaSyBl65JN31ewjDjXtFzST1X1gxgZ9rvBbSQ",
+  authDomain: "indmonmachine.firebaseapp.com",
+  projectId: "indmonmachine",
+  storageBucket: "indmonmachine.firebasestorage.app",
+  messagingSenderId: "727618530118",
+  appId: "1:727618530118:web:4bb56062eaf5b55b831347",
+  measurementId: "G-67405GEZ2C"
 };
 
 

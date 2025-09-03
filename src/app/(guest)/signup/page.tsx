@@ -66,7 +66,7 @@ export default function SignupPage() {
     }
 
   return (
-     <div className="flex items-center justify-center py-12">
+      <div className="flex items-center justify-center py-12">
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Sign Up</CardTitle>
@@ -112,6 +112,6 @@ export default function SignupPage() {
             </CardFooter>
         </form>
       </Card>
-     </div>
+      </div>
   )
 }

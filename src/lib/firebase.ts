@@ -8,7 +8,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 // 2. In your project dashboard, click the web icon (</>) to add a web app.
 // 3. Follow the steps, and Firebase will give you a `firebaseConfig` object.
 // 4. Paste that entire object here, replacing the placeholder below.
-// 5. In the Firebase Console, go to Authentication > Sign-in method and enable "Email/Password".
+// 5. In the Firebase Console, go to Build > Authentication > Sign-in method and enable "Email/Password".
 // =========================================================================================
 
 const firebaseConfig = {

@@ -22,6 +22,8 @@ const statusDescriptions: Record<BrainStatus, string> = {
 export function MachineStatus() {
   const { signals, tradingStatus, positions, indicators, chartData } = useStore();
   const [isClient, setIsClient] = useState(false);
+  const [lastSignalId, setLastSignalId] = useState('');
+  const [focusTimer, setFocusTimer] = useState<NodeJS.Timeout | null>(null);
   
   useEffect(() => {
     setIsClient(true);
@@ -40,19 +42,25 @@ export function MachineStatus() {
     if (tradingStatus === 'STOPPED' || tradingStatus === 'EMERGENCY_STOP') {
       return 'idle';
     }
-    
+
     // 2. FOCUSED: An action was just taken. This overrides everything for a few seconds.
-    if (latestSignal) {
-        const now = new Date();
-        const signalTimeParts = latestSignal.time.split(':').map(Number);
-        const signalDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), signalTimeParts[0] || 0, signalTimeParts[1] || 0, signalTimeParts[2] || 0);
-
-        const isRecent = (now.getTime() - signalDate.getTime()) < 3000; // 3 seconds
+    // Check if the latest signal is a new buy/sell action
+    if (latestSignal && latestSignal.time !== lastSignalId) {
         const isAction = latestSignal.action.includes('BUY') || latestSignal.action.includes('SELL');
-
-        if (isRecent && isAction) {
-             return 'focused';
+        if (isAction) {
+            // This is a new action, trigger focused state
+            if (focusTimer) clearTimeout(focusTimer);
+            setLastSignalId(latestSignal.time); // Mark this signal as seen
+            setFocusTimer(setTimeout(() => {
+                setLastSignalId(''); // Reset after 3 seconds
+            }, 3000));
+            return 'focused';
         }
+    }
+    
+    // If we are still within the 3-second focus window
+    if(lastSignalId){
+        return 'focused';
     }
 
     // 3. PROFIT / LOSS: The state of an open position is very important.
@@ -82,7 +90,7 @@ export function MachineStatus() {
 
   // We are using many state variables here to make the brain holistic
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isClient, tradingStatus, signals, positions, indicators, chartData]);
+  }, [isClient, tradingStatus, signals, positions, indicators, chartData, lastSignalId]);
 
 
   if (!isClient) {

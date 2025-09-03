@@ -151,6 +151,10 @@ const calculateRSI = (data: ChartData[], period: number = 14): number | null => 
     return 100 - (100 / (1 + rs));
 }
 
+// Professional Trading Constants
+const TRADE_SYMBOL = 'NIFTY50';
+const MARGIN_PER_LOT = 125000; // Approximate margin for one Nifty lot
+const LOT_SIZE = 50; // Quantity per Nifty lot
 
 // This is the main simulation flow, defined with Genkit
 export const simulationFlow = ai.defineFlow(
@@ -166,13 +170,15 @@ export const simulationFlow = ai.defineFlow(
     let newOverview = {...overview};
     
     // If we have a session, try to fetch real funds.
-    if (session && tickCounter === 0) { // Only fetch on the first tick to set the baseline
+    if (session) { 
       try {
         const funds = await getFunds(session);
-        // CRITICAL FIX: Reset initial equity AND peak equity to the fetched funds.
-        newOverview.initialEquity = funds.net;
-        newOverview.peakEquity = funds.net;
-        newOverview.equity = funds.net; // Also set current equity
+        // CRITICAL FIX: Reset initial equity AND peak equity to the fetched funds on the first tick.
+        if (tickCounter === 0) {
+            newOverview.initialEquity = funds.net;
+            newOverview.peakEquity = funds.net;
+        }
+        newOverview.equity = funds.net + newOverview.realizedPnl; // Update equity based on real funds + realized P&L
       } catch (e: any) {
         console.error("Could not fetch funds:", e.message);
       }
@@ -245,7 +251,6 @@ export const simulationFlow = ai.defineFlow(
     const currentRSI = newIndicators.find(i => i.name.includes('RSI'))?.value ?? 50;
     
     const hasOpenPosition = newPositions.length > 0;
-    const TRADE_SYMBOL = 'NIFTY50';
 
     if (hasOpenPosition && currentRSI > 70) {
         const positionToClose = newPositions[0];
@@ -257,10 +262,22 @@ export const simulationFlow = ai.defineFlow(
         newPositions = [];
     } 
     else if (!hasOpenPosition && currentRSI < 30 && finalTradingStatus === 'ACTIVE') {
-        const quantityToBuy = 50;
-        newPositions.push({ symbol: TRADE_SYMBOL, qty: quantityToBuy, avgPrice: newPrice, ltp: newPrice, pnl: 0 });
-        newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'BUY', qty: quantityToBuy, price: newPrice, status: 'EXECUTED' });
-        newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_TO_OPEN', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}). Buying ${quantityToBuy} units.` });
+        const maxLots = Math.floor(newOverview.equity / MARGIN_PER_LOT);
+        
+        if (maxLots > 0) {
+            // For now, let's just trade one lot for safety.
+            const lotsToBuy = 1;
+            const quantityToBuy = lotsToBuy * LOT_SIZE;
+
+            newPositions.push({ symbol: TRADE_SYMBOL, qty: quantityToBuy, avgPrice: newPrice, ltp: newPrice, pnl: 0 });
+            newOrders.push({ time: nowLocale, symbol: TRADE_SYMBOL, type: 'BUY', qty: quantityToBuy, price: newPrice, status: 'EXECUTED' });
+            newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_TO_OPEN', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}). Buying ${lotsToBuy} Lot(s) (${quantityToBuy} units).` });
+        } else {
+             // Only send the skip signal ONCE when the state changes to skippable.
+             // This avoids spamming the signal feed. We can implement a simple check for this later if needed.
+             // For now, we will add a signal on every tick it can't afford.
+             newSignals.push({ time: nowLocale, strategy: 'RSI_Simple', action: 'BUY_SKIP', instrument: TRADE_SYMBOL, reason: `RSI < 30 (${currentRSI.toFixed(2)}), but not enough equity (${newOverview.equity}) for margin (${MARGIN_PER_LOT}).` });
+        }
     }
 
     let positionsWithPnl = newPositions.map(pos => {
@@ -276,9 +293,12 @@ export const simulationFlow = ai.defineFlow(
 
     const totalUnrealizedPnl = positionsWithPnl.reduce((acc, pos) => acc + pos.pnl, 0);
     
+    // COMPREHENSIVE FIX: Calculate PNL and Equity correctly.
+    // Total PNL is the sum of profits from closed trades and PNL from open trades.
     const totalPnl = newOverview.realizedPnl + totalUnrealizedPnl;
     newOverview.pnl = parseFloat(totalPnl.toFixed(2));
     
+    // Current total equity is the starting money plus all profits/losses (realized and unrealized).
     const currentTotalEquity = newOverview.initialEquity + totalPnl;
     newOverview.equity = parseFloat(currentTotalEquity.toFixed(2));
     
@@ -315,3 +335,6 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
 
   return simulationFlow(newInput);
 }
+
+
+    

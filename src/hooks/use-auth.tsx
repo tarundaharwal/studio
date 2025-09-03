@@ -1,19 +1,21 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getAuth, onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { getAuth, onAuthStateChanged, signOut, User, updateProfile } from 'firebase/auth';
 import { app, isFirebaseConfigured } from '@/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
+  updateUserProfile: (displayName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   logout: async () => {},
+  updateUserProfile: async () => {},
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -21,7 +23,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const firebaseReady = isFirebaseConfigured();
   
-  // Only get auth instance if Firebase is configured
   const auth = firebaseReady && app ? getAuth(app) : null;
 
   useEffect(() => {
@@ -32,7 +33,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
       return () => unsubscribe();
     } else {
-      // If firebase is not configured, stop loading and set user to null
       setLoading(false);
       setUser(null);
     }
@@ -44,8 +44,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const updateUserProfile = async (displayName: string) => {
+    if (auth && auth.currentUser) {
+      await updateProfile(auth.currentUser, { displayName });
+      // We need to create a new user object to trigger a re-render
+      setUser(auth.currentUser ? { ...auth.currentUser } : null);
+    } else {
+      throw new Error("User not found or auth not initialized.");
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, loading, logout, updateUserProfile }}>
       {children}
     </AuthContext.Provider>
   );

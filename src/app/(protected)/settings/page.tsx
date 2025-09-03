@@ -26,14 +26,40 @@ import { CheckCircle, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, updateUserProfile, loading } = useAuth();
   const { toast } = useToast();
+  
+  // State for Profile
+  const [displayName, setDisplayName] = React.useState(user?.displayName || '');
   
   // State for API Keys
   const [apiKey, setApiKey] = React.useState('');
   const [apiSecret, setApiSecret] = React.useState('');
   const [totpSecret, setTotpSecret] = React.useState('');
   const [isConnected, setIsConnected] = React.useState(false);
+
+  React.useEffect(() => {
+    if (user?.displayName) {
+      setDisplayName(user.displayName);
+    }
+  }, [user?.displayName]);
+
+
+  const handleProfileSave = async () => {
+    try {
+      await updateUserProfile(displayName);
+      toast({
+        title: "Profile Updated",
+        description: "Your name has been successfully updated.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  }
 
   const handleConnect = () => {
     // In a real app, you would send these to a secure backend to be encrypted and stored.
@@ -74,17 +100,17 @@ export default function SettingsPage() {
             <CardHeader className="p-4">
               <CardTitle>Profile</CardTitle>
               <CardDescription>
-                This is your personal information as provided during sign up.
+                This is your personal information. Your name is permanent after sign up.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
-                <Input id="name" defaultValue={user?.displayName || ''} disabled />
+                <Input id="name" value={displayName} disabled />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" defaultValue={user?.email || ''} disabled />
+                <Input id="email" type="email" value={user?.email || ''} disabled />
               </div>
             </CardContent>
           </Card>

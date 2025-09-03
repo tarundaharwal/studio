@@ -25,12 +25,19 @@ const pickStateForAPI = (state: StoreState, authState: any) => ({
 
 export function DataSimulator() {
   const store = useStore();
-  const { credentials } = useAuthStore(); // Get credentials from the new auth store
+  const authStore = useAuthStore(); // Get the whole auth store
   const { toast } = useToast();
   const isRunning = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const tick = async () => {
+    // Do not run the simulation if we are not connected to the broker
+    if (!authStore.session) {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
+      return;
+    }
+      
     if (isRunning.current) {
       return;
     }
@@ -79,6 +86,7 @@ export function DataSimulator() {
         description: "Could not connect to the simulation backend.",
         variant: "destructive",
       });
+      // Stop the simulation if there's an error
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
@@ -90,6 +98,7 @@ export function DataSimulator() {
   };
 
   useEffect(() => {
+    // Initial delay before the first tick
     timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
 
     return () => {
@@ -98,7 +107,9 @@ export function DataSimulator() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [authStore.session]); // Re-run effect if session changes (e.g., user connects/disconnects)
 
   return null;
 }
+
+    

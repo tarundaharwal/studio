@@ -167,7 +167,7 @@ export const simulationFlow = ai.defineFlow(
     let { chartData, timeframe, positions, overview, indicators, optionChain, tradingStatus, lastTickTime, tickCounter, credentials } = input;
     
     // If we have credentials, try to connect and fetch real funds
-    if (credentials && tickCounter === 1) { // Only on the first tick
+    if (credentials && credentials.apiKey && tickCounter === 0) { // Only on the very first tick
       try {
         const session = await connectToBroker(credentials);
         const funds = await getFunds(session);
@@ -175,7 +175,8 @@ export const simulationFlow = ai.defineFlow(
         overview.equity = funds.net;
         overview.peakEquity = funds.net;
       } catch (e) {
-        console.error("Could not connect to broker, using simulated funds.", e);
+        console.error("Could not connect to broker, will use simulated funds.", e);
+        // Do nothing, will just use the default store values.
       }
     }
 
@@ -358,3 +359,5 @@ export const simulationFlow = ai.defineFlow(
 export async function runSimulation(input: SimulationInput): Promise<SimulationOutput> {
     return simulationFlow(input);
 }
+
+    

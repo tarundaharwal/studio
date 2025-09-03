@@ -72,14 +72,33 @@ export async function getFunds(session: Session) {
     if (!session || !session.jwtToken) {
         throw new Error('Invalid session. Please reconnect.');
     }
-  // MOCK IMPLEMENTATION
-  console.log('Fetching funds with session:', session.jwtToken);
-  await new Promise(resolve => setTimeout(resolve, 500));
-  return {
-    net: 500000,
-    availablecash: 500000,
-    marginused: 0,
-  };
+    
+    // --- REALISTIC MOCK IMPLEMENTATION ---
+    // In a real scenario, this would be an API call:
+    // const smart_api = new SmartAPI({...});
+    // const response = await smart_api.getRMS();
+    // if (response.status === 'error') {
+    //   throw new Error(response.message);
+    // }
+    // return response.data;
+    
+    console.log('Fetching funds with session:', session.jwtToken);
+    
+    // Simulate a failure for an "expired" mock session for demonstration
+    if(session.jwtToken.includes('expired')) {
+        console.error('Angel One Mock Error: Session has expired.');
+        throw new Error('Invalid session. Please reconnect.');
+    }
+
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // On success, return realistic mock data
+    return {
+        net: 500000,
+        availablecash: 500000,
+        marginused: 0,
+    };
 }
 
 /**
@@ -102,5 +121,3 @@ export async function placeOrder(session: Session, orderDetails: any) {
     orderid: `mock_${Math.round(Math.random() * 100000)}`,
   };
 }
-
-    

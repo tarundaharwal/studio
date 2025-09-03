@@ -365,5 +365,3 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
   }
   return simulationFlow(input);
 }
-
-    

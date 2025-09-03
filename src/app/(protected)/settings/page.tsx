@@ -22,17 +22,28 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Loader2, XCircle } from 'lucide-react';
+import { CheckCircle, Loader2, XCircle, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { connectToBroker } from '@/services/angelone';
 import { useAuthStore } from '@/store/use-auth-store';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from '@/components/ui/alert-dialog';
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   
   // Use the new persistent store
-  const { credentials, session, setCredentials, setSession } = useAuthStore();
+  const { credentials, session, setCredentials, setSession, clearAuth } = useAuthStore();
 
   // Local state for input fields, initialized from the store
   const [apiKey, setApiKey] = React.useState(credentials?.apiKey || '');
@@ -54,7 +65,7 @@ export default function SettingsPage() {
     }
     
     setIsConnecting(true);
-    setSession(null);
+    setSession(null); // Clear previous session
 
     try {
       // Save credentials to the persistent store FIRST
@@ -67,7 +78,7 @@ export default function SettingsPage() {
         description: "Successfully connected to Angel One broker.",
       });
     } catch (error: any) {
-      setSession(null);
+      setSession(null); // Ensure session is cleared on failure
       toast({
         title: "Connection Failed",
         description: error.message || "Could not connect to the broker.",
@@ -77,6 +88,14 @@ export default function SettingsPage() {
       setIsConnecting(false);
     }
   };
+  
+  const handleDisconnect = () => {
+    clearAuth();
+    toast({
+        title: "Disconnected",
+        description: "Your broker session has been cleared.",
+    });
+  }
 
   return (
     <main className="flex-1 space-y-4 p-4 pt-6 md:p-8">
@@ -118,7 +137,7 @@ export default function SettingsPage() {
             <CardHeader className="p-4 pb-2">
               <CardTitle>API Keys</CardTitle>
               <CardDescription>
-                Manage your broker API keys for live trading. Your keys are stored securely in your browser.
+                Manage your broker API keys for live trading. Your keys are stored securely in your browser's local storage.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
@@ -138,21 +157,43 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="api-key">Angel One API Key</Label>
-                <Input id="api-key" placeholder="Enter your API key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)}/>
+                <Input id="api-key" placeholder="Enter your API key" type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} disabled={isConnected}/>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="api-secret">Angel One API Secret</Label>
-                <Input id="api-secret" placeholder="Enter your API secret" type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)}/>
+                <Input id="api-secret" placeholder="Enter your API secret" type="password" value={apiSecret} onChange={(e) => setApiSecret(e.target.value)} disabled={isConnected}/>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="totp-secret">Angel One TOTP Secret</Label>
-                <Input id="totp-secret" placeholder="Enter your TOTP authenticator secret" type="password" value={totpSecret} onChange={(e) => setTotpSecret(e.target.value)}/>
+                <Input id="totp-secret" placeholder="Enter your TOTP authenticator secret" type="password" value={totpSecret} onChange={(e) => setTotpSecret(e.target.value)} disabled={isConnected}/>
               </div>
             </CardContent>
-            <CardFooter className="p-4">
-              <Button onClick={handleConnect} disabled={isConnecting}>
-                {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</> : 'Save & Connect Broker'}
-              </Button>
+            <CardFooter className="p-4 flex justify-between">
+              {isConnected ? (
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive">
+                            <LogOut className="mr-2 h-4 w-4" /> Disconnect
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure you want to disconnect?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                        This will clear your current session and API keys from local storage. You will need to enter them again to reconnect.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDisconnect}>Confirm Disconnect</AlertDialogAction>
+                    </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+              ) : (
+                <Button onClick={handleConnect} disabled={isConnecting}>
+                    {isConnecting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...</> : 'Save & Connect Broker'}
+                </Button>
+              )}
             </CardFooter>
           </Card>
         </TabsContent>
@@ -199,3 +240,5 @@ export default function SettingsPage() {
     </main>
   )
 }
+
+    

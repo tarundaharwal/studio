@@ -31,9 +31,9 @@ export function DataSimulator() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const tick = async () => {
-    // Do not run the simulation if we are not connected to the broker
-    if (!authStore.session) {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    // CRITICAL CHECK: Do not run the simulation if we are not connected to the broker
+    if (!authStore.session || !authStore.credentials) {
+      // If not connected, simply wait and check again. Don't run the simulation.
       timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
       return;
     }
@@ -44,6 +44,7 @@ export function DataSimulator() {
 
     try {
       isRunning.current = true;
+      // Get the latest state from both stores for the API call
       const currentState = pickStateForAPI(useStore.getState(), useAuthStore.getState());
       
       const response = await fetch('/api/simulate', {
@@ -55,9 +56,26 @@ export function DataSimulator() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("API Error Response:", errorText);
-        throw new Error(`API call failed with status: ${response.status}`);
+        const errorData = await response.json();
+        console.error("API Error Response:", errorData);
+        // If the error indicates an auth failure, clear the session
+        if (response.status === 401) {
+            authStore.clearAuth();
+            toast({
+                title: "Broker Connection Lost",
+                description: "Your session expired or became invalid. Please reconnect.",
+                variant: "destructive",
+            });
+        } else {
+            toast({
+                title: "Simulation Error",
+                description: errorData.message || `API call failed with status: ${response.status}`,
+                variant: "destructive",
+            });
+        }
+        // Stop the simulation if there's an error
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        return;
       }
 
       const newState = await response.json();
@@ -81,24 +99,27 @@ export function DataSimulator() {
 
     } catch (error) {
       console.error("Error during simulation tick:", error);
-      toast({
-        title: "Simulation Error",
-        description: "Could not connect to the simulation backend.",
-        variant: "destructive",
-      });
-      // Stop the simulation if there's an error
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      // Don't show toast for network errors if it's a disconnect
+      if (authStore.session) {
+        toast({
+            title: "Simulation Error",
+            description: "Could not connect to the simulation backend.",
+            variant: "destructive",
+        });
       }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       return; 
     } finally {
       isRunning.current = false;
+      // Always reschedule the next tick, the check at the top will handle pausing.
       timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
     }
   };
 
   useEffect(() => {
-    // Initial delay before the first tick
+    // Stop any existing timer before starting a new one
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    // Start the simulation loop
     timeoutRef.current = setTimeout(tick, TICK_INTERVAL);
 
     return () => {
@@ -107,7 +128,7 @@ export function DataSimulator() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authStore.session]); // Re-run effect if session changes (e.g., user connects/disconnects)
+  }, [authStore.session]); // The simulation loop is now entirely dependent on the session state.
 
   return null;
 }

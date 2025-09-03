@@ -125,6 +125,48 @@ export async function getFunds(session: Session) {
     };
 }
 
+
+/**
+ * Fetches the live market data for a given instrument.
+ * @param session The active session object.
+ * @param instrument The instrument to fetch data for (e.g., "NIFTY 50").
+ * @returns A promise that resolves to the live market data.
+ */
+let lastMockPrice = 22800; // Let's make the mock price persistent across calls
+
+export async function getLiveMarketData(session: Session, instrument: string) {
+    if (!session || !session.jwtToken) {
+        throw new Error('Invalid session. Please reconnect.');
+    }
+
+    // --- REAL IMPLEMENTATION (Commented Out) ---
+    /*
+    const smart_api = new SmartAPI({ access_token: session.jwtToken, ... });
+    const response = await smart_api.getLTP({
+        exchange: "NFO",
+        tradingsymbol: "NIFTY24AUGFUT", // Example
+        symboltoken: "..." // Corresponding token
+    });
+    return {
+        ltp: response.data.ltp,
+        symbol: instrument
+    };
+    */
+
+    // --- REALISTIC MOCK IMPLEMENTATION ---
+    // Simulate a more realistic price movement
+    const movement = (Math.random() - 0.5) * 35; // a bit more volatile
+    lastMockPrice += movement;
+
+    await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network latency
+
+    return {
+        ltp: parseFloat(lastMockPrice.toFixed(2)),
+        symbol: instrument,
+    };
+}
+
+
 /**
  * Places a trade order with Angel One.
  * @param session The active session object.

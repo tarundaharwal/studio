@@ -9,7 +9,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { connectToBroker, getFunds, UserCredentials, Session } from '@/services/angelone';
+import { connectToBroker, getFunds, getLiveMarketData, UserCredentials, Session } from '@/services/angelone';
 
 
 // Define schemas for the data structures we'll be working with.
@@ -165,12 +165,12 @@ export const simulationFlow = ai.defineFlow(
     if (session) {
       try {
         const funds = await getFunds(session);
+        overview.equity = funds.net;
         // Only update initialEquity on the first tick to establish a baseline for P&L calculation
         if (tickCounter === 0) {
             overview.initialEquity = funds.net;
             overview.peakEquity = funds.net;
         }
-        overview.equity = funds.net;
       } catch (e: any) {
         console.error("Could not fetch funds:", e.message);
         // This might happen if the session is valid but some other API fails.
@@ -218,79 +218,26 @@ export const simulationFlow = ai.defineFlow(
             tradingStatus: finalTradingStatus 
         };
     }
-
-    // --- SCRIPTED SCENARIO LOGIC ---
-    let open = chartData.length > 0 ? chartData[chartData.length - 1].ohlc[3] : 22800;
-    let movement = (Math.random() - 0.5) * 20; // Base random movement
-    let vol = 150000;
     
-    // SCENARIO STEPS DRIVEN BY TICK COUNTER
-    
-    // Step 1: Sudden Drop -> Alert
-    if (tickCounter === 15) { 
-        movement = -150;
-        vol = 450000;
-        newSignals.push({ time: nowLocale, strategy: "Risk Mgmt", action: "ALERT", instrument: "NIFTY 50", reason: "High Volatility Detected" });
-    } 
-    // Step 2: Buy Signal -> Focused
-    else if (tickCounter === 22 && newPositions.length === 0) {
-        movement = 20;
-        const price = open + movement;
-        const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: price, ltp: price, pnl: 0 };
-        newPositions.push(newPosition);
-        newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: price, status: 'EXECUTED' });
-        newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'BUY', instrument: 'NIFTY AUG FUT', reason: `RSI<30, entering long position.`});
-    } 
-    // Step 3: Profit State
-    else if (tickCounter > 25 && tickCounter <= 35) {
-        movement = 25; 
-        vol = 250000;
-    } 
-    // Step 4: Sell Signal (Profit) -> Focused
-    else if (tickCounter === 38 && newPositions.length > 0) {
-        movement = 15;
-        const positionToClose = newPositions[0];
-        const price = open + movement;
-        const pnlFromTrade = (price - positionToClose.avgPrice) * positionToClose.qty;
-        overview.equity += pnlFromTrade;
-        newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
-        newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'SELL (Profit)', instrument: positionToClose.symbol, reason: `Profit booked: PnL was ${pnlFromTrade.toFixed(2)}`});
-        // CRITICAL: Position will be removed on the *next tick* to allow UI to see profit state
+    // --- FETCH LIVE DATA ---
+    const lastPrice = chartData.length > 0 ? chartData[chartData.length - 1].ohlc[3] : 22800;
+    let newPrice = lastPrice;
+    if (session) {
+        try {
+            const marketData = await getLiveMarketData(session, 'NIFTY 50');
+            newPrice = marketData.ltp;
+        } catch (e: any) {
+            console.error("Could not fetch live market data:", e.message);
+            // If fetching fails, we'll just use the last known price to keep the simulation running.
+        }
     }
-    else if (tickCounter === 39) { 
-        newPositions = [];
-    }
-    // Step 5: Re-entry for loss
-    else if (tickCounter === 45 && newPositions.length === 0) {
-        movement = -20;
-        const price = open + movement;
-        const newPosition: Position = { symbol: 'NIFTY AUG FUT', qty: 50, avgPrice: price, ltp: price, pnl: 0 };
-        newPositions.push(newPosition);
-        newOrders.push({ time: nowLocale, symbol: 'NIFTY AUG FUT', type: 'BUY', qty: 50, price: price, status: 'EXECUTED' });
-        newSignals.push({ time: nowLocale, strategy: 'Confluence-v1', action: 'BUY', instrument: 'NIFTY AUG FUT', reason: `Re-entering position.`});
-    } 
-    // Step 6: Big drop for Loss State -> Sell
-    else if (tickCounter === 50 && newPositions.length > 0) {
-        movement = -150;
-        vol = 400000;
-        const positionToClose = newPositions[0];
-        const price = open + movement;
-        const pnlFromTrade = (price - positionToClose.avgPrice) * positionToClose.qty;
-        overview.equity += pnlFromTrade;
-        newOrders.push({ time: nowLocale, symbol: positionToClose.symbol, type: 'SELL', qty: positionToClose.qty, price, status: 'EXECUTED' });
-        newSignals.push({ time: nowLocale, strategy: 'Risk Mgmt', action: 'SELL (Loss)', instrument: positionToClose.symbol, reason: `Loss booked: PnL was ${pnlFromTrade.toFixed(2)}`});
-        // CRITICAL: Position will be removed on the *next tick*
-    }
-    else if (tickCounter === 51) { 
-        newPositions = [];
-    }
-
 
     // --- MARKET DATA SIMULATION ---
-    const close = open + movement;
+    const open = lastPrice;
+    const close = newPrice;
     const high = Math.max(open, close) + getRandom(0, 15);
     const low = Math.min(open, close) - getRandom(0, 15);
-    const newPrice = close;
+    const vol = 150000 + getRandom(10000, 50000);
 
     const lastCandleTime = chartData.length > 0 ? chartData[chartData.length - 1].time : '09:10';
     const newTime = getNextTime(lastCandleTime, 5); // 5 min timeframe
@@ -298,7 +245,7 @@ export const simulationFlow = ai.defineFlow(
     const newCandle: ChartData = {
         time: newTime,
         ohlc: [open, high, low, close],
-        volume: vol + getRandom(10000, 50000),
+        volume: vol,
     };
     const newChartData = [...chartData.slice(1), newCandle];
 
@@ -312,6 +259,7 @@ export const simulationFlow = ai.defineFlow(
     const calculatedRSI = calculateRSI(newChartData);
     const newIndicators = indicators.map(ind => {
         let newValue = ind.value;
+        const movement = newPrice - lastPrice;
         if (ind.name.includes('RSI')) {
             newValue = calculatedRSI ?? ind.value;
         } else if (ind.name.includes('MACD')) {
@@ -368,5 +316,3 @@ export async function runSimulation(input: SimulationInput): Promise<SimulationO
   }
   return simulationFlow(input);
 }
-
-    
